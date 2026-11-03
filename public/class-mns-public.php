@@ -20,6 +20,6 @@ class MNS_Public {
 	}
 
 	public function init(): void {
-		// Phase 3: page templates, shortcodes, panel gates.
+		MNS_Page_Templates::instance()->init();
 	}
 }

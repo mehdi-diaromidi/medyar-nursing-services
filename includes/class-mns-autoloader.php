@@ -22,9 +22,12 @@ class MNS_Autoloader {
 		'MNS_Admin'      => 'admin/class-mns-admin.php',
 		'MNS_Admin_Menu' => 'admin/class-mns-admin-menu.php',
 		'MNS_Admin_Ui'   => 'admin/class-mns-admin-ui.php',
-		'MNS_Public'     => 'public/class-mns-public.php',
-		'MNS_Assets'     => 'public/class-mns-assets.php',
-		'MNS_Rewrite'    => 'public/class-mns-rewrite.php',
+		'MNS_Public'          => 'public/class-mns-public.php',
+		'MNS_Assets'          => 'public/class-mns-assets.php',
+		'MNS_Rewrite'         => 'public/class-mns-rewrite.php',
+		'MNS_Pages'           => 'public/class-mns-pages.php',
+		'MNS_Page_Templates'  => 'public/class-mns-page-templates.php',
+		'MNS_Static_Fixtures' => 'public/class-mns-static-fixtures.php',
 	);
 
 	public static function register(): void {
