@@ -6,3 +6,7 @@ error_log
 .vscode/
 *.swp
 *~
+
+.ftp.env
+deploy.sh
+deploy.ps1

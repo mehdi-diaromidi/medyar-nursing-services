@@ -1,233 +1,630 @@
-# Medyar Nursing Services — مرجع UI/UX فرانت
+# Medyar Nursing Services — مرجع کامل UI/UX
 
-RTL · فارسی · تم Dr Plus · الگوی رفتاری/بصری `affiliate-referral/UI-UX.md`  
-ادمین وردپرس در این سند پوشش داده نمی‌شود (استاندارد `wp-admin`).  
-طراحی با اصول ui0ux؛ پیاده‌سازی پیکسلی در فاز ۳ روی همین توکن‌ها.
+RTL · فارسی · تم Dr Plus · الگوی بصری/رفتاری `affiliate-referral/UI-UX.md`  
+طراحی با **ui0ux** · پیاده‌سازی فرانت با توکن `--mns-*` · ادمین با الگوی `wp-admin` + پوست ARP-admin.
+
+---
+
+## فهرست
+
+1. [Problem & Goal](#1-problem--goal)
+2. [Assumptions & Open Questions](#2-assumptions--open-questions)
+3. [User & Context](#3-user--context)
+4. [Proposed Solution — IA & Shell](#4-proposed-solution--ia--shell)
+5. [Visual system & components](#5-visual-system--components)
+6. [بیمار — ثبت سفارش و پنل](#6-بیمار--ثبت-سفارش-و-پنل)
+7. [پرستار — عضویت و پنل](#7-پرستار--عضویت-و-پنل)
+8. [داروهای نسخه‌دار](#8-داروهای-نسخهدار)
+9. [فاکتور و پرداخت](#9-فاکتور-و-پرداخت)
+10. [ادمین وردپرس](#10-ادمین-وردپرس)
+11. [Rationale](#11-rationale)
+12. [Accessibility & Edge Cases](#12-accessibility--edge-cases)
+13. [Risks & Trade-offs](#13-risks--trade-offs)
+14. [Next Steps / Validation](#14-next-steps--validation)
+15. [پیوست‌ها](#پیوست-a--نقشه-فایل)
 
 ---
 
 ## 1. Problem & Goal
 
-**بیمار** باید بتواند خدمت ببیند، سفارش بدهد و وضعیت/فاکتور/پرداخت را بدون سردرگمی پیگیری کند.  
-**پرستار** باید سفارش‌های تخصیص‌یافته، چک‌لیست، گزارش و کیف پول را در یک شِل آشنا (مثل پنل همکار) انجام دهد.  
-**کسب‌وکار:** اعتماد مدیار، کاهش تماس پشتیبانی، تکمیل مسیر تا پرداخت و امتیاز.
+**بیمار / سفارش‌دهنده** نیاز دارد در چند دقیقه خدمت را انتخاب کند، برای خودش یا دیگری ثبت کند، بداند «الان کجاست»، فاکتور را ببیند و پرداخت کند — بدون ابهام قیمت و بدون ترس از نبود پرستار.
 
-هدف UI: یک سیستم بصری واحد با ARP (شناخت برند)، دو شِل نقش‌محور، و قرارداد دادهٔ ثابت تا bind بک‌اند بدون بازنویسی مارکاپ.
+**پرستار** نیاز دارد وضعیت پذیرش، برنامه، شروع/پایان خدمت، چک‌لیست و گزارش را روی موبایل بین دو مراجعه انجام دهد — بدون ورود مبلغ دستی و بدون سردرگمی مالی.
+
+**ادمین عملیات** نیاز دارد صف تخصیص، عضویت، مالی و فوری‌ها را در یک پیشخوان ببیند و با کمترین کلیک مداخله کند.
+
+**کسب‌وکار:** اعتماد مدیار، کاهش تماس پشتیبانی، تکمیل تا پرداخت و امتیاز، عدالت تخصیص.
+
+هدف UI: یک زبان بصری واحد با ARP، دو شِل نقش‌محور فرانت، جریان‌های واضح با **یک primary action در هر لحظه**، و قرارداد دادهٔ ثابت برای bind بک‌اند.
 
 ---
 
 ## 2. Assumptions & Open Questions
 
-### Assumptions (توسعه)
+### Assumptions
 - بدون dark mode (مثل ARP).
-- OTP و هدر سایت از تم؛ پنل‌ها داخل محتوای صفحه قالب پلاگین.
-- ارقام فارسی در UI؛ phone / tracking / URL / NID با `dir="ltr"`.
-- فاز ۳ با `MNS_UI_STATIC` و fixture؛ اکشن‌ها no-op یا mock notice.
-- اصلاح a11y نسبت به ARP: focus ring روی فیلد (≥3:1)، لمس pager/toggle ترجیحاً ۴۴px، `prefers-reduced-motion`.
+- OTP و هدر سایت از تم؛ پنل‌ها داخل قالب پلاگین.
+- ارقام فارسی در UI؛ phone / tracking / NID / URL با `dir="ltr"`.
+- تخصیص به پرستار **قطعی** است (پرستار پذیرش/رد نمی‌کند)؛ فقط Online/Offline برای ورود به استخر تخصیص.
+- جنسیت پرستار در تخصیص **قطعی و مؤثر** است.
+- مبلغ‌ها فقط از تعرفه سیستم؛ هیچ فیلد مبلغ دستی در فرانت پرستار.
+- فاز استاتیک با `MNS_UI_STATIC`؛ اکشن‌ها mock/notice تا فاز بک‌اند.
+- a11y بهتر از ARP: focus-ring ≥3:1، لمس ۴۴px، `prefers-reduced-motion`.
 
-### Open (کارفرما / بعداً)
-- متن قرارداد عضویت پرستار، فیلدهای دقیق per-service، شهربندی واقعی.
-- پذیرش/رد تخصیص توسط پرستار (فرض فعلی: تخصیص قطعی).
+### Open (کارفرما)
+- متن کامل قرارداد عضویت پرستار.
+- فیلدهای دقیق per-service و شهربندی واقعی.
+- SLA دقیق «سفارش فوری» (زمان پاسخ / هزینه اضافه؟).
+- آیا کیف پول پرستار داخل پنل MNS است یا فقط لینک My Account؟
 
 ---
 
 ## 3. User & Context
 
-| نقش | زمینه | Job اصلی | اضطراب |
+| نقش | زمینه | Job-to-be-Done | اضطراب اصلی |
 | --- | --- | --- | --- |
-| بیمار / سفارش‌دهنده | موبایل زیاد، عجله، گاهی برای دیگری سفارش می‌دهد | ثبت سریع + دیدن «الان کجاست سفارش» | قیمت مبهم، نبود پرستار، پرداخت |
-| پرستار | بین مراجعات، موبایل/دسکتاپ | شروع/پایان، چک‌لیست، گزارش بدون اشتباه مبلغ | فاکتور اشتباه، مورد فوری |
-| مهمان کاتالوگ | قبل از ورود | فهم خدمت و قیمت پایه | نمی‌داند کدام خدمت |
+| بیمار / مراقب | موبایل، عجله، گاهی برای دیگری | «خدمت درست را سریع ثبت کنم و بفهمم کی می‌آید» | قیمت مبهم، نبود پرستار، اشتباه خدمت |
+| پرستار | بین دو مراجعه، یک‌دستی | «شروع/چک‌لیست/پایان بدون اشتباه فاکتور» | مبلغ اشتباه، مورد فوری بی‌پاسخ |
+| مهمان کاتالوگ | قبل از ورود | فهم خدمت و بازه قیمت | نمی‌داند کدام دسته |
+| ادمین عملیات | دسکتاپ، چند صف همزمان | تخصیص، تأیید عضویت، فوری، مالی | از دست رفتن سفارش فوری |
 
 ---
 
-## 4. Proposed Solution
+## 4. Proposed Solution — IA & Shell
 
-### 4.1 Information architecture
+### 4.1 نقشه صفحات
 
 ```
 کاتالوگ عمومی
   ├ آرشیو دسته‌ها (۶)
-  └ صفحه خدمت → CTA ثبت سفارش (لاگین)
+  └ خدمت تکی → CTA ثبت سفارش
 
-عضویت پرستار (خارج شِل یا گیت)
-  └ pending | rejected | suspended | → پنل
+عضویت پرستار (خارج شِل)
+  └ form | pending | rejected+resubmit | suspended
 
-پنل بیمار (?mns_panel=patient&mns_page=)
-  dashboard | new-order | orders | order-view | patients
-  invoices | recurring | loyalty | surveys | account↗ | logout
+پنل بیمار  ?mns_panel=patient&mns_page=
+  dashboard | new-order | orders | order-view
+  patients | invoices | invoice-view
+  recurring | loyalty | surveys | account↗ | logout
 
-پنل پرستار (?mns_panel=nurse&mns_page=)
-  dashboard | orders | order-view | availability | wallet↗
-  ratings | profile | account↗ | logout
+پنل پرستار  ?mns_panel=nurse&mns_page=
+  dashboard | orders | order-view | availability
+  ratings | profile | wallet↗ | account↗ | logout
+
+ادمین wp-admin → منوی «خدمات پرستاری»
+  monitor | assign | nurses | manual-order | finance | settings
 ```
 
-یک primary action per صفحه (Jakob + Hick): داشبورد بیمار → «ثبت سفارش»؛ جزئیات پرستار در حین خدمت → «ثبت چک‌لیست / پایان».
-
-### 4.2 Shell (آناتومی — آینه ARP)
+### 4.2 شِل فرانت (آینه ARP)
 
 ```
 ┌──── 306px ────┬──────── 1fr ────────┐
 │ Header آبی    │ Main #f7f7f7 r24    │
-│ badge·avatar  │ notice?             │
-│ name·phone    │ page body           │
+│ badge · name  │ notice?             │
+│ phone         │ page body           │
 │ Nav           │                     │
 └───────────────┴─────────────────────┘
 ```
 
-- `dir="rtl"` روی `.mns-dash`
-- `data-mns-panel` / `data-mns-page`
-- موبایل ≤767: drawer از راست + expand لبه + backdrop + Escape + focus return
-- دسکتاپ ≥1024: sticky زیر هدر Elementor/admin bar (`--mns-sticky-top`)
+- `dir="rtl"` روی `.mns-dash` · `data-mns-panel` / `data-mns-page`
+- ≤767: drawer راست + expand لبه + backdrop + Escape + **focus return + scroll lock**
+- ≥1024: sticky زیر هدر (`--mns-sticky-top`)
 
-### 4.3 Navigation (ثابت ترتیب)
+**Nav بیمار (ترتیب ثابت):** داشبورد · ثبت سفارش · سفارش‌های من · بیماران من · فاکتورها · دوره‌ای · وفاداری · پرسشنامه‌ها · پنل مدیار ↗ · خروج
 
-**بیمار:** dashboard · new-order · orders · patients · invoices · recurring · loyalty · surveys · پنل مدیار (خارجی) · خروج (danger)
+**Nav پرستار:** داشبورد · سفارش‌های من · برنامه و دسترسی · امتیازها · پروفایل · کیف پول ↗ · پنل مدیار ↗ · خروج
 
-**پرستار:** dashboard · orders · availability · wallet (خارجی برداشت در صورت وجود) · ratings · profile · پنل مدیار · خروج
+### 4.3 ایدهٔ خلاق مرکزی (سادگی حفظ می‌شود)
 
-قواعد: active فقط داخلی؛ `aria-current="page"`؛ فلش hover فقط غیرفعال.
+| ایده | چیست | چرا |
+| --- | --- | --- |
+| **مسیر مراقبت** | استپر افقی ۳–۴ مرحله روی ثبت سفارش (نه ویزارد ۷صفحه‌ای) | Hick: chunking بدون گم‌شدن |
+| **انتخاب سریع بیمار** | segmented: خودم / خانواده / جدید | Recognition؛ ثبت برای دیگری رایج است |
+| **تراشه جنسیت** | ۳ chip بزرگ مرد/زن/فرقی نمی‌کند | تخصیص وابسته است؛ نباید در select دفن شود |
+| **نوار وضعیت سفارش** | تایم‌لاین عمودی + «الان اینجایید» | کاهش تماس «سفارشم کجاست؟» |
+| **کارت مهر وفاداری** | ۵ خانه مهر فیزیکی‌شکل | انگیزه تکمیل بدون پیچیدگی امتیاز |
+| **کلید پذیرش در هیرو** | Online/Offline روی داشبورد پرستار | Fitts + وضوح درآمدی |
+| **خط دارو** | ریل اختیاری داخل سفارش/فاکتور | یکپارچه بدون صفحه جدا اجباری |
 
-### 4.4 Visual tokens (`--mns-*`)
+---
+
+## 5. Visual system & components
 
 منبع اجرایی: `assets/css/public.css`.
+
+### 5.1 Tokens
 
 | Token | Value | Use |
 | --- | --- | --- |
 | `--mns-primary` | `var(--primary-100, #0272b1)` | CTA, focus, nav active |
-| `--mns-primary-soft` | `rgba(2,114,177,0.12)` | icon wells, soft hover |
-| `--mns-primary-hover` | `#015a8c` | primary button hover |
+| `--mns-primary-soft` | `rgba(2,114,177,0.12)` | wells, soft hover |
+| `--mns-primary-hover` | `#015a8c` | primary hover |
 | `--mns-text` | `#383838` | body |
 | `--mns-heading` | `#373434` | titles |
-| `--mns-muted` | `#a6a6a6` | secondary |
-| `--mns-muted-strong` | `#747474` | labels / lead |
+| `--mns-muted` / `--mns-muted-strong` | `#a6a6a6` / `#747474` | secondary / labels |
 | `--mns-border` | `#e6e6e6` | cards / fields |
-| `--mns-bg` | `#f7f7f7` | shell |
-| `--mns-card` | `#ffffff` | surfaces |
-| `--mns-radius` | `16px` | cards / fields |
-| `--mns-radius-shell` | `24px` | sidebar / main |
-| `--mns-success` | `#1a7a4c` | done / paid |
-| `--mns-success-bg` | `#e8f7ee` | pills |
-| `--mns-danger` | `#d60043` | errors / logout hover |
-| `--mns-danger-bg` | `#fde8ec` | invalid |
-| `--mns-warn` | `#b7791f` | in progress |
-| `--mns-warn-bg` | `#fff5e0` | progress pill |
-| `--mns-metrics-ink` | `#114b5f` | KPI numbers |
-| `--mns-metrics-accent` | `#0d5c63` | hero bar |
-| `--mns-space-1`…`8` | 4 / 8 / 12 / 16 / 24 / 32 / 40 / 48 | 8pt grid |
-| `--mns-field-min-h` | `50px` | controls |
-| `--mns-touch-min` | `44px` | a11y target (بهبود نسبت به ARP) |
-| `--mns-focus-ring` | `0 0 0 3px rgba(2,114,177,0.35)` | focus-visible |
+| `--mns-bg` / `--mns-card` | `#f7f7f7` / `#fff` | shell / surfaces |
+| `--mns-radius` / `--mns-radius-shell` | `16px` / `24px` | |
+| `--mns-success` / bg | `#1a7a4c` / `#e8f7ee` | |
+| `--mns-danger` / bg | `#d60043` / `#fde8ec` | |
+| `--mns-warn` / bg | `#b7791f` / `#fff5e0` | |
+| `--mns-metrics-ink` / accent | `#114b5f` / `#0d5c63` | KPI |
+| `--mns-urgent` | `#c2410c` | سفارش فوری / مورد فوری |
+| `--mns-urgent-bg` | `#fff7ed` | |
+| `--mns-space-1`…`8` | 4 / 8 / 12 / 16 / 24 / 32 / 40 / 48 | 8pt |
+| `--mns-field-min-h` | `50px` | |
+| `--mns-touch-min` | `44px` | |
+| `--mns-focus-ring` | `0 0 0 3px rgba(2,114,177,0.35)` | |
 
-**بدون** سایه کارت پیش‌فرض. سایه فقط منوی select / datepicker / avatar / تب موبایل (مقادیر ARP).
+بدون سایه کارت پیش‌فرض. سایه فقط select menu / datepicker / drawer edge.
 
 Breakpoints: **640 / 767 / 900 / 1023 / 1100 / 1200**.  
-Container: `min(1280px, calc(100% - 32px))`.
+Container: `min(1280px, calc(100% - 32px))`.  
+Type: `var(--main-font)` · 12 / 14 / 16 / 18 / 20 / 24 / 28 · title 24/800 · body 16 LH≈1.6–2.
 
-Typography: `var(--main-font)`; scale 12 / 14 / 16 / 18 / 20 / 24 / 28; page title 24/800; body 16/400 LH 2 در شِل؛ label 14; Inter فقط tracking code.
+Motion: field 150–200ms · drawer open 420ms `cubic-bezier(0.22,1,0.36,1)` · close 280ms · reduced-motion ≈0.01ms.
 
-### 4.5 Order status pills (فرانت)
+### 5.2 Status pills سفارش
 
-| slug | tone | bg / text |
+| slug | برچسب | tone |
 | --- | --- | --- |
-| submitted | waiting | soft primary / `#0272b1` |
-| assigned | progress | warn palette |
-| in_progress | progress | warn |
-| service_ended | accepted | success soft |
-| medication | progress | warn |
-| invoiced | waiting | primary soft |
-| paid | done | success |
-| completed | done | success / teal feel `#0f766e` text ok |
-| cancelled | cancel | danger |
-| needs_review | failed | `#f1f3f5` / `#6b7280` |
+| `submitted` | ثبت‌شده | waiting |
+| `assigned` | تخصیص‌یافته | progress |
+| `in_progress` | در حال انجام | progress |
+| `service_ended` | پایان خدمت | accepted |
+| `medication` | مرحله دارو | progress |
+| `invoiced` | فاکتور صادرشده | waiting |
+| `paid` | پرداخت‌شده | done |
+| `completed` | تکمیل‌شده | done |
+| `cancelled` | لغو‌شده | cancel |
+| `needs_review` | نیازمند بررسی | muted/failed |
 
-همیشه متن + رنگ (نه فقط رنگ).
+همیشه **متن + رنگ**. کلاس: `.mns-status.mns-status--{tone}`.
 
-### 4.6 Components (فاز ۳ باید پوشش دهد)
+### 5.3 کامپوننت‌های کلیدی
 
-| Component | Class root | States |
+| Component | Root | Variants / notes |
 | --- | --- | --- |
-| Field block | `.mns-field-block` | default, focus-within, filled, invalid, readonly, disabled |
-| Primary button | `.mns-submit-btn` | default, hover, loading, disabled |
-| Outline button | `.mns-btn-outline` | … |
-| Notice | `.mns-notice` | success, error (role status/alert) |
-| Status pill | `.mns-status` | tones بالا |
-| Metrics | `.mns-metrics` | hero / open / success |
-| Table | `.mns-table` | hover, empty, expandable |
-| Pager | `.mns-pager` | current, disabled, compact≤767 |
-| Custom select | `.mns-select` | open, filled, search |
-| Date range | `.mns-date-range` | jdate readonly + Delete clears |
-| Drawer | `.mns-dash__sidebar` | mobile-expanded |
-
-Motion: field 150–200ms ease; drawer open 420ms `cubic-bezier(0.22,1,0.36,1)`; close 280ms; reduced-motion ≈ 0.01ms.
-
-### 4.7 Forms — microcopy نمونه
-
-- ثبت سفارش CTA: «ثبت درخواست خدمت»
-- نبود پرستار: «برای این زمان و منطقه پرستاری در دسترس نیست. زمان دیگری انتخاب کنید یا با پشتیبانی تماس بگیرید.»
-- چک‌لیست: «مبالغ از تعرفه سیستم محاسبه می‌شود؛ مبلغ دستی وارد نکنید.»
-- گزارش فوری: «با علامت فوری، ادمین مدیار فوراً مطلع می‌شود.»
-
-### 4.8 Data contract (UI → backend)
-
-هر صفحه فقط `MNS_View_Data` / آرایه DTO می‌گیرد:
-
-- Static: `MNS_Static_Fixtures::get( $key )`
-- Live (فاز ۵+): همان shape از Repository
-
-نام فیلدهای فرم از روز اول قفل می‌شوند (پیوست B همین فایل در طول فاز ۳ تکمیل می‌شود). لیست‌ها: partial HTML مشترک برای mock AJAX و live.
+| Field | `.mns-field-block` | focus-within, filled, invalid, readonly, disabled |
+| Segmented | `.mns-seg` | ۲–۳ گزینه؛ selected solid primary |
+| Choice chips | `.mns-chip` | gender / urgency؛ min 44×44 |
+| Stepper | `.mns-stepper` | current / done / todo؛ aria-current |
+| How card | `.mns-how` | ۴ گام کنار فرم (دسکتاپ) |
+| Timeline | `.mns-timeline` | نقطه + خط؛ `is-current` |
+| Stamp card | `.mns-stamps` | ۵ خانه؛ filled / empty |
+| Switch | `.mns-switch` | Online/Offline؛ aria-pressed |
+| Checklist | `.mns-check` | item + optional qty؛ no money input |
+| Upload lane | `.mns-upload` | preview thumb؛ replace/remove |
+| Invoice lines | `.mns-invoice` | rows + total sticky موبایل |
+| Primary / Outline | `.mns-submit-btn` / `.mns-btn-outline` | loading · disabled |
+| Notice | `.mns-notice` | success / error · role status/alert |
+| Table + pager | `.mns-table` · `.mns-pager` | expandable · empty |
+| Calendar | `.mns-availability-calendar` | Jalali grid؛ ARP skin نه booking CSS |
 
 ---
 
-## 5. Rationale
+## 6. بیمار — ثبت سفارش و پنل
 
-- **Jakob's Law:** شِل ARP = هزینه یادگیری صفر برای کاربران مدیار.
-- **One primary action:** کاهش خطا در مسیر اورژانسی/پرستاری.
-- **Recognition over recall:** وضعیت سفارش با pill رنگی + برچسب فارسی.
-- **Fitts:** CTA بلوک min-height 52؛ لمس ۴۴px.
-- **Consistency:** توکن و رفتار فیلد عین ARP با rename `--mns-*`.
+### 6.1 ثبت سفارش (`new-order`) — مسیر مراقبت
+
+**الگوی انتخاب‌شده:** یک صفحه با **۴ استپ** + اسکرول نرم به بخش فعال (نه ویزارد چند URL). دسکتاپ: فرم چپ / How card راست. موبایل: استپر چسبان بالا + How جمع‌شونده.
+
+```
+[۱ بیمار و تماس] → [۲ مکان و زمان] → [۳ خدمت و جزئیات] → [۴ مرور و ثبت]
+```
+
+استپر فقط ناوبری بصری است؛ اعتبارسنجی هنگام «ادامه» همان استپ + در submit نهایی.
+
+#### استپ ۱ — بیمار و تماس
+- **Segmented** `.mns-seg`: `خودم` | `افراد ذخیره‌شده` | `بیمار جدید`
+- خودم: پیش‌فرض نام/سن از پروفایل (قابل اصلاح محدود)
+- ذخیره‌شده: select بیمار + پیش‌نمایش سن/جنسیت
+- جدید (inline drawer/panel، نه مودال سنگین): نام · سن · جنسیت · بیماری‌های زمینه‌ای (textarea کوتاه) → ذخیره در «بیماران من» + انتخاب خودکار
+- تلفن تماس اجباری · `data-mns-iran-mobile` · `dir="ltr"`
+
+#### استپ ۲ — مکان و زمان
+- شهر (select شهربندی) → منطقه (select وابسته)
+- آدرس دقیق متنی (بدون نقشه) · placeholder نمونه خیابان/پلاک/واحد
+- تاریخ و ساعت شمسی (جدا یا ترکیب جلالی + time select)
+- **تراشه فوری** `.mns-chip--urgent`: «سفارش فوری»  
+  - روشن: کپی کوتاه «اولویت تخصیص؛ ممکن است بازه قیمت متفاوت باشد»  
+  - اگر فوری خاموش: تاریخ/ساعت اجباری
+
+#### استپ ۳ — خدمت و جزئیات
+- دسته خدمت (۶ chip یا select): سرم‌تراپی · تزریقات · پانسمان · سوندگذاری · مراقبت · سایر
+- خدمت اصلی (select وابسته به دسته)
+- **جنسیت پرستار** — ۳ chip اجباری: زن | مرد | فرقی نمی‌کند  
+  Microcopy زیر چیپ‌ها: «این انتخاب در تخصیص پرستار لحاظ می‌شود.»
+- اطلاعات ضروری خدمت: علائم / وضعیت بیمار / توضیح پزشک (textarea با راهنمای کوتاه per-service از fixture)
+- **خدمات دوره‌ای** (اختیاری، progressive disclosure):  
+  سوییچ «این سفارش بخشی از برنامه دوره‌ای است» → تعداد روزها / ساعات / تناوب (روز در میان، هفتگی، …)
+- **خط دارو** (اختیاری): آپلود عکس نسخه → لینک به §8
+
+#### استپ ۴ — مرور و ثبت
+- خلاصه کارت‌مانند (نه فرم دوباره): بیمار · مکان · زمان/فوری · خدمت · جنسیت پرستار · دوره‌ای؟ · دارو؟
+- CTA اولیه: **«ثبت و ادامه»** (`.mns-submit-btn` min-h 52)
+- CTA ثانویه متنی: «بعداً پرداخت از فاکتورها»
+- حالات پس از submit (mock/live):
+  - موفقیت + کد پیگیری `dir="ltr"`
+  - **نبود پرستار:** notice خطا + پیشنهاد تغییر زمان/منطقه یا تماس پشتیبانی
+  - نیازمند بررسی (دارو): هدایت به order-view با وضعیت `needs_review`
+
+**How card (کنار فرم):**  
+۱ درخواست → ۲ تخصیص پرستار → ۳ انجام و گزارش → ۴ فاکتور و پرداخت
+
+### 6.2 داشبورد بیمار
+
+- Metric row: سفارش باز · در انتظار پرداخت · مهرهای وفاداری
+- Primary CTA بلوک: «ثبت سفارش جدید»
+- لیست فشرده ۳ سفارش اخیر (لینک به orders / order-view)
+- Empty: تصویر/آیکون ساده + CTA ثبت
+
+### 6.3 سفارش‌های من (`orders`)
+
+- فیلترها (یک ردیف، موبایل ۲×۲): وضعیت · خدمت · بازه تاریخ · جستجوی کد/نام
+- دسکتاپ: جدول expandable (کد · خدمت · تاریخ · وضعیت · ▾)
+- موبایل ≤767: **کارت سفارش** (همان داده؛ وضعیت بالا چپ)
+- Pager mock/live
+- کلیک ردیف/«جزئیات» → `order-view`
+
+### 6.4 جزئیات سفارش (`order-view`)
+
+ساختار عمودی یک ستونه (موبایل‌اول):
+
+1. هدر: کد پیگیری + status pill  
+2. **تایم‌لاین** `.mns-timeline` با نقطه `is-current` و زمان‌های جلالی  
+3. کارت پرستار (اگر assigned+): نام · میانگین امتیاز · جنسیت · دکمه تماس (tel:) در صورت مجاز  
+4. خلاصه خدمت/آدرس/زمان  
+5. بلوک دارو (§8) اگر فعال  
+6. لینک فاکتور اگر `invoiced|paid|…`  
+7. اکشن‌ها (یک primary در لحظه):
+   - `completed`/`cancelled`: **درخواست مجدد** (پیش‌پر کردن new-order)
+   - اگر واجد شرایط: **همان پرستار** (chip تأیید)
+   - `invoiced`: **پرداخت فاکتور**
+
+### 6.5 بیماران من (`patients`)
+
+- لیست کارت/جدول: نام · نسبت · سن · جنسیت
+- Primary: «افزودن بیمار»
+- فرم افزودن/ویرایش: نام · سن · جنسیت · بیماری‌های زمینه‌ای · نسبت (خودم/پدر/…)
+- حذف با تأیید (destructive outline)
+
+### 6.6 فاکتورها (`invoices` / `invoice-view`)
+
+- لیست: شماره · تاریخ · مبلغ · وضعیت پرداخت · اکشن
+- جزئیات = §9
+- دکمه‌ها: پرداخت آنلاین · دانلود PDF / چاپ
+
+### 6.7 خدمات دوره‌ای (`recurring`)
+
+- کارت برنامه: خدمت · تناوب · پرستار ترجیحی؟ · وضعیت
+- جدول نوبت‌های آینده
+- اکشن هر نوبت: ویرایش زمان · لغو نوبت بعدی (تأیید)
+- Empty: لینک به new-order با سوییچ دوره‌ای روشن
+
+### 6.8 وفاداری (`loyalty`)
+
+- **کارت مهر** `.mns-stamps`: ۵ خانه؛ هر خدمت تکمیل‌شده = ۱ مهر (پیش‌فرض قابل تنظیم ادمین)
+- پیشرفت: «۲ از ۵ — ۳ مهر تا تخفیف بعدی»
+- لیست کدهای تخفیف فعال: کد `dir="ltr"` + کپی + انقضا
+- قوانین کوتاه زیر کارت (قابل جمع‌شدن)
+
+### 6.9 نظرسنجی و نارضایتی (`surveys`)
+
+- صف نظرسنجی‌های باز (بعد از completed)
+- فرم: ۳ دسته ستارهٔ ۵تایی — **علمی · اخلاق · نظم** (`.mns-stars` جدا per دسته)
+- توضیح اختیاری
+- مسیر جدا: «ثبت نارضایتی» → موضوع · شرح · پیگیری (وضعیت: ثبت / در حال بررسی / پاسخ‌داده‌شده)
+- بعد از ارسال: ستاره‌ها و نارضایتی ثبت‌شده فقط‌خواندنی
 
 ---
 
-## 6. Accessibility & Edge Cases
+## 7. پرستار — عضویت و پنل
 
-- Landmarks: aside/nav/main؛ aria-current؛ aria-live برای notice و لیست.
-- Focus ring اجباری روی control (شکاف ARP را اینجا نمی‌آوریم).
-- Empty / loading / error / success / no-nurse / pending membership / wallet missing.
-- بدون JS: native select دیده شود؛ فیلتر GET کار کند.
+### 7.1 عضویت (`mns-nurse-signup`)
+
+یک فرم تک‌صفحه + How card «مراحل تأیید».
+
+| گروه | فیلدها |
+| --- | --- |
+| فردی | نام کامل · کدملی (`dir="ltr"`) · جنسیت · موبایل |
+| مدارک | آپلود کارت ملی · نظام پرستاری · پایان خدمت/معافیت (اگر مرد) · نام بیمارستان |
+| قرارداد | متن قرارداد در `.mns-contract` اسکرول‌دار · چک‌باکس پذیرش اجباری |
+
+CTA: **ارسال درخواست عضویت**
+
+حالت‌های تمام‌صفحه (جایگزین فرم):
+- `pending`: صف بررسی + کد پیگیری
+- `rejected`: دلیل + CTA ارسال مجدد (فرم پیش‌پر)
+- `suspended`: پیام تعلیق + تماس پشتیبانی
+
+### 7.2 داشبورد پرستار
+
+**هیرو فشرده** (الهام متخصص، پوست ARP — بدون کلاس تم):
+- آواتار حرف اول · نام · «تأییدشده · بیمارستان …»
+- **کلید پذیرش** بزرگ در هیرو: «آماده پذیرش درخواست» Online/Offline  
+  خاموش → کپی: «در تخصیص خودکار پیشنهاد نمی‌شوید.»
+
+Metrics: امروز · آینده · میانگین امتیاز
+
+لیست نوبت‌های امروز (ساعت · خدمت · منطقه · وضعیت) → لینک order-view
+
+### 7.3 سفارش‌های فعال / جزئیات (`orders` / `order-view`)
+
+- فیلتر ساده وضعیت
+- جزئیات تخصیص‌یافته:
+  - خلاصه بیمار/آدرس/خدمت (داده‌های ضروری؛ بدون مدارک حساس اضافه)
+  - **شروع خدمت** / **پایان خدمت** (پایان بدون کد بیمار)
+  - کلید **مورد فوری** `.mns-btn-outline--urgent` → تأیید: «ادمین فوراً پیامک می‌گیرد» → notice
+  - چک‌لیست per-service (§7.4)
+  - خدمات اضافه / مصرفی (§7.5)
+  - گزارش پایان (§7.6)
+  - خط دارو اگر مشمول (§8)
+
+ترتیب اکشن (progressive): شروع → چک‌لیست/اضافه → گزارش → پایان → (دارو اگر لازم)
+
+### 7.4 چک‌لیست تخصصی
+
+- لیست تعاملی اقلام از fixture/تعرفه خدمت
+- تیک انجام · در صورت نیاز زمان/مدت · ثبت داروهای مصرفی مرتبط · مشکلات احتمالی (textarea)
+- Microcopy ثابت: «مبالغ از تعرفه سیستم؛ مبلغ دستی وارد نکنید.»
+- ذخیره پیش‌نویس تا «ثبت نهایی پایان»
+
+### 7.5 خدمات اضافه و مصرفی
+
+- چک‌باکس از لیست مصوب (بدون قیمت ویرایشی؛ قیمت فقط نمایش خواندنی از تعرفه)
+- جمع تخمینی فقط‌خواندنی (اختیاری در UI)
+
+### 7.6 گزارش پایان مراجعه
+
+- Textarea شرح حال و وضعیت نهایی
+- پس از ثبت نهایی: **readonly** + مهر زمان
+- تا قبل از نهایی: ویرایش آزاد
+
+### 7.7 برنامه و دسترسی (`availability`)
+
+چیدمان دسکتاپ دو ستون / موبایل ستونی:
+
+| ستون | محتوا |
+| --- | --- |
+| تقویم | `.mns-availability-calendar` جلالی inline · prev/next · جمعه قرمز · today ring · selected solid · روز مسدود |
+| کنار | برنامه هفتگی ۷روزه · لیست روزهای لغو · مناطق و صلاحیت خواندنی |
+
+انتخاب روز → پنل جزئیات همان روز (فعال/مسدود + بازه در صورت نیاز) · ذخیره mock notice.
+
+کلید پذیرش می‌تواند اینجا هم تکرار شود (همگام با داشبورد).
+
+### 7.8 پروفایل (فقط‌خواندنی برای پرستار)
+
+- هیرو هویت + وضعیت تأیید
+- معرفی / درباره
+- ماتریس/لیست خدمات مجاز
+- شهر و مناطق فعالیت
+- خلاصه برنامه هفتگی (لینک ویرایش → availability)
+- FAQ آکاردئونی عضویت/پرداخت سهم
+
+ویرایش مدارک/مناطق فقط از مسیر ادمین یا درخواست پشتیبانی (فرانت: لینک راهنما).
+
+### 7.9 امتیازات (`ratings`)
+
+- سه میانگین بزرگ: علمی · اخلاق · نظم
+- بدون نمایش نظرات متنی بیمار (طبق بریف میانگین)
+- Empty: «هنوز امتیازی ثبت نشده»
+
+### 7.10 کیف پول
+
+ترجیح: لینک خارجی به My Account / ماژول کیف پول مدیار با همان الگوی ARP.  
+اگر داخل MNS ساخته شود: موجودی · تاریخچه · فرم برداشت + کد تراکنش — پوست `.mns-*`.
 
 ---
 
-## 7. Risks & Trade-offs
+## 8. داروهای نسخه‌دار
+
+یکپارچه در سفارش بیمار، جزئیات پرستار، فاکتور و مانیتور ادمین — **نه صفحه ایزوله اجباری**.
+
+### UI بلوک `.mns-med-lane`
+
+1. آپلود عکس نسخه / کارت دارویی (چند فایل؟ پیش‌فرض ۱–۳)
+2. وضعیت: در انتظار بررسی · تأیید مشاور · رد
+3. دکمه/وضعیت **استعلام پزشک مشاور** (بیمار می‌بیند «ارسال شد»؛ ادمین/پزشک نتیجه را ثبت می‌کند)
+4. اگر تأیید: مبلغ دارو در فاکتور (§9)
+5. اگر رد/مبهم: سفارش → `needs_review` + notice برای بیمار
+
+Microcopy بیمار: «دارو فقط پس از تأیید پزشک مشاور به فاکتور اضافه می‌شود.»
+
+---
+
+## 9. فاکتور و پرداخت
+
+### آناتومی `.mns-invoice`
+
+| ردیف | مثال |
+| --- | --- |
+| خدمت اصلی | سرم‌تراپی |
+| خدمات اضافه | … |
+| اقلام مصرفی | … |
+| دارو / مشاوره | در صورت تأیید |
+| تخفیف / وفاداری | کد یا مهر |
+| **قابل پرداخت** | جمع نهایی · وزن ۸۰۰ |
+
+اکشن‌ها:
+- **پرداخت آنلاین** (زرین‌پال) — primary
+- دانلود PDF / چاپ — outline
+- (سیستم) لینک پیامکی فاکتور برای بیمار
+
+موبایل: نوار جمع + CTA پرداخت sticky پایین (بالای تب‌بار تم اگر تداخل داشت، `bottom` را با safe-area تنظیم کنید).
+
+حالت‌ها: unpaid · paying(loading) · paid · failed(retry) · void.
+
+---
+
+## 10. ادمین وردپرس
+
+پوست: `wp-admin` استاندارد + `assets/css/admin.css` با توکن نزدیک ARP-admin.  
+منوی ریشه: **خدمات پرستاری** (`dashicons-heart` یا مشابه) · position نزدیک ARP · **bubble** برای: عضویت pending · سفارش needs_review · فوری باز.
+
+### 10.1 رصد مرکزی (Monitor)
+
+- فیلتر پیشرفته: وضعیت · شهر · بازه تاریخ · پرستار · بیمار/موبایل
+- جدول لیست + صفحه جزئیات سفارش ادمین:
+  - تایم‌لاین کامل
+  - چک‌لیست / گزارش / دارو / فاکتور
+  - یادداشت داخلی ادمین (فقط staff)
+- اکشن‌ها: تغییر دستی پرستار · ویرایش فاکتور unpaid · لغو با دلیل اجباری
+
+### 10.2 تخصیص (خودکار / دستی)
+
+- سوییچ حالت تخصیص در تنظیمات + بنر وضعیت در صفحه
+- صف «در انتظار تخصیص»:
+  - پیشنهاد سیستم (رتبه وزن‌دار: پرستار قبلی · امتیاز · عدالت توزیع · سابقه لغو)
+  - تخصیص یک‌کلیکی + override دستی جستجوی پرستار
+
+### 10.3 عضویت پرستاران
+
+- جدول درخواست‌ها · مشاهده مدارک (خصوصی)
+- تأیید · رد (+ دلیل) · تعلیق
+- بعد از تأیید: نقش/قابلیت پرستار
+
+### 10.4 سفارش دستی تلفنی
+
+فرم ادمین:
+1. جستجوی موبایل یا ساخت کاربر
+2. انتخاب بیمار/خدمت/زمان/جنسیت پرستار
+3. صدور فاکتور دستی
+4. ثبت پرداخت نقدی / کارت‌به‌کارت (بدون زرین‌پال لزوماً)
+
+### 10.5 مالی و گزارش
+
+- گزارش مالی کل
+- کیف پول‌ها و صف برداشت پرستاران
+- تعرفه، دسته خدمت، قیمت پایه/بازه، شهربندی، مصرفی، خدمات اضافه
+
+### 10.6 تنظیمات
+
+- وزن‌های الگوریتم تخصیص
+- تخفیف و تعداد مهر وفاداری
+- موبایل ادمین‌های فوری
+- پترن SMS
+- لیست پزشکان مشاور
+
+---
+
+## 11. Rationale
+
+| تصمیم | اصل |
+| --- | --- |
+| شِل ARP | Jakob — هزینه یادگیری صفر در اکوسیستم مدیار |
+| استپر ۴تایی یک‌صفحه | Miller / Hick — chunk بدون گم‌کردن context |
+| Chip جنسیت و فوری | Visibility of system status + Fitts برای انتخاب حیاتی |
+| تایم‌لاین سفارش | Recognition over recall — کاهش تماس پشتیبانی |
+| بدون مبلغ دستی پرستار | Error prevention — منبع حقیقت = تعرفه |
+| خط دارو توکار | Progressive disclosure — پیچیدگی فقط وقتی لازم است |
+| کارت مهر | Motivation ساده بدون gamification شلوغ |
+| یک primary action | کاهش خطا در زمینه مراقبت سلامت |
+
+---
+
+## 12. Accessibility & Edge Cases
+
+- Landmarks: `aside` / `nav` / `main`؛ `aria-current`؛ `aria-live` برای notice و نتیجه تخصیص
+- Focus-visible اجباری؛ drawer: trap نسبی + بازگشت فوکوس + قفل اسکرول
+- Chip/segment/switch همه کیبوردپذیر
+- ستاره‌ها: `radiogroup` / `aria-checked`
+- تایم‌لاین: لیست مرتب با وضعیت متنی نه فقط رنگ
+- حالات: empty · loading(skeleton لیست / spinner دکمه) · validation · no-nurse · needs_review · offline nurse · wallet missing · upload fail · payment fail · long names · RTL اعداد
+
+بدون JS: native select و submit HTML؛ استپر به‌صورت بخش‌های پشت‌سرهم قابل استفاده.
+
+---
+
+## 13. Risks & Trade-offs
 
 | Risk | Mitigation |
 | --- | --- |
-| دو پنل = دوبرابر مارکاپ | partials مشترک + یک CSS |
-| Fixture از DTO واقعی فاصله بگیرد | shape در fixtures از همین سند قفل |
-| پرش به بک‌اند زود | `MNS_UI_STATIC` تا پذیرش UI |
+| استپر یک‌صفحه طولانی در موبایل | استپر چسبان + اسکرول به بخش + خلاصه استپ ۴ |
+| خلاقیت بیش از ARP | فقط الگوهای تعامل جدید؛ توکن و شِل ثابت |
+| ادمین سنگین | صف‌ها + bubble؛ جزئیات در صفحه تک |
+| Fixture ≠ بک‌اند | پیوست B قفل فیلد؛ DTO یک‌شکل |
 
 ---
 
-## 8. Next Steps (فاز ۳ اجرا)
+## 14. Next Steps / Validation
 
-1. توکن CSS + شِل بیمار/پرستار + drawer  
-2. پارشال‌ها + fixtures پایه  
-3. کاتالوگ → پنل بیمار صفحات → پنل پرستار → عضویت  
-4. JS: select، jdate، mobile، list mock  
-5. چک‌لیست a11y و حالت‌ها روی هر صفحه  
+**فاز پیاده‌سازی پیشنهادی بعد از این سند**
+1. ارتقای `new-order` به استپر ۴تایی + chips (جنسیت/فوری/بیمار)
+2. `order-view` بیمار و پرستار + تایم‌لاین + اکشن‌ها
+3. خط دارو در سفارش/فاکتور
+4. مهر وفاداری بصری
+5. اسکلت ادمین monitor/assign/nurses (فاز ادمین جدا)
 
-سنجه‌های بعداً: نرخ تکمیل ثبت سفارش، زمان تا اولین سفارش، خطای اعتبارسنجی، SUS پنل پرستار.
+**سنجه‌ها:** نرخ تکمیل ثبت سفارش · زمان تا submit · نرخ خطای validation · نرخ no-nurse و بازیابی · نرخ پرداخت پس از invoice · SUS پنل پرستار · زمان تا تخصیص در ادمین دستی.
+
+**تست کاربری سبک (۵ نفر مراقب + ۳ پرستار):** تکالیف ثبت برای دیگری، فهم تایم‌لاین، Online/Offline، تکمیل چک‌لیست بدون مبلغ.
 
 ---
 
-## پیوست — نقشه فایل UI
+## پیوست A — نقشه فایل
 
 | موضوع | مسیر |
 | --- | --- |
-| CSS | `assets/css/public.css` |
-| JS | `assets/js/public.js` |
-| شِل بیمار/پرستار | `public/views/patient/layout.php` · `nurse/layout.php` |
+| CSS فرانت | `assets/css/public.css` |
+| JS فرانت | `assets/js/public.js` |
+| CSS ادمین | `assets/css/admin.css` |
+| شِل | `public/views/patient/layout.php` · `nurse/layout.php` |
 | صفحات | `public/views/**/page-*.php` |
-| Fixtures | `public/static-fixtures/*.php` |
+| Partials | `public/views/partials/*` |
+| Fixtures | `public/static-fixtures/**` |
 | Templates | `public/templates/mns-*.php` |
-| Loader | `public/class-mns-static-fixtures.php` · `class-mns-pages.php` |
+| Routing | `public/class-mns-pages.php` · `?mns_panel=&mns_page=` · `?mns_service=` |
+
+---
+
+## پیوست B — قرارداد فیلدها (قفل UI)
+
+### بیمار / new-order
+`patient_mode` (self|saved|new) · `patient_id?` · `new_patient{name,age,gender,comorbidities}?` · `phone` · `city_id` · `area_id` · `address` · `is_urgent` · `preferred_date?` · `preferred_time?` · `category_id` · `service_id` · `nurse_gender` (female|male|any) · `service_notes` · `notes?` · `recurring{enabled,pattern,count}?` · `prescription_files[]?`
+
+### بیمار / patients
+`name` · `age` · `gender` · `relation` · `comorbidities?`
+
+### بیمار / surveys
+`order_id` · `score_science` · `score_ethics` · `score_discipline` · `comment?`  
+نارضایتی: `subject` · `body`
+
+### پرستار / signup
+`full_name` · `national_id` · `gender` · `phone` · `national_id_file` · `nursing_card_file` · `military_file?` · `hospital` · `contract_accept`
+
+### پرستار / order actions
+`start_at` · `end_at` · `urgent_flag` · `checklist[]` · `extras[]` · `consumables[]` · `report_text` · `report_finalized`
+
+### پرستار / availability
+`accepting` · `weekly[7]` · `blocked_dates[]` · `day_override{date,enabled,from?,to?}?`
+
+### فاکتور
+خطوط سیستم‌ساز: `line_type` (service|extra|consumable|medication|discount) · `label` · `amount` · `total_payable`
+
+### ادمین (خلاصه)
+فیلتر monitor · `assign_mode` · `assign_nurse_id` · `cancel_reason` · `reject_reason` · `tariff_*` · `algo_weights` · `loyalty_stamps_required` · `urgent_admin_phones[]` · `sms_patterns` · `consultant_doctors[]`
+
+---
+
+## پیوست C — Microcopy کلیدی
+
+| موقعیت | متن |
+| --- | --- |
+| CTA ثبت سفارش | ثبت و ادامه |
+| نبود پرستار | برای این زمان و منطقه پرستاری در دسترس نیست. زمان دیگری انتخاب کنید یا با پشتیبانی تماس بگیرید. |
+| جنسیت | این انتخاب در تخصیص پرستار لحاظ می‌شود. |
+| فوری | اولویت تخصیص؛ ممکن است شرایط قیمت یا زمان متفاوت باشد. |
+| چک‌لیست | مبالغ از تعرفه سیستم محاسبه می‌شود؛ مبلغ دستی وارد نکنید. |
+| فوری پرستار | با علامت فوری، ادمین مدیار فوراً مطلع می‌شود. |
+| دارو | دارو فقط پس از تأیید پزشک مشاور به فاکتور اضافه می‌شود. |
+| Offline | در تخصیص خودکار پیشنهاد نمی‌شوید. |
+| مهر | هر خدمت تکمیل‌شده یک مهر؛ با تکمیل کارت کد تخفیف فعال می‌شود. |
+
+---
+
+## پیوست D — وضعیت فاز ۳ استاتیک
+
+پایه شِل، کاتالوگ، صفحات لیست/فرم ساده، availability calendar، عضویت اولیه روی develop پذیرفته شده‌اند.  
+این سند **هدف طراحی کامل محصول** است؛ شکاف‌های باقی‌مانده برای ارتقای UI (استپر، order-view غنی، خط دارو، مهر بصری، ادمین) در §14 اولویت‌بندی شده‌اند.

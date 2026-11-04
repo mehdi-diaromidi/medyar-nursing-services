@@ -31,13 +31,13 @@ $orders  = isset( $data['recent_orders'] ) && is_array( $data['recent_orders'] )
 	</div>
 </div>
 
-<p>
-	<a class="mns-submit-btn" style="max-width:280px;text-decoration:none;" href="<?php echo esc_url( MNS_Pages::panel_url( 'patient', 'new-order' ) ); ?>">
+<div class="mns-actions-row">
+	<a class="mns-submit-btn" href="<?php echo esc_url( MNS_Pages::panel_url( 'patient', 'new-order' ) ); ?>">
 		<?php echo esc_html__( 'ثبت سفارش جدید', 'medyar-nursing-services' ); ?>
 	</a>
-</p>
+</div>
 
-<section class="mns-card" style="margin-top:24px;" aria-labelledby="mns-recent-orders-title">
+<section class="mns-card" aria-labelledby="mns-recent-orders-title">
 	<h2 id="mns-recent-orders-title" class="mns-card__title"><?php echo esc_html__( 'آخرین سفارش‌ها', 'medyar-nursing-services' ); ?></h2>
 	<div class="mns-table-wrap">
 		<table class="mns-table">
@@ -69,7 +69,7 @@ $orders  = isset( $data['recent_orders'] ) && is_array( $data['recent_orders'] )
 			</tbody>
 		</table>
 	</div>
-	<p style="margin-top:16px;">
+	<div class="mns-actions-row">
 		<a class="mns-btn-outline" href="<?php echo esc_url( MNS_Pages::panel_url( 'patient', 'orders' ) ); ?>"><?php echo esc_html__( 'مشاهده همه', 'medyar-nursing-services' ); ?></a>
-	</p>
+	</div>
 </section>

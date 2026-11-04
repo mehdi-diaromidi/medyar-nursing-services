@@ -37,10 +37,14 @@ class MNS_Assets {
 			self::HANDLE_PUBLIC,
 			'mnsPublic',
 			array(
-				'ajaxUrl'  => admin_url( 'admin-ajax.php' ),
-				'restUrl'  => esc_url_raw( rest_url( 'mns/v1' ) ),
-				'nonce'    => wp_create_nonce( 'mns_public' ),
-				'uiStatic' => MNS_Plugin::is_ui_static(),
+				'ajaxUrl'   => admin_url( 'admin-ajax.php' ),
+				'restUrl'   => esc_url_raw( rest_url( 'mns/v1' ) ),
+				'nonce'     => wp_create_nonce( 'mns_public' ),
+				'uiStatic'  => MNS_Plugin::is_ui_static(),
+				'devTools'  => class_exists( 'MNS_Dev' ) && MNS_Dev::enabled(),
+				'i18n'      => MNS_Copy::for_js(),
+				'calendar'  => MNS_Format::js_calendar(),
+				'supportTel'=> MNS_UI::support_tel_href(),
 			)
 		);
 	}

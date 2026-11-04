@@ -28,6 +28,11 @@ class MNS_Autoloader {
 		'MNS_Pages'           => 'public/class-mns-pages.php',
 		'MNS_Page_Templates'  => 'public/class-mns-page-templates.php',
 		'MNS_Static_Fixtures' => 'public/class-mns-static-fixtures.php',
+		'MNS_Format'          => 'public/class-mns-format.php',
+		'MNS_Copy'            => 'public/class-mns-copy.php',
+		'MNS_Dev'             => 'public/class-mns-dev.php',
+		'MNS_UI'              => 'public/class-mns-ui.php',
+		'MNS_Order_Status'    => 'includes/domain/class-mns-order-status.php',
 	);
 
 	public static function register(): void {

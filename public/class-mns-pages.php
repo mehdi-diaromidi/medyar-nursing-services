@@ -32,29 +32,39 @@ class MNS_Pages {
 	 * @return string[]
 	 */
 	public static function patient_slugs(): array {
-		return array(
+		$slugs = array(
 			'dashboard',
 			'new-order',
 			'orders',
+			'order-view',
 			'patients',
 			'invoices',
 			'recurring',
 			'loyalty',
 			'surveys',
 		);
+		if ( class_exists( 'MNS_Dev' ) && MNS_Dev::enabled() ) {
+			$slugs[] = 'ui-kit';
+		}
+		return $slugs;
 	}
 
 	/**
 	 * @return string[]
 	 */
 	public static function nurse_slugs(): array {
-		return array(
+		$slugs = array(
 			'dashboard',
 			'orders',
+			'order-view',
 			'availability',
 			'ratings',
 			'profile',
 		);
+		if ( class_exists( 'MNS_Dev' ) && MNS_Dev::enabled() ) {
+			$slugs[] = 'ui-kit';
+		}
+		return $slugs;
 	}
 
 	public static function current_panel(): string {
@@ -65,7 +75,11 @@ class MNS_Pages {
 	public static function current_page( string $panel ): string {
 		$page = isset( $_GET[ self::QV_PAGE ] ) ? sanitize_key( wp_unslash( $_GET[ self::QV_PAGE ] ) ) : 'dashboard'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$allowed = 'nurse' === $panel ? self::nurse_slugs() : self::patient_slugs();
-		return in_array( $page, $allowed, true ) ? $page : 'dashboard';
+		if ( in_array( $page, $allowed, true ) ) {
+			return $page;
+		}
+		// Soft not-found for unknown slugs (still renders a panel page).
+		return 'not-found';
 	}
 
 	public static function panel_url( string $panel, string $page = 'dashboard' ): string {

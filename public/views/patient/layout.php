@@ -13,13 +13,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-require_once MNS_PLUGIN_DIR . 'public/views/partials/icons.php';
+MNS_UI::boot_icons();
 
 $nav      = MNS_Static_Fixtures::get( 'patient/nav' );
 $profile  = MNS_Static_Fixtures::get( 'patient/profile' );
 $account  = function_exists( 'wc_get_page_permalink' ) ? (string) wc_get_page_permalink( 'myaccount' ) : home_url( '/my-account/' );
 $display  = isset( $profile['display_name'] ) ? (string) $profile['display_name'] : ( $user->display_name ?: __( 'کاربر', 'medyar-nursing-services' ) );
 $phone    = isset( $profile['phone'] ) ? (string) $profile['phone'] : '';
+$phone_ui = '' !== $phone ? MNS_Format::mobile( $phone ) : '';
 $logout   = wp_logout_url( home_url( '/' ) );
 
 if ( ! is_array( $nav ) || empty( $nav ) ) {
@@ -34,14 +35,16 @@ if ( ! is_array( $nav ) || empty( $nav ) ) {
 		array( 'slug' => 'surveys', 'label' => 'پرسشنامه‌ها', 'icon' => 'star' ),
 	);
 }
+
+$show_bottom = ! in_array( $page, array( 'new-order', 'order-view', 'ui-kit' ), true );
 ?>
-<div class="mns-dash" dir="rtl" data-mns-panel="patient" data-mns-page="<?php echo esc_attr( $page ); ?>">
+<div class="mns-dash<?php echo $show_bottom ? ' mns-dash--has-bottom' : ''; ?>" dir="rtl" data-mns-panel="patient" data-mns-page="<?php echo esc_attr( $page ); ?>">
 	<aside class="mns-dash__sidebar" data-mns-sidebar>
 		<div class="mns-dash__sidebar-header">
 			<span class="mns-dash__badge"><?php echo esc_html__( 'پنل بیمار', 'medyar-nursing-services' ); ?></span>
 			<p class="mns-dash__name" data-mns-bind="display_name"><?php echo esc_html( $display ); ?></p>
-			<?php if ( '' !== $phone ) : ?>
-				<p class="mns-dash__phone" data-mns-bind="mobile_display"><?php echo esc_html( $phone ); ?></p>
+			<?php if ( '' !== $phone_ui ) : ?>
+				<p class="mns-dash__phone" data-mns-bind="mobile_display" dir="ltr"><?php echo esc_html( $phone_ui ); ?></p>
 			<?php endif; ?>
 		</div>
 		<nav class="mns-dash__nav" aria-label="<?php echo esc_attr__( 'منوی پنل بیمار', 'medyar-nursing-services' ); ?>">
@@ -63,9 +66,11 @@ if ( ! is_array( $nav ) || empty( $nav ) ) {
 					<span><?php echo esc_html( $label ); ?></span>
 				</a>
 			<?php endforeach; ?>
-			<a class="mns-dash__nav-link" href="<?php echo esc_url( $account ); ?>" title="<?php echo esc_attr__( 'پنل مدیار', 'medyar-nursing-services' ); ?>">
+			<a class="mns-dash__nav-link" href="<?php echo esc_url( $account ); ?>" title="<?php echo esc_attr__( 'پنل مدیار', 'medyar-nursing-services' ); ?>" target="_blank" rel="noopener noreferrer">
 				<span class="mns-dash__nav-icon" aria-hidden="true"><?php echo mns_icon( 'grid' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
 				<span><?php echo esc_html__( 'پنل مدیار', 'medyar-nursing-services' ); ?></span>
+				<?php echo MNS_UI::external_mark(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+				<span class="screen-reader-text"><?php echo esc_html( MNS_Copy::t( 'label.external' ) ); ?></span>
 			</a>
 			<a class="mns-dash__nav-link mns-dash__nav-link--logout" href="<?php echo esc_url( $logout ); ?>" title="<?php echo esc_attr__( 'خروج از حساب', 'medyar-nursing-services' ); ?>">
 				<span class="mns-dash__nav-icon" aria-hidden="true"><?php echo mns_icon( 'logout' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
@@ -76,15 +81,24 @@ if ( ! is_array( $nav ) || empty( $nav ) ) {
 
 	<main class="mns-dash__main" id="mns-main">
 		<?php
-		$body = MNS_PLUGIN_DIR . 'public/views/patient/page-' . $page . '.php';
-		if ( ! is_readable( $body ) ) {
-			$body = MNS_PLUGIN_DIR . 'public/views/patient/page-dashboard.php';
-		}
-		if ( is_readable( $body ) ) {
-			require $body;
+		if ( MNS_Dev::is( 'loading' ) ) {
+			MNS_UI::skeleton( array( 'variant' => 'detail', 'rows' => 4 ) );
+		} elseif ( MNS_Dev::is( 'error' ) ) {
+			MNS_UI::error_state();
+		} else {
+			$body = MNS_PLUGIN_DIR . 'public/views/patient/page-' . $page . '.php';
+			if ( ! is_readable( $body ) ) {
+				$body = MNS_PLUGIN_DIR . 'public/views/patient/page-not-found.php';
+			}
+			if ( is_readable( $body ) ) {
+				require $body;
+			}
 		}
 		?>
 	</main>
+	<?php if ( $show_bottom ) : ?>
+		<?php MNS_UI::bottom_nav( 'patient', $page ); ?>
+	<?php endif; ?>
 </div>
-<button type="button" class="mns-dash__sidebar-mobile-expand" data-mns-sidebar-expand aria-expanded="false" aria-label="<?php echo esc_attr__( 'باز کردن منو', 'medyar-nursing-services' ); ?>" hidden></button>
+<button type="button" class="mns-dash__sidebar-mobile-expand" data-mns-sidebar-expand aria-expanded="false" aria-label="<?php echo esc_attr( MNS_Copy::t( 'action.open_menu' ) ); ?>" hidden></button>
 <div class="mns-dash__backdrop" data-mns-sidebar-backdrop hidden></div>

@@ -1,39 +1,19 @@
-# فاز ۳ — فرانت استاتیک (چک‌لیست اجرا)
+# فاز ۳ — فرانت استاتیک (وضعیت اجرا)
 
-پیش‌نیاز آماده در ریپو: [`UI-UX.md`](UI-UX.md) · توکن CSS · Fixtures loader · Page templates · شِل‌های خالی.  
-مرجع رفتار: `affiliate-referral/UI-UX.md`.  
-ادمین اپ خارج از اسکوپ این فاز است.
+- [x] توکن CSS + شِل + کامپوننت‌ها (field/select/how/pager/calendar/hero/empty/cta/loading)
+- [x] JS: drawer (focus return + scroll lock) · select · iran-mobile · mock form · switches · availability calendar · stars · row toggle · boot بعد از delayed JS
+- [x] پارشال‌ها: notice · empty · pager · date-range · metrics · status-pill · table-wrap · icons
+- [x] قالب‌ها و برگه‌های develop
+- [x] کاتالوگ + صفحه خدمت (`?mns_service=`)
+- [x] پنل بیمار صفحات اصلی (new-order · orders · patients · invoices · recurring · loyalty · surveys)
+- [x] عضویت پرستار + پنل پرستار (availability الهام booking، پروفایل/داشبورد الهام متخصص)
+- [x] Fixture loader و DTOهای پایه
+- [x] پذیرش بصری develop (دسکتاپ viewport مرورگر + layout موبایل شِل ≤767)
 
-## پرچم‌ها
+برگه‌های develop:
+- `/nursing-services/`
+- `/nursing-patient-panel/` (`?mns_panel=patient&mns_page=…`)
+- `/nursing-nurse-panel/` (`?mns_panel=nurse&mns_page=…`)
+- `/nursing-nurse-signup/`
 
-- `MNS_UI_STATIC` / `MNS_Plugin::is_ui_static()` → fixture
-- Enqueue فرانت فقط روی صفحات قالب MNS
-
-## ترتیب پیاده‌سازی پیشنهادی
-
-1. تکمیل CSS شِل + field + table + notice + status (پورت از ARP با rename)
-2. JS: drawer · select · iran-mobile · form busy · copy (list AJAX mock بعد از اولین لیست)
-3. قالب‌ها و روتینگ `mns_panel` / `mns_page`
-4. کاتالوگ استاتیک
-5. پنل بیمار صفحه به صفحه
-6. عضویت پرستار + پنل پرستار
-7. حالت‌های empty/error/loading روی همه
-8. پذیرش بصری دسکتاپ + ≤767
-
-## قرارداد DTO
-
-کلیدهای fixture اولیه:
-
-- `patient.nav` · `patient.dashboard` · `patient.orders` · `patient.order_detail`
-- `nurse.nav` · `nurse.dashboard` · `nurse.orders`
-- `catalog.categories` · `catalog.service_sample`
-- `meta.statuses` · `meta.cities`
-
-هر کلید آرایه PHP برمی‌گرداند؛ view فقط کلیدهای مستند را می‌خواند.
-
-## پذیرش فاز ۳
-
-- تمام صفحات UI-UX.md با fixture قابل مرور
-- بدون نوشتن سفارش واقعی در DB
-- degrad بدون JS برای فرم/فیلتر پایه
-- سند UI-UX پیوست فیلدها تکمیل شده
+دیپلوی: ریشه ریپو `deploy.ps1` / `deploy.sh` + `.ftp.env` (gitignored).

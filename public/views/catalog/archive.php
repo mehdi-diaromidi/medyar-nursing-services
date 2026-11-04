@@ -9,6 +9,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+$service = isset( $_GET['mns_service'] ) ? sanitize_key( wp_unslash( $_GET['mns_service'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+if ( '' !== $service ) {
+	require MNS_PLUGIN_DIR . 'public/views/catalog/service.php';
+	return;
+}
+
 $catalog = MNS_Static_Fixtures::get( 'catalog/categories' );
 $items   = isset( $catalog['items'] ) && is_array( $catalog['items'] ) ? $catalog['items'] : array();
 ?>
