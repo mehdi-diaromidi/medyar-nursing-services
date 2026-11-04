@@ -333,6 +333,18 @@
 | سوئیچر `?mns_state=` + کیت `?mns_page=ui-kit` | فقط `manage_options` + static |
 | soft not-found برای slug نامعتبر | به‌جای سقوط بی‌صدا به داشبورد |
 | scoped reset کامل / mobile-first MQ rewrite | **عمداً موکول** به فازهای بازطراحی صفحه (توکن و palette بدون تغییر ماند) |
-| پذیرش fixture shape جدید در همهٔ صفحات | **فاز ۲+**؛ foundations آمادهٔ مصرف‌اند |
 
 تأیید روی develop: داشبورد، ui-kit، حالت loading. Deprecated دیده‌شده در QM از افزونهٔ خارجی است، نه MNS.
+
+---
+
+## ۹. وضعیت فاز ۲ (v0.1.5) — کاتالوگ عمومی
+
+| مورد | وضعیت |
+| --- | --- |
+| آرشیو: معرفی + ۶ کارت لمسی + راهنمای انتخاب + ۴ قدم + نظرات + FAQ | `views/catalog/archive.php` |
+| تمپلیت خدمت داده‌محور برای ۶ slug | `static-fixtures/catalog/services.php` + `views/catalog/service.php` |
+| تفاوت دارویی (`needs_prescription`) فقط وقتی لازم | هشدار نسخه در صفحهٔ خدمت |
+| CTA چسبان موبایل + سایدبار دسکتاپ | `.mns-service-sticky` / `.mns-service-side-cta` |
+| حالت‌های سوئیچر روی کاتالوگ | loading / empty / error / long |
+| slug نامعتبر خدمت | error-state + بازگشت به آرشیو |

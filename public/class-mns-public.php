@@ -30,23 +30,27 @@ class MNS_Public {
 	 * @return array<string,string>
 	 */
 	public function filter_document_title( array $parts ): array {
-		$panel = MNS_Pages::current_panel();
-		if ( '' === $panel ) {
-			$slug = get_page_template_slug();
-			if ( 'mns-patient.php' === $slug ) {
-				$panel = 'patient';
-			} elseif ( 'mns-nurse.php' === $slug ) {
-				$panel = 'nurse';
-			}
-		}
-		if ( '' === $panel ) {
+		$ctx = self::front_context();
+		if ( null === $ctx ) {
 			return $parts;
 		}
-		$page  = MNS_Pages::current_page( $panel );
-		$titles = MNS_UI::page_titles( $panel );
-		if ( isset( $titles[ $page ] ) ) {
-			$parts['title'] = $titles[ $page ];
-		} elseif ( 'not-found' === $page ) {
+
+		if ( 'catalog' === $ctx['panel'] ) {
+			if ( 'service' === $ctx['page'] && '' !== $ctx['service'] ) {
+				$svc = MNS_Static_Fixtures::catalog_service( $ctx['service'] );
+				$parts['title'] = ! empty( $svc['title'] )
+					? (string) $svc['title']
+					: __( 'خدمت پرستاری', 'medyar-nursing-services' );
+			} else {
+				$parts['title'] = __( 'خدمات پرستاری در منزل', 'medyar-nursing-services' );
+			}
+			return $parts;
+		}
+
+		$titles = MNS_UI::page_titles( $ctx['panel'] );
+		if ( isset( $titles[ $ctx['page'] ] ) ) {
+			$parts['title'] = $titles[ $ctx['page'] ];
+		} elseif ( 'not-found' === $ctx['page'] ) {
 			$parts['title'] = MNS_Copy::t( 'state.not_found_title' );
 		}
 		return $parts;
@@ -56,18 +60,46 @@ class MNS_Public {
 		if ( ! MNS_Dev::enabled() ) {
 			return;
 		}
-		$panel = MNS_Pages::current_panel();
+		$ctx = self::front_context();
+		if ( null === $ctx ) {
+			return;
+		}
+		MNS_Dev::render_switcher( $ctx['panel'], $ctx['page'] );
+	}
+
+	/**
+	 * @return array{panel:string,page:string,service:string}|null
+	 */
+	private static function front_context(): ?array {
+		$panel   = MNS_Pages::current_panel();
+		$page    = '';
+		$service = isset( $_GET['mns_service'] ) ? sanitize_key( wp_unslash( $_GET['mns_service'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$tpl     = get_page_template_slug();
+
 		if ( '' === $panel ) {
-			$slug = get_page_template_slug();
-			if ( 'mns-patient.php' === $slug ) {
+			if ( 'mns-patient.php' === $tpl ) {
 				$panel = 'patient';
-			} elseif ( 'mns-nurse.php' === $slug ) {
+			} elseif ( 'mns-nurse.php' === $tpl ) {
 				$panel = 'nurse';
-			} else {
-				return;
+			} elseif ( 'mns-catalog.php' === $tpl ) {
+				$panel = 'catalog';
 			}
 		}
-		$page = MNS_Pages::current_page( $panel );
-		MNS_Dev::render_switcher( $panel, $page );
+
+		if ( '' === $panel ) {
+			return null;
+		}
+
+		if ( 'catalog' === $panel ) {
+			$page = '' !== $service ? 'service' : 'archive';
+		} else {
+			$page = MNS_Pages::current_page( $panel );
+		}
+
+		return array(
+			'panel'   => $panel,
+			'page'    => $page,
+			'service' => $service,
+		);
 	}
 }

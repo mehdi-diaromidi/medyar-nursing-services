@@ -26,6 +26,34 @@ class MNS_Static_Fixtures {
 	}
 
 	/**
+	 * Single catalog service by slug.
+	 *
+	 * @return array<string,mixed>
+	 */
+	public static function catalog_service( string $slug ): array {
+		$all = self::get( 'catalog/services' );
+		$slug = sanitize_key( $slug );
+		if ( '' !== $slug && isset( $all[ $slug ] ) && is_array( $all[ $slug ] ) ) {
+			return $all[ $slug ];
+		}
+		return array();
+	}
+
+	/**
+	 * @return array<string,array<string,mixed>>
+	 */
+	public static function catalog_services(): array {
+		$all = self::get( 'catalog/services' );
+		$out = array();
+		foreach ( $all as $key => $row ) {
+			if ( is_array( $row ) ) {
+				$out[ (string) $key ] = $row;
+			}
+		}
+		return $out;
+	}
+
+	/**
 	 * @param string $key Fixture key.
 	 */
 	private static function file_for_key( string $key ): string {
