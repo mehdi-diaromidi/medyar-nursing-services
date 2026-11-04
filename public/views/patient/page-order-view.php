@@ -1,6 +1,6 @@
 <?php
 /**
- * Patient order detail — timeline + nurse + actions.
+ * Patient order detail (Phase 3) — status-driven from fixtures.
  *
  * @package medyar-nursing-services
  */
@@ -9,82 +9,185 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$d         = MNS_Static_Fixtures::get( 'patient/order_view' );
-$timeline  = isset( $d['timeline'] ) && is_array( $d['timeline'] ) ? $d['timeline'] : array();
-$nurse     = isset( $d['nurse'] ) && is_array( $d['nurse'] ) ? $d['nurse'] : array();
-$med       = isset( $d['medication'] ) && is_array( $d['medication'] ) ? $d['medication'] : array();
+MNS_UI::boot_icons();
+
+$pack    = MNS_Static_Fixtures::get( 'patient/order_view' );
+$by      = isset( $pack['by_status'] ) && is_array( $pack['by_status'] ) ? $pack['by_status'] : array();
+$default = (string) ( $pack['default_status'] ?? MNS_Order_Status::ASSIGNED );
+
+$status = $default;
+if ( MNS_Dev::enabled() ) {
+	$raw = MNS_Dev::state();
+	if ( MNS_Order_Status::is_valid( $raw ) && isset( $by[ $raw ] ) ) {
+		$status = $raw;
+	}
+}
+$d      = isset( $by[ $status ] ) && is_array( $by[ $status ] ) ? $by[ $status ] : ( $by[ $default ] ?? array() );
+$status = (string) ( $d['status'] ?? $status );
+
 $orders_url = MNS_Pages::panel_url( 'patient', 'orders' );
+$info       = MNS_Order_Status::get( $status );
+$nurse      = isset( $d['nurse'] ) && is_array( $d['nurse'] ) ? $d['nurse'] : null;
+$invoice    = isset( $d['invoice'] ) && is_array( $d['invoice'] ) ? $d['invoice'] : null;
+$pay_needed = MNS_Order_Status::INVOICED === $status && ! empty( $invoice );
+
+ob_start();
+MNS_UI::status_badge( $status );
+$badge = ob_get_clean();
+
+MNS_UI::page_header(
+	array(
+		'title'      => (string) ( $d['service'] ?? __( 'جزئیات سفارش', 'medyar-nursing-services' ) ),
+		'lead'       => MNS_Order_Status::sentence( $status, 'patient' ),
+		'back_url'   => $orders_url,
+		'back_label' => __( 'سفارش‌های من', 'medyar-nursing-services' ),
+		'badge_html' => $badge,
+	)
+);
 ?>
-<p class="mns-breadcrumb"><a href="<?php echo esc_url( $orders_url ); ?>"><?php echo esc_html__( 'سفارش‌های من', 'medyar-nursing-services' ); ?></a></p>
 
-<header class="mns-order-head">
-	<div>
-		<h1 class="mns-dash__title" style="margin-bottom:8px"><?php echo esc_html( (string) ( $d['service'] ?? __( 'جزئیات سفارش', 'medyar-nursing-services' ) ) ); ?></h1>
-		<p class="mns-dash__lead" style="margin:0" dir="ltr"><?php echo esc_html( (string) ( $d['tracking'] ?? '' ) ); ?></p>
-	</div>
-	<span class="mns-status mns-status--<?php echo esc_attr( (string) ( $d['tone'] ?? 'waiting' ) ); ?>"><?php echo esc_html( (string) ( $d['status_label'] ?? '' ) ); ?></span>
-</header>
+<p class="mns-tracking-row">
+	<span><?php echo esc_html( MNS_Copy::t( 'label.tracking_code' ) ); ?></span>
+	<strong dir="ltr"><?php echo esc_html( MNS_Format::digits( (string) ( $d['tracking'] ?? '' ) ) ); ?></strong>
+	<button type="button" class="mns-link-btn" data-mns-copy="<?php echo esc_attr( (string) ( $d['tracking'] ?? '' ) ); ?>">
+		<?php echo esc_html( MNS_Copy::t( 'action.copy' ) ); ?>
+	</button>
+</p>
 
-<section class="mns-card" aria-labelledby="mns-tl-title">
-	<h2 id="mns-tl-title" class="mns-card__title"><?php echo esc_html__( 'مسیر سفارش', 'medyar-nursing-services' ); ?></h2>
-	<ol class="mns-timeline">
-		<?php foreach ( $timeline as $item ) : ?>
-			<?php
-			$state = (string) ( $item['state'] ?? 'todo' );
-			$class = 'mns-timeline__item';
-			if ( 'done' === $state ) {
-				$class .= ' is-done';
-			} elseif ( 'current' === $state ) {
-				$class .= ' is-current';
-			}
-			?>
-			<li class="<?php echo esc_attr( $class ); ?>">
-				<span class="mns-timeline__dot" aria-hidden="true"></span>
-				<div>
-					<p class="mns-timeline__label"><?php echo esc_html( (string) ( $item['label'] ?? '' ) ); ?></p>
-					<p class="mns-timeline__at"><?php echo esc_html( (string) ( $item['at'] ?? '' ) ); ?></p>
-				</div>
-			</li>
-		<?php endforeach; ?>
-	</ol>
+<section class="mns-card">
+	<h2 class="mns-card__title"><?php echo esc_html__( 'مسیر سفارش', 'medyar-nursing-services' ); ?></h2>
+	<?php MNS_UI::order_timeline( $status, array( 'variant' => 'full', 'audience' => 'patient' ) ); ?>
 </section>
 
-<?php if ( ! empty( $nurse ) ) : ?>
-	<section class="mns-card mns-nurse-card" aria-labelledby="mns-nurse-title">
-		<h2 id="mns-nurse-title" class="mns-card__title"><?php echo esc_html__( 'پرستار تخصیص‌یافته', 'medyar-nursing-services' ); ?></h2>
-		<p class="mns-nurse-card__name"><?php echo esc_html( (string) ( $nurse['name'] ?? '' ) ); ?></p>
-		<p class="mns-nurse-card__meta"><?php echo esc_html( sprintf( /* translators: rating */ __( 'میانگین امتیاز %s', 'medyar-nursing-services' ), (string) ( $nurse['rating'] ?? '—' ) ) ); ?> · <?php echo esc_html( (string) ( $d['nurse_gender'] ?? '' ) ); ?></p>
-		<?php if ( ! empty( $nurse['phone'] ) ) : ?>
-			<a class="mns-btn-outline" href="<?php echo esc_url( 'tel:' . preg_replace( '/\D+/', '', (string) $nurse['phone'] ) ); ?>"><?php echo esc_html__( 'تماس', 'medyar-nursing-services' ); ?></a>
-		<?php endif; ?>
+<?php if ( $nurse ) : ?>
+	<section class="mns-card">
+		<h2 class="mns-card__title"><?php echo esc_html__( 'پرستار تخصیص‌یافته', 'medyar-nursing-services' ); ?></h2>
+		<?php MNS_UI::nurse_card( array( 'nurse' => $nurse, 'show_call' => true ) ); ?>
+		<p class="mns-field-hint"><?php echo esc_html__( 'برای هماهنگی فوری با پشتیبانی مدیار تماس بگیرید.', 'medyar-nursing-services' ); ?> <?php echo esc_html__( 'TODO(client-decision): نمایش مستقیم شماره پرستار.', 'medyar-nursing-services' ); ?></p>
 	</section>
 <?php endif; ?>
 
 <section class="mns-card">
-	<h2 class="mns-card__title"><?php echo esc_html__( 'خلاصه مراجعه', 'medyar-nursing-services' ); ?></h2>
+	<h2 class="mns-card__title"><?php echo esc_html__( 'اطلاعات مراجعه', 'medyar-nursing-services' ); ?></h2>
 	<ul class="mns-kv">
 		<li><span><?php echo esc_html__( 'بیمار', 'medyar-nursing-services' ); ?></span><strong><?php echo esc_html( (string) ( $d['patient'] ?? '' ) ); ?></strong></li>
-		<li><span><?php echo esc_html__( 'زمان', 'medyar-nursing-services' ); ?></span><strong><?php echo esc_html( (string) ( $d['scheduled'] ?? '' ) ); ?></strong></li>
+		<li><span><?php echo esc_html__( 'زمان', 'medyar-nursing-services' ); ?></span><strong><?php echo esc_html( MNS_Format::human( (string) ( $d['when'] ?? '' ) ) ); ?></strong></li>
 		<li><span><?php echo esc_html__( 'آدرس', 'medyar-nursing-services' ); ?></span><strong><?php echo esc_html( (string) ( $d['address'] ?? '' ) ); ?></strong></li>
+		<?php if ( ! empty( $d['phone'] ) ) : ?>
+			<li><span><?php echo esc_html__( 'تماس', 'medyar-nursing-services' ); ?></span><strong dir="ltr"><?php echo esc_html( MNS_Format::mobile( (string) $d['phone'] ) ); ?></strong></li>
+		<?php endif; ?>
 	</ul>
+	<?php if ( ! empty( $d['essentials'] ) && is_array( $d['essentials'] ) ) : ?>
+		<h3 class="mns-card__subtitle"><?php echo esc_html__( 'اطلاعات ضروری', 'medyar-nursing-services' ); ?></h3>
+		<ul class="mns-service-list">
+			<?php foreach ( $d['essentials'] as $line ) : ?>
+				<li><?php echo esc_html( (string) $line ); ?></li>
+			<?php endforeach; ?>
+		</ul>
+	<?php endif; ?>
 </section>
 
-<?php if ( ! empty( $med['enabled'] ) ) : ?>
-	<section class="mns-card mns-med-lane" aria-labelledby="mns-med-title">
-		<h2 id="mns-med-title" class="mns-card__title"><?php echo esc_html__( 'خط دارو', 'medyar-nursing-services' ); ?></h2>
-		<p><span class="mns-status mns-status--progress"><?php echo esc_html( (string) ( $med['status'] ?? '' ) ); ?></span></p>
-		<p class="mns-field-hint"><?php echo esc_html( (string) ( $med['hint'] ?? '' ) ); ?></p>
+<?php if ( ! empty( $d['medication']['enabled'] ) ) : ?>
+	<section class="mns-card">
+		<h2 class="mns-card__title"><?php echo esc_html__( 'مرحلهٔ دارو', 'medyar-nursing-services' ); ?></h2>
+		<?php
+		MNS_UI::alert(
+			array(
+				'tone' => 'info',
+				'text' => (string) ( $d['medication']['hint'] ?? '' ),
+			)
+		);
+		?>
 	</section>
 <?php endif; ?>
 
+<?php if ( ! empty( $d['report'] ) ) : ?>
+	<section class="mns-card">
+		<h2 class="mns-card__title"><?php echo esc_html__( 'نتیجهٔ مراجعه', 'medyar-nursing-services' ); ?></h2>
+		<p class="mns-catalog__muted"><?php echo esc_html( (string) $d['report'] ); ?></p>
+	</section>
+<?php endif; ?>
+
+<?php if ( $invoice ) : ?>
+	<section class="mns-card">
+		<h2 class="mns-card__title"><?php echo esc_html__( 'فاکتور', 'medyar-nursing-services' ); ?></h2>
+		<?php
+		MNS_UI::price_summary(
+			array(
+				'base'  => $invoice['base'] ?? 0,
+				'lines' => $invoice['lines'] ?? array(),
+				'total' => $invoice['total'] ?? 0,
+				'note'  => MNS_Copy::t( 'price.travel' ),
+			)
+		);
+		?>
+	</section>
+<?php endif; ?>
+
+<?php if ( MNS_Order_Status::NEEDS_REVIEW === $status ) : ?>
+	<?php
+	MNS_UI::alert(
+		array(
+			'tone'  => 'warning',
+			'title' => __( 'در حال بررسی', 'medyar-nursing-services' ),
+			'text'  => MNS_Order_Status::sentence( $status, 'patient' ),
+		)
+	);
+	?>
+<?php endif; ?>
+
 <div class="mns-order-actions">
-	<?php if ( ! empty( $d['invoice_url'] ) ) : ?>
-		<a class="mns-btn-outline" href="<?php echo esc_url( (string) $d['invoice_url'] ); ?>"><?php echo esc_html__( 'مشاهده فاکتور', 'medyar-nursing-services' ); ?></a>
+	<?php if ( ! empty( $d['can_survey'] ) && ! empty( $d['survey_url'] ) ) : ?>
+		<a class="mns-submit-btn mns-submit-btn--auto" href="<?php echo esc_url( (string) $d['survey_url'] ); ?>"><?php echo esc_html__( 'ثبت نظر', 'medyar-nursing-services' ); ?></a>
 	<?php endif; ?>
 	<?php if ( ! empty( $d['can_repick'] ) && ! empty( $d['reorder_url'] ) ) : ?>
-		<a class="mns-btn-outline" href="<?php echo esc_url( (string) $d['reorder_url'] ); ?>"><?php echo esc_html__( 'همان پرستار', 'medyar-nursing-services' ); ?></a>
+		<a class="mns-outline-btn" href="<?php echo esc_url( (string) $d['reorder_url'] ); ?>"><?php echo esc_html__( 'همان پرستار قبلی', 'medyar-nursing-services' ); ?></a>
 	<?php endif; ?>
 	<?php if ( ! empty( $d['reorder_url'] ) ) : ?>
-		<a class="mns-submit-btn" style="width:auto;min-height:44px;padding:10px 20px" href="<?php echo esc_url( (string) $d['reorder_url'] ); ?>"><?php echo esc_html__( 'درخواست مجدد', 'medyar-nursing-services' ); ?></a>
+		<a class="mns-outline-btn" href="<?php echo esc_url( (string) $d['reorder_url'] ); ?>"><?php echo esc_html__( 'درخواست مجدد', 'medyar-nursing-services' ); ?></a>
+	<?php endif; ?>
+	<?php if ( ! empty( $d['can_cancel'] ) ) : ?>
+		<button type="button" class="mns-link-btn" data-mns-dialog-open="mns-cancel-order"><?php echo esc_html__( 'لغو سفارش', 'medyar-nursing-services' ); ?></button>
+	<?php endif; ?>
+	<?php if ( MNS_Order_Status::NEEDS_REVIEW === $status || MNS_Order_Status::CANCELLED === $status ) : ?>
+		<?php MNS_UI::support_call( array( 'variant' => 'outline' ) ); ?>
 	<?php endif; ?>
 </div>
+
+<?php if ( $pay_needed ) : ?>
+	<?php
+	MNS_UI::sticky_action(
+		array(
+			'primary_label' => sprintf(
+				/* translators: %s: amount */
+				__( 'پرداخت %s', 'medyar-nursing-services' ),
+				MNS_Format::toman( $invoice['total'] ?? 0 )
+			),
+			'as_link'       => true,
+			'primary_url'   => (string) ( $d['invoice_url'] ?? MNS_Pages::panel_url( 'patient', 'invoices' ) ),
+			'hint'          => __( 'مهلت پرداخت همین حالا است.', 'medyar-nursing-services' ),
+		)
+	);
+	?>
+<?php endif; ?>
+
+<?php
+if ( ! empty( $d['can_cancel'] ) ) {
+	ob_start();
+	echo '<p>' . esc_html__( 'با لغو، درخواست از صف تخصیص خارج می‌شود. TODO(client-decision): قاعدهٔ دقیق لغو.', 'medyar-nursing-services' ) . '</p>';
+	$body = ob_get_clean();
+	ob_start();
+	echo '<button type="button" class="mns-outline-btn" data-mns-dialog-close>' . esc_html( MNS_Copy::t( 'action.cancel' ) ) . '</button>';
+	echo '<button type="button" class="mns-submit-btn mns-submit-btn--auto" data-mns-mock-action data-mns-success="' . esc_attr__( 'درخواست لغو ثبت شد.', 'medyar-nursing-services' ) . '" data-mns-dialog-close>' . esc_html__( 'بله، لغو شود', 'medyar-nursing-services' ) . '</button>';
+	$footer = ob_get_clean();
+	MNS_UI::partial(
+		'dialog',
+		array(
+			'id'          => 'mns-cancel-order',
+			'title'       => __( 'لغو سفارش؟', 'medyar-nursing-services' ),
+			'body_html'   => $body,
+			'footer_html' => $footer,
+			'variant'     => 'sheet',
+		)
+	);
+}

@@ -1,6 +1,7 @@
 <?php
 /**
- * Patient order detail fixture.
+ * Patient order detail fixtures keyed by status (Phase 3).
+ * Default = assigned. Override with ?mns_state=<status> or ?mns_order=.
  *
  * @package medyar-nursing-services
  */
@@ -9,48 +10,124 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$invoice = add_query_arg(
-	array(
-		'mns_panel' => 'patient',
-		'mns_page'  => 'invoices',
+$invoice = MNS_Pages::panel_url( 'patient', 'invoices' );
+$reorder = MNS_Pages::panel_url( 'patient', 'new-order' );
+$survey  = MNS_Pages::panel_url( 'patient', 'surveys' );
+
+$base = array(
+	'tracking'   => 'MNS-1403-1001',
+	'service'    => 'سرم‌تراپی',
+	'patient'    => 'حسن محمدی',
+	'phone'      => '09121234567',
+	'address'    => 'تهران، ونک، خیابان فلان، پلاک ۱۰',
+	'when'       => '2026-11-05 10:00',
+	'nurse'      => array(
+		'name'       => 'علی رضایی',
+		'specialty'  => 'پرستار ارشد',
+		'rating'     => 4.8,
+		'reviews'    => 126,
+		'meta'       => 'تأییدشدهٔ مدیار',
 	),
-	get_permalink()
+	'essentials' => array(
+		'نوع سرم: نرمال سالین',
+		'حساسیت: ندارد',
+	),
+	'report'     => '',
+	'invoice'    => null,
+	'can_cancel' => true,
+	'can_repick' => true,
+	'reorder_url'=> $reorder,
+	'survey_url' => $survey,
+	'invoice_url'=> $invoice,
 );
-$reorder = add_query_arg(
-	array(
-		'mns_panel' => 'patient',
-		'mns_page'  => 'new-order',
+
+$by_status = array(
+	'submitted'     => array_merge(
+		$base,
+		array(
+			'status' => 'submitted',
+			'nurse'  => null,
+			'can_repick' => false,
+		)
 	),
-	get_permalink()
+	'assigned'      => array_merge( $base, array( 'status' => 'assigned' ) ),
+	'in_progress'   => array_merge( $base, array( 'status' => 'in_progress', 'can_cancel' => false ) ),
+	'medication'    => array_merge(
+		$base,
+		array(
+			'status'     => 'medication',
+			'can_cancel' => false,
+			'medication' => array(
+				'enabled' => true,
+				'hint'    => 'دارو در حال بررسی است؛ نتیجه در فاکتور اعمال می‌شود.',
+			),
+		)
+	),
+	'service_ended' => array_merge(
+		$base,
+		array(
+			'status'     => 'service_ended',
+			'can_cancel' => false,
+			'report'     => 'سرم به‌طور کامل تزریق شد. علائم پایدار بود.',
+		)
+	),
+	'invoiced'      => array_merge(
+		$base,
+		array(
+			'status'     => 'invoiced',
+			'can_cancel' => false,
+			'report'     => 'سرم به‌طور کامل تزریق شد. علائم پایدار بود.',
+			'invoice'    => array(
+				'base'  => 850000,
+				'total' => 920000,
+				'lines' => array(
+					array( 'label' => 'اقلام مصرفی', 'amount' => 70000 ),
+				),
+			),
+		)
+	),
+	'paid'          => array_merge(
+		$base,
+		array(
+			'status'     => 'paid',
+			'can_cancel' => false,
+			'report'     => 'سرم به‌طور کامل تزریق شد.',
+			'invoice'    => array(
+				'base'  => 850000,
+				'total' => 920000,
+				'paid'  => true,
+			),
+		)
+	),
+	'completed'     => array_merge(
+		$base,
+		array(
+			'status'     => 'completed',
+			'can_cancel' => false,
+			'report'     => 'سرم به‌طور کامل تزریق شد.',
+			'can_survey' => true,
+		)
+	),
+	'cancelled'     => array_merge(
+		$base,
+		array(
+			'status'     => 'cancelled',
+			'nurse'      => null,
+			'can_cancel' => false,
+			'can_repick' => false,
+		)
+	),
+	'needs_review'  => array_merge(
+		$base,
+		array(
+			'status'     => 'needs_review',
+			'can_cancel' => false,
+			'can_repick' => false,
+		)
+	),
 );
 
 return array(
-	'tracking'     => 'MNS-1403-1001',
-	'service'      => 'سرم‌تراپی',
-	'status_label' => 'تخصیص‌یافته',
-	'tone'         => 'progress',
-	'patient'      => 'حسن محمدی',
-	'address'      => 'تهران، ونک، خیابان فلان، پلاک ۱۰',
-	'scheduled'    => '۱۴۰۳/۰۸/۱۲ · ۱۰:۰۰',
-	'nurse_gender' => 'آقا',
-	'nurse'        => array(
-		'name'   => 'علی رضایی',
-		'rating' => '۴٫۸',
-		'phone'  => '09129876543',
-	),
-	'timeline'     => array(
-		array( 'label' => 'ثبت سفارش', 'at' => '۱۴۰۳/۰۸/۱۱ · ۲۱:۱۰', 'state' => 'done' ),
-		array( 'label' => 'تخصیص پرستار', 'at' => '۱۴۰۳/۰۸/۱۱ · ۲۱:۴۰', 'state' => 'done' ),
-		array( 'label' => 'در انتظار مراجعه', 'at' => '۱۴۰۳/۰۸/۱۲ · ۱۰:۰۰', 'state' => 'current' ),
-		array( 'label' => 'انجام خدمت و گزارش', 'at' => '—', 'state' => 'todo' ),
-		array( 'label' => 'فاکتور و پرداخت', 'at' => '—', 'state' => 'todo' ),
-	),
-	'medication'   => array(
-		'enabled' => true,
-		'status'  => 'در انتظار بررسی مشاور',
-		'hint'    => 'دارو فقط پس از تأیید پزشک مشاور به فاکتور اضافه می‌شود.',
-	),
-	'invoice_url'  => is_string( $invoice ) ? $invoice : '',
-	'reorder_url'  => is_string( $reorder ) ? $reorder : '',
-	'can_repick'   => true,
+	'default_status' => 'assigned',
+	'by_status'      => $by_status,
 );

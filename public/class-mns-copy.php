@@ -6,6 +6,7 @@
  * Page-specific copy is added under its own group when each page is redesigned.
  *
  * @package medyar-nursing-services
+ * @since 0.1.6 nav.invoices / nav.more confirmed
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -43,13 +44,15 @@ class MNS_Copy {
 				'show_details'  => __( 'جزئیات', 'medyar-nursing-services' ),
 			),
 			'nav'     => array(
-				'label'   => __( 'ناوبری سریع', 'medyar-nursing-services' ),
-				'home'    => __( 'خانه', 'medyar-nursing-services' ),
-				'orders'  => __( 'سفارش‌ها', 'medyar-nursing-services' ),
-				'new'     => __( 'سفارش جدید', 'medyar-nursing-services' ),
-				'profile' => __( 'پروفایل', 'medyar-nursing-services' ),
-				'schedule'=> __( 'برنامه', 'medyar-nursing-services' ),
-				'wallet'  => __( 'کیف پول', 'medyar-nursing-services' ),
+				'label'    => __( 'ناوبری سریع', 'medyar-nursing-services' ),
+				'home'     => __( 'خانه', 'medyar-nursing-services' ),
+				'orders'   => __( 'سفارش‌ها', 'medyar-nursing-services' ),
+				'new'      => __( 'سفارش جدید', 'medyar-nursing-services' ),
+				'invoices' => __( 'فاکتورها', 'medyar-nursing-services' ),
+				'more'     => __( 'بیشتر', 'medyar-nursing-services' ),
+				'profile'  => __( 'پروفایل', 'medyar-nursing-services' ),
+				'schedule' => __( 'برنامه', 'medyar-nursing-services' ),
+				'wallet'   => __( 'کیف پول', 'medyar-nursing-services' ),
 			),
 			'label'   => array(
 				'required'      => __( 'الزامی', 'medyar-nursing-services' ),

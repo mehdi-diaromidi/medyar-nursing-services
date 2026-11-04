@@ -204,9 +204,15 @@ class MNS_UI {
 				'primary' => true,
 			),
 			array(
+				'key'   => 'invoices',
+				'label' => __( 'فاکتورها', 'medyar-nursing-services' ),
+				'icon'  => 'invoice',
+				'url'   => MNS_Pages::panel_url( 'patient', 'invoices' ),
+			),
+			array(
 				'key'   => 'patients',
-				'label' => MNS_Copy::t( 'nav.profile' ),
-				'icon'  => 'user',
+				'label' => __( 'بیشتر', 'medyar-nursing-services' ),
+				'icon'  => 'more',
 				'url'   => MNS_Pages::panel_url( 'patient', 'patients' ),
 			),
 		);

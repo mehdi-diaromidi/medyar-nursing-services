@@ -36,7 +36,15 @@ if ( ! is_array( $nav ) || empty( $nav ) ) {
 	);
 }
 
-$show_bottom = ! in_array( $page, array( 'new-order', 'order-view', 'ui-kit' ), true );
+$show_bottom = ! in_array( $page, array( 'new-order', 'ui-kit' ), true );
+$more_pages  = array( 'patients', 'recurring', 'loyalty', 'surveys' );
+if ( 'order-view' === $page ) {
+	$nav_active = 'orders';
+} elseif ( in_array( $page, $more_pages, true ) ) {
+	$nav_active = 'patients';
+} else {
+	$nav_active = $page;
+}
 ?>
 <div class="mns-dash<?php echo $show_bottom ? ' mns-dash--has-bottom' : ''; ?>" dir="rtl" data-mns-panel="patient" data-mns-page="<?php echo esc_attr( $page ); ?>">
 	<aside class="mns-dash__sidebar" data-mns-sidebar>
@@ -97,7 +105,7 @@ $show_bottom = ! in_array( $page, array( 'new-order', 'order-view', 'ui-kit' ), 
 		?>
 	</main>
 	<?php if ( $show_bottom ) : ?>
-		<?php MNS_UI::bottom_nav( 'patient', $page ); ?>
+		<?php MNS_UI::bottom_nav( 'patient', $nav_active ); ?>
 	<?php endif; ?>
 </div>
 <button type="button" class="mns-dash__sidebar-mobile-expand" data-mns-sidebar-expand aria-expanded="false" aria-label="<?php echo esc_attr( MNS_Copy::t( 'action.open_menu' ) ); ?>" hidden></button>

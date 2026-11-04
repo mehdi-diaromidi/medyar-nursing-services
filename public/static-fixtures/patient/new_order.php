@@ -29,18 +29,19 @@ return array(
 	),
 	'categories'    => array(
 		array( 'id' => 'serum', 'name' => 'سرم‌تراپی' ),
-		array( 'id' => 'inject', 'name' => 'تزریقات' ),
-		array( 'id' => 'dress', 'name' => 'پانسمان' ),
-		array( 'id' => 'cath', 'name' => 'سوندگذاری' ),
+		array( 'id' => 'injection', 'name' => 'تزریقات' ),
+		array( 'id' => 'dressing', 'name' => 'پانسمان' ),
+		array( 'id' => 'catheter', 'name' => 'سوندگذاری' ),
 		array( 'id' => 'care', 'name' => 'مراقبت' ),
 		array( 'id' => 'other', 'name' => 'سایر' ),
 	),
 	'services'      => array(
 		array( 'id' => '1', 'category' => 'serum', 'name' => 'سرم‌تراپی' ),
-		array( 'id' => '2', 'category' => 'inject', 'name' => 'تزریقات' ),
-		array( 'id' => '3', 'category' => 'dress', 'name' => 'پانسمان' ),
-		array( 'id' => '4', 'category' => 'cath', 'name' => 'سوندگذاری' ),
+		array( 'id' => '2', 'category' => 'injection', 'name' => 'تزریقات' ),
+		array( 'id' => '3', 'category' => 'dressing', 'name' => 'پانسمان' ),
+		array( 'id' => '4', 'category' => 'catheter', 'name' => 'سوندگذاری' ),
 		array( 'id' => '5', 'category' => 'care', 'name' => 'مراقبت کوتاه‌مدت' ),
+		array( 'id' => '6', 'category' => 'other', 'name' => 'سایر خدمات' ),
 	),
 	'cities'        => array(
 		array(

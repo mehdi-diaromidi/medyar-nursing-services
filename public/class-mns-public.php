@@ -23,6 +23,46 @@ class MNS_Public {
 		MNS_Page_Templates::instance()->init();
 		add_filter( 'document_title_parts', array( $this, 'filter_document_title' ) );
 		add_action( 'wp_footer', array( $this, 'render_dev_tools' ), 40 );
+		add_filter( 'mns_dev_states', array( $this, 'filter_dev_states' ), 10, 3 );
+	}
+
+	/**
+	 * @param array<string,string> $states States.
+	 * @return array<string,string>
+	 */
+	public function filter_dev_states( array $states, string $panel, string $page ): array {
+		if ( 'patient' === $panel && 'dashboard' === $page ) {
+			return array_merge(
+				$states,
+				array(
+					'unpaid'   => __( 'فاکتور پرداخت‌نشده', 'medyar-nursing-services' ),
+					'active'   => __( 'سفارش فعال', 'medyar-nursing-services' ),
+					'survey'   => __( 'پرسشنامه باز', 'medyar-nursing-services' ),
+					'new_user' => __( 'کاربر جدید', 'medyar-nursing-services' ),
+				)
+			);
+		}
+		if ( 'patient' === $panel && 'order-view' === $page ) {
+			$out = array(
+				'default' => __( 'عادی (تخصیص‌یافته)', 'medyar-nursing-services' ),
+				'loading' => $states['loading'] ?? __( 'در حال بارگذاری', 'medyar-nursing-services' ),
+				'error'   => $states['error'] ?? __( 'خطا', 'medyar-nursing-services' ),
+			);
+			foreach ( MNS_Order_Status::all() as $slug => $row ) {
+				$out[ $slug ] = (string) ( $row['label'] ?? $slug );
+			}
+			return $out;
+		}
+		if ( 'patient' === $panel && 'new-order' === $page ) {
+			return array_merge(
+				$states,
+				array(
+					'success'  => __( 'ثبت موفق', 'medyar-nursing-services' ),
+					'no_nurse' => __( 'پرستار موجود نیست', 'medyar-nursing-services' ),
+				)
+			);
+		}
+		return $states;
 	}
 
 	/**

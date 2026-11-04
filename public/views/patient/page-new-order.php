@@ -16,6 +16,7 @@ $services   = isset( $data['services'] ) && is_array( $data['services'] ) ? $dat
 $cities     = isset( $data['cities'] ) && is_array( $data['cities'] ) ? $data['cities'] : array();
 $times      = isset( $data['times'] ) && is_array( $data['times'] ) ? $data['times'] : array();
 $phone      = isset( $data['default_phone'] ) ? (string) $data['default_phone'] : '';
+$preselect  = isset( $_GET['mns_service'] ) ? sanitize_key( wp_unslash( $_GET['mns_service'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 
 $services_json = wp_json_encode( $services );
 $cities_json   = wp_json_encode( $cities );
@@ -25,9 +26,73 @@ if ( ! is_string( $services_json ) ) {
 if ( ! is_string( $cities_json ) ) {
 	$cities_json = '[]';
 }
+
+if ( MNS_Dev::is( 'success' ) ) {
+	$track = 'MNS-1403-1102';
+	MNS_UI::page_header(
+		array(
+			'title' => __( 'درخواست ثبت شد', 'medyar-nursing-services' ),
+			'lead'  => __( 'به‌زودی پرستار تخصیص می‌یابد و پیامک اطلاع‌رسانی می‌آید.', 'medyar-nursing-services' ),
+		)
+	);
+	?>
+	<section class="mns-card mns-result-card">
+		<span class="mns-result-card__icon" aria-hidden="true"><?php echo mns_icon( 'check-circle' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
+		<p class="mns-result-card__code">
+			<?php echo esc_html( MNS_Copy::t( 'label.tracking_code' ) ); ?>
+			<strong dir="ltr"><?php echo esc_html( MNS_Format::digits( $track ) ); ?></strong>
+			<button type="button" class="mns-link-btn" data-mns-copy="<?php echo esc_attr( $track ); ?>"><?php echo esc_html( MNS_Copy::t( 'action.copy' ) ); ?></button>
+		</p>
+		<ol class="mns-how__steps">
+			<li><span class="mns-how__num">۱</span><span><?php echo esc_html__( 'تخصیص پرستار', 'medyar-nursing-services' ); ?></span></li>
+			<li><span class="mns-how__num">۲</span><span><?php echo esc_html__( 'پیامک زمان مراجعه', 'medyar-nursing-services' ); ?></span></li>
+			<li><span class="mns-how__num">۳</span><span><?php echo esc_html__( 'انجام خدمت و فاکتور', 'medyar-nursing-services' ); ?></span></li>
+		</ol>
+		<div class="mns-actions-row">
+			<a class="mns-submit-btn mns-submit-btn--auto" href="<?php echo esc_url( MNS_Pages::panel_url( 'patient', 'order-view' ) ); ?>"><?php echo esc_html__( 'مشاهده وضعیت', 'medyar-nursing-services' ); ?></a>
+			<a class="mns-outline-btn" href="<?php echo esc_url( MNS_Pages::panel_url( 'patient', 'dashboard' ) ); ?>"><?php echo esc_html( MNS_Copy::t( 'action.go_dashboard' ) ); ?></a>
+		</div>
+	</section>
+	<?php
+	return;
+}
+
+if ( MNS_Dev::is( 'no_nurse' ) ) {
+	MNS_UI::page_header(
+		array(
+			'title' => __( 'پرستار آزاد نداریم', 'medyar-nursing-services' ),
+			'lead'  => __( 'برای این زمان و منطقه فعلاً پرستار آزاد نیست.', 'medyar-nursing-services' ),
+		)
+	);
+	?>
+	<section class="mns-card">
+		<?php
+		MNS_UI::alert(
+			array(
+				'tone' => 'warning',
+				'text' => __( 'زمان دیگری انتخاب کنید یا با پشتیبانی تماس بگیرید. صف انتظار نداریم.', 'medyar-nursing-services' ),
+			)
+		);
+		?>
+		<div class="mns-actions-row">
+			<a class="mns-submit-btn mns-submit-btn--auto" href="<?php echo esc_url( remove_query_arg( 'mns_state' ) ); ?>"><?php echo esc_html__( 'تغییر زمان', 'medyar-nursing-services' ); ?></a>
+			<?php MNS_UI::support_call( array( 'variant' => 'outline' ) ); ?>
+		</div>
+	</section>
+	<?php
+	return;
+}
+
+MNS_UI::boot_icons();
 ?>
-<h1 class="mns-dash__title"><?php echo esc_html__( 'ثبت سفارش', 'medyar-nursing-services' ); ?></h1>
-<p class="mns-dash__lead"><?php echo esc_html__( 'مسیر مراقبت را گام‌به‌گام کامل کنید. مبلغ نهایی طبق تعرفه سیستم محاسبه می‌شود.', 'medyar-nursing-services' ); ?></p>
+<?php
+MNS_UI::page_header(
+	array(
+		'title' => __( 'ثبت سفارش', 'medyar-nursing-services' ),
+		'lead'  => __( 'مسیر مراقبت را گام‌به‌گام کامل کنید. مبلغ نهایی طبق تعرفه سیستم محاسبه می‌شود.', 'medyar-nursing-services' ),
+	)
+);
+?>
 
 <nav class="mns-stepper" data-mns-stepper aria-label="<?php echo esc_attr__( 'مراحل ثبت سفارش', 'medyar-nursing-services' ); ?>">
 	<button type="button" class="mns-stepper__item is-current" data-mns-step-goto="1" aria-current="step">
@@ -56,6 +121,7 @@ if ( ! is_string( $cities_json ) ) {
 		data-mns-order-form
 		data-mns-services="<?php echo esc_attr( $services_json ); ?>"
 		data-mns-cities="<?php echo esc_attr( $cities_json ); ?>"
+		data-mns-preselect="<?php echo esc_attr( $preselect ); ?>"
 		data-mns-success="<?php echo esc_attr__( 'درخواست ثبت شد. کد پیگیری: MNS-1403-1102', 'medyar-nursing-services' ); ?>"
 	>
 		<div class="mns-form-notice mns-notice" data-mns-notice hidden tabindex="-1"></div>
@@ -220,9 +286,9 @@ if ( ! is_string( $cities_json ) ) {
 
 			<p class="mns-field-block__label" style="margin-bottom:8px"><?php echo esc_html__( 'جنسیت پرستار', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></p>
 			<div class="mns-chip-row" role="radiogroup" aria-label="<?php echo esc_attr__( 'جنسیت پرستار', 'medyar-nursing-services' ); ?>" data-mns-gender-chips>
-				<button type="button" class="mns-chip" role="radio" aria-checked="false" data-value="female"><?php echo esc_html__( 'زن', 'medyar-nursing-services' ); ?></button>
-				<button type="button" class="mns-chip" role="radio" aria-checked="false" data-value="male"><?php echo esc_html__( 'مرد', 'medyar-nursing-services' ); ?></button>
-				<button type="button" class="mns-chip" role="radio" aria-checked="false" data-value="any"><?php echo esc_html__( 'فرقی نمی‌کند', 'medyar-nursing-services' ); ?></button>
+				<button type="button" class="mns-chip" role="radio" aria-checked="false" data-value="any"><?php echo esc_html__( 'فرقی ندارد', 'medyar-nursing-services' ); ?></button>
+				<button type="button" class="mns-chip" role="radio" aria-checked="false" data-value="female"><?php echo esc_html__( 'خانم', 'medyar-nursing-services' ); ?></button>
+				<button type="button" class="mns-chip" role="radio" aria-checked="false" data-value="male"><?php echo esc_html__( 'آقا', 'medyar-nursing-services' ); ?></button>
 			</div>
 			<p class="mns-field-hint"><?php echo esc_html__( 'این انتخاب در تخصیص پرستار لحاظ می‌شود.', 'medyar-nursing-services' ); ?></p>
 

@@ -486,7 +486,7 @@
 			var cityLabel = citySelect && citySelect.options[citySelect.selectedIndex] ? citySelect.options[citySelect.selectedIndex].text : '—';
 			var areaLabel = areaSelect && areaSelect.options[areaSelect.selectedIndex] ? areaSelect.options[areaSelect.selectedIndex].text : '—';
 			var serviceLabel = serviceSelect && serviceSelect.options[serviceSelect.selectedIndex] ? serviceSelect.options[serviceSelect.selectedIndex].text : '—';
-			var genderMap = { female: 'زن', male: 'مرد', any: 'فرقی نمی‌کند' };
+			var genderMap = { female: 'خانم', male: 'آقا', any: 'فرقی ندارد' };
 			var genderLabel = genderMap[genderInput.value] || '—';
 			var urgent = urgentInput && urgentInput.value === '1';
 			var when = urgent
@@ -628,6 +628,15 @@
 		});
 
 		goStep(1);
+
+		var preselect = form.getAttribute('data-mns-preselect') || '';
+		if (preselect) {
+			var chip = qs('[data-mns-category-chips] [data-value="' + preselect + '"]', form);
+			if (chip) {
+				setChipGroup('[data-mns-category-chips]', preselect, categoryInput);
+				fillServices();
+			}
+		}
 	}
 
 	function initMockActions() {
