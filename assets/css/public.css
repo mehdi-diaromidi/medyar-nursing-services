@@ -3157,3 +3157,52 @@ html.mns-drawer-open body {
 	padding: 4px;
 }
 .mns-stars[data-mns-stars] button.is-on { color: #f59e0b; }
+
+/* —— Phase 5: nurse panel —— */
+.mns-nurse-hero {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--mns-space-4);
+	padding: var(--mns-space-5);
+	margin-bottom: var(--mns-space-5);
+	border-radius: var(--mns-radius);
+	border: 1px solid var(--mns-border);
+	background: linear-gradient(135deg, #e8f4fb 0%, #f7fbfe 100%);
+}
+.mns-nurse-hero__text { flex: 1; min-width: 140px; }
+.mns-nurse-hero__accept {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex: 1 1 220px;
+	justify-content: space-between;
+	padding: 12px 14px;
+	border-radius: 14px;
+	background: #fff;
+	border: 1px solid var(--mns-border);
+}
+.mns-nurse-hero__accept-label {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+.mns-nurse-hero__accept-label small {
+	font-size: 0.75rem;
+	color: var(--mns-muted-strong);
+}
+.mns-accept-card {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	flex-wrap: wrap;
+	margin-bottom: var(--mns-space-5);
+}
+.mns-order-actions--nurse {
+	position: sticky;
+	top: 0;
+	z-index: 5;
+	padding: 10px 0;
+	background: linear-gradient(180deg, #fffcf9 70%, transparent);
+}

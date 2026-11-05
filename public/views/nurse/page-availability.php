@@ -8,13 +8,19 @@ $areas = isset( $data['areas'] ) ? (string) $data['areas'] : '';
 $services = isset( $data['services'] ) ? (string) $data['services'] : '';
 $accepting = ! empty( $data['accepting'] );
 ?>
-<h1 class="mns-dash__title"><?php echo esc_html__( 'برنامه و دسترسی', 'medyar-nursing-services' ); ?></h1>
-<p class="mns-dash__lead"><?php echo esc_html__( 'برنامه هفتگی ثابت، لغو روزهای خاص و پذیرش درخواست.', 'medyar-nursing-services' ); ?></p>
+<?php
+MNS_UI::page_header(
+	array(
+		'title' => __( 'برنامه و دسترسی', 'medyar-nursing-services' ),
+		'lead'  => __( 'برنامه هفتگی ثابت، لغو روزهای خاص و پذیرش درخواست.', 'medyar-nursing-services' ),
+	)
+);
+?>
 
-<div class="mns-card" style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+<div class="mns-card mns-accept-card">
 	<div>
 		<strong><?php echo esc_html__( 'پذیرش درخواست', 'medyar-nursing-services' ); ?></strong>
-		<p style="margin:4px 0 0;color:var(--mns-muted-strong);font-size:0.875rem"><?php echo esc_html__( 'اگر خاموش باشد در تخصیص خودکار پیشنهاد نمی‌شوید.', 'medyar-nursing-services' ); ?></p>
+		<p class="mns-field-hint" style="margin:4px 0 0"><?php echo esc_html__( 'اگر خاموش باشد در تخصیص خودکار پیشنهاد نمی‌شوید.', 'medyar-nursing-services' ); ?></p>
 	</div>
 	<button type="button" class="mns-switch<?php echo $accepting ? ' is-on' : ''; ?>" data-mns-switch aria-pressed="<?php echo $accepting ? 'true' : 'false'; ?>" aria-label="<?php echo esc_attr__( 'پذیرش درخواست', 'medyar-nursing-services' ); ?>"></button>
 </div>

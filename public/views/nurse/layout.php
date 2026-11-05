@@ -34,6 +34,7 @@ if ( empty( $nav ) ) {
 }
 
 $show_bottom = ! in_array( $page, array( 'order-view', 'ui-kit' ), true );
+$nav_active  = ( 'order-view' === $page ) ? 'orders' : $page;
 ?>
 <div class="mns-dash<?php echo $show_bottom ? ' mns-dash--has-bottom' : ''; ?>" dir="rtl" data-mns-panel="nurse" data-mns-page="<?php echo esc_attr( $page ); ?>">
 	<aside class="mns-dash__sidebar" data-mns-sidebar>
@@ -100,7 +101,7 @@ $show_bottom = ! in_array( $page, array( 'order-view', 'ui-kit' ), true );
 		?>
 	</main>
 	<?php if ( $show_bottom ) : ?>
-		<?php MNS_UI::bottom_nav( 'nurse', $page ); ?>
+		<?php MNS_UI::bottom_nav( 'nurse', $nav_active ); ?>
 	<?php endif; ?>
 </div>
 <button type="button" class="mns-dash__sidebar-mobile-expand" data-mns-sidebar-expand aria-expanded="false" aria-label="<?php echo esc_attr( MNS_Copy::t( 'action.open_menu' ) ); ?>" hidden></button>

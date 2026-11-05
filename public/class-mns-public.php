@@ -81,6 +81,21 @@ class MNS_Public {
 		if ( 'patient' === $panel && 'surveys' === $page ) {
 			return array_merge( $states, array( 'submitted' => __( 'ارسال‌شده', 'medyar-nursing-services' ) ) );
 		}
+		if ( 'nurse' === $panel && 'dashboard' === $page ) {
+			return array_merge( $states, array( 'offline' => __( 'آفلاین / عدم پذیرش', 'medyar-nursing-services' ) ) );
+		}
+		if ( 'nurse' === $panel && 'order-view' === $page ) {
+			$out = array(
+				'default' => __( 'عادی (تخصیص‌یافته)', 'medyar-nursing-services' ),
+				'loading' => $states['loading'] ?? __( 'در حال بارگذاری', 'medyar-nursing-services' ),
+				'error'   => $states['error'] ?? __( 'خطا', 'medyar-nursing-services' ),
+			);
+			foreach ( array( MNS_Order_Status::ASSIGNED, MNS_Order_Status::IN_PROGRESS, MNS_Order_Status::SERVICE_ENDED, MNS_Order_Status::NEEDS_REVIEW ) as $slug ) {
+				$row = MNS_Order_Status::get( $slug );
+				$out[ $slug ] = (string) ( $row['label'] ?? $slug );
+			}
+			return $out;
+		}
 		return $states;
 	}
 
