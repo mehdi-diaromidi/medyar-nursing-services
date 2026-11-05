@@ -3206,3 +3206,20 @@ html.mns-drawer-open body {
 	padding: 10px 0;
 	background: linear-gradient(180deg, #fffcf9 70%, transparent);
 }
+
+/* —— Phase 6: nurse signup —— */
+.mns-signup { max-width: 960px; margin: 0 auto; padding: var(--mns-space-5) var(--mns-space-4); }
+.mns-contract {
+	max-height: 160px;
+	overflow: auto;
+	padding: 12px 14px;
+	margin-bottom: var(--mns-space-4);
+	border: 1px solid var(--mns-border);
+	border-radius: 12px;
+	background: #fffcf9;
+	font-size: 0.875rem;
+	line-height: 1.8;
+	color: var(--mns-muted-strong);
+}
+.mns-contract p { margin: 0 0 10px; }
+.mns-contract p:last-child { margin-bottom: 0; }
