@@ -28,7 +28,7 @@ if ( empty( $s ) ) {
 				'title'       => MNS_Copy::t( 'state.not_found_title' ),
 				'text'        => __( 'این خدمت پیدا نشد یا دیگر فعال نیست.', 'medyar-nursing-services' ),
 				'retry_label' => __( 'بازگشت به فهرست خدمات', 'medyar-nursing-services' ),
-				'retry_url'   => home_url( '/nursing-services/' ),
+				'retry_url'   => MNS_Pages::catalog_url(),
 			)
 		);
 		?>
@@ -48,20 +48,32 @@ if ( MNS_Dev::is( 'loading' ) ) {
 if ( MNS_Dev::is( 'error' ) ) {
 	?>
 	<div class="mns-catalog" dir="rtl" data-mns-panel="catalog" data-mns-page="service">
-		<?php MNS_UI::error_state( array( 'retry_url' => add_query_arg( 'mns_service', $slug, home_url( '/nursing-services/' ) ) ) ); ?>
+		<?php MNS_UI::error_state( array( 'retry_url' => MNS_Pages::catalog_service_url( $slug ) ) ); ?>
 	</div>
 	<?php
 	return;
 }
 
 $order_url = add_query_arg(
-	array(
-		'mns_panel'   => 'patient',
-		'mns_page'    => 'new-order',
-		'mns_service' => $slug,
-	),
-	home_url( '/nursing-patient-panel/' )
+	'mns_service',
+	$slug,
+	MNS_Pages::panel_url( 'patient', 'new-order' )
 );
+/* Prefer patient panel permalink when current request is catalog. */
+$patient_page = get_page_by_path( 'nursing-patient-panel' );
+if ( $patient_page instanceof WP_Post ) {
+	$plink = get_permalink( $patient_page );
+	if ( is_string( $plink ) && '' !== $plink ) {
+		$order_url = add_query_arg(
+			array(
+				'mns_panel'   => 'patient',
+				'mns_page'    => 'new-order',
+				'mns_service' => $slug,
+			),
+			$plink
+		);
+	}
+}
 
 $price_label = (string) ( $s['price_label'] ?? '' );
 $from        = isset( $s['price_from'] ) ? (int) $s['price_from'] : 0;
@@ -87,7 +99,7 @@ $cta_label     = __( 'ثبت سفارش این خدمت', 'medyar-nursing-servic
 ?>
 <div class="mns-catalog mns-catalog--service" dir="rtl" data-mns-panel="catalog" data-mns-page="service" data-mns-service="<?php echo esc_attr( $slug ); ?>">
 	<p class="mns-breadcrumb">
-		<a href="<?php echo esc_url( home_url( '/nursing-services/' ) ); ?>">
+		<a href="<?php echo esc_url( MNS_Pages::catalog_url() ); ?>">
 			<span class="mns-breadcrumb__icon" aria-hidden="true"><?php echo mns_icon( 'chevron', 'mns-icon--dir' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
 			<?php echo esc_html__( 'همهٔ خدمات', 'medyar-nursing-services' ); ?>
 		</a>
@@ -208,7 +220,11 @@ $cta_label     = __( 'ثبت سفارش این خدمت', 'medyar-nursing-servic
 
 		<aside class="mns-service-layout__side mns-stack">
 			<section class="mns-card mns-service-side-cta">
-				<p class="mns-service-side-cta__price"><?php echo esc_html( $price_label ); ?></p>
+				<?php if ( '' !== $price_label ) : ?>
+					<p class="mns-service-side-cta__price"><?php echo esc_html( $price_label ); ?></p>
+				<?php else : ?>
+					<p class="mns-catalog__muted"><?php echo esc_html__( 'مبلغ نهایی پس از ارزیابی در سفارش مشخص می‌شود.', 'medyar-nursing-services' ); ?></p>
+				<?php endif; ?>
 				<a class="mns-submit-btn" href="<?php echo esc_url( $order_url ); ?>"><?php echo esc_html( $cta_label ); ?></a>
 				<p class="mns-catalog__muted"><?php echo esc_html__( 'برای ثبت سفارش وارد حساب مدیار می‌شوید.', 'medyar-nursing-services' ); ?></p>
 			</section>
@@ -230,7 +246,7 @@ $cta_label     = __( 'ثبت سفارش این خدمت', 'medyar-nursing-servic
 								continue;
 							}
 							$row = $all_services[ $rel ];
-							$url = add_query_arg( 'mns_service', $rel, home_url( '/nursing-services/' ) );
+							$url = MNS_Pages::catalog_service_url( $rel );
 							?>
 							<li>
 								<a href="<?php echo esc_url( $url ); ?>">
@@ -247,7 +263,11 @@ $cta_label     = __( 'ثبت سفارش این خدمت', 'medyar-nursing-servic
 
 	<div class="mns-service-sticky" data-mns-service-sticky>
 		<div class="mns-service-sticky__inner">
-			<span class="mns-service-sticky__price"><?php echo esc_html( $price_label ); ?></span>
+			<?php if ( '' !== $price_label ) : ?>
+				<span class="mns-service-sticky__price"><?php echo esc_html( $price_label ); ?></span>
+			<?php else : ?>
+				<span class="mns-service-sticky__price mns-service-sticky__price--muted"><?php echo esc_html__( 'پس از ارزیابی', 'medyar-nursing-services' ); ?></span>
+			<?php endif; ?>
 			<a class="mns-submit-btn mns-submit-btn--auto" href="<?php echo esc_url( $order_url ); ?>"><?php echo esc_html( $cta_label ); ?></a>
 		</div>
 	</div>

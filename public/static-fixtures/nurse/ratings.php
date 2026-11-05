@@ -1,10 +1,18 @@
 <?php
+/**
+ * Nurse ratings fixture.
+ *
+ * @package medyar-nursing-services
+ */
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+
 return array(
-	'overall' => '۴٫۷',
-	'science' => '۴٫۸',
-	'ethics'  => '۴٫۷',
-	'order'   => '۴٫۶',
+	'overall' => 4.7,
+	'science' => 4.8,
+	'ethics'  => 4.7,
+	'order'   => 4.6,
+	'sample'  => 126,
 );

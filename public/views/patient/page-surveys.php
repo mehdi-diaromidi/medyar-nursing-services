@@ -1,6 +1,6 @@
 <?php
 /**
- * Surveys queue + complaint path (Phase 4).
+ * Surveys queue + complaint path (UX Phase D).
  *
  * @package medyar-nursing-services
  */
@@ -28,7 +28,7 @@ if ( MNS_Dev::is( 'submitted' ) ) {
 	$mode = 'done';
 }
 
-$active = isset( $_GET['mns_survey'] ) ? sanitize_key( wp_unslash( $_GET['mns_survey'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+$active  = isset( $_GET['mns_survey'] ) ? sanitize_key( wp_unslash( $_GET['mns_survey'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 $current = null;
 foreach ( $open as $row ) {
 	if ( (string) ( $row['id'] ?? '' ) === $active ) {
@@ -36,9 +36,12 @@ foreach ( $open as $row ) {
 		break;
 	}
 }
-if ( null === $current && ! empty( $open ) && 'open' === $mode && '' === $active ) {
-	// list mode
-}
+
+$counts = array(
+	'open'      => count( $open ),
+	'done'      => count( $done ),
+	'complaint' => count( $complaints ),
+);
 
 MNS_UI::page_header(
 	array(
@@ -48,7 +51,7 @@ MNS_UI::page_header(
 );
 ?>
 
-<div class="mns-tabs" role="tablist">
+<div class="mns-tabs" role="tablist" aria-label="<?php echo esc_attr__( 'وضعیت پرسشنامه‌ها', 'medyar-nursing-services' ); ?>">
 	<?php
 	$tabs = array(
 		'open'      => __( 'باز', 'medyar-nursing-services' ),
@@ -56,16 +59,17 @@ MNS_UI::page_header(
 		'complaint' => __( 'نارضایتی', 'medyar-nursing-services' ),
 	);
 	foreach ( $tabs as $key => $label ) :
-		$url = add_query_arg(
-			array(
-				'mns_panel' => 'patient',
-				'mns_page'  => 'surveys',
-				'mns_tab'   => $key,
-			),
-			home_url( '/nursing-patient-panel/' )
-		);
+		$url = add_query_arg( 'mns_tab', $key, MNS_Pages::panel_url( 'patient', 'surveys' ) );
 		?>
-		<a class="mns-tabs__btn<?php echo $mode === $key ? ' is-active' : ''; ?>" href="<?php echo esc_url( $url ); ?>"><?php echo esc_html( $label ); ?></a>
+		<a
+			class="mns-tabs__btn<?php echo $mode === $key ? ' is-active' : ''; ?>"
+			role="tab"
+			aria-selected="<?php echo $mode === $key ? 'true' : 'false'; ?>"
+			href="<?php echo esc_url( $url ); ?>"
+		>
+			<?php echo esc_html( $label ); ?>
+			<span class="mns-tabs__count"><?php echo esc_html( MNS_Format::digits( (string) ( $counts[ $key ] ?? 0 ) ) ); ?></span>
+		</a>
 	<?php endforeach; ?>
 </div>
 
@@ -101,7 +105,7 @@ MNS_UI::page_header(
 			</label>
 			<div class="mns-actions-row">
 				<button type="submit" class="mns-submit-btn mns-submit-btn--auto"><?php echo esc_html__( 'ارسال پرسشنامه', 'medyar-nursing-services' ); ?></button>
-				<a class="mns-outline-btn" href="<?php echo esc_url( remove_query_arg( 'mns_survey' ) ); ?>"><?php echo esc_html( MNS_Copy::t( 'action.back' ) ); ?></a>
+				<a class="mns-outline-btn" href="<?php echo esc_url( add_query_arg( 'mns_tab', 'open', MNS_Pages::panel_url( 'patient', 'surveys' ) ) ); ?>"><?php echo esc_html( MNS_Copy::t( 'action.back' ) ); ?></a>
 			</div>
 		</form>
 	<?php elseif ( empty( $open ) ) : ?>
@@ -115,21 +119,30 @@ MNS_UI::page_header(
 		);
 		?>
 	<?php else : ?>
-		<ul class="mns-order-cards">
+		<ul class="mns-list">
 			<?php foreach ( $open as $row ) : ?>
-				<li>
-					<a class="mns-order-card" href="<?php echo esc_url( add_query_arg( 'mns_survey', (string) ( $row['id'] ?? '' ) ) ); ?>">
-						<span class="mns-order-card__top">
-							<span class="mns-order-card__service"><?php echo esc_html( (string) ( $row['service'] ?? '' ) ); ?></span>
-							<span class="mns-status mns-status--waiting"><?php echo esc_html__( 'در انتظار پاسخ', 'medyar-nursing-services' ); ?></span>
-						</span>
-						<span class="mns-order-card__meta">
-							<?php echo esc_html( (string) ( $row['nurse'] ?? '' ) ); ?>
-							· <?php echo esc_html( MNS_Format::human( (string) ( $row['when'] ?? '' ) ) ); ?>
-						</span>
-						<span class="mns-order-card__code" dir="ltr"><?php echo esc_html( MNS_Format::digits( (string) ( $row['order'] ?? '' ) ) ); ?></span>
-					</a>
-				</li>
+				<?php
+				ob_start();
+				echo '<span class="mns-status mns-status--waiting">' . esc_html__( 'در انتظار پاسخ', 'medyar-nursing-services' ) . '</span>';
+				$badge = (string) ob_get_clean();
+				MNS_UI::list_item(
+					array(
+						'url'          => add_query_arg(
+							array(
+								'mns_tab'    => 'open',
+								'mns_survey' => (string) ( $row['id'] ?? '' ),
+							),
+							MNS_Pages::panel_url( 'patient', 'surveys' )
+						),
+						'title'        => (string) ( $row['service'] ?? '' ),
+						'meta'         => (string) ( $row['nurse'] ?? '' ) . ' · ' . MNS_Format::human( (string) ( $row['when'] ?? '' ) ),
+						'code'         => (string) ( $row['order'] ?? '' ),
+						'badge_html'   => $badge,
+						'action_label' => __( 'ثبت نظر', 'medyar-nursing-services' ),
+						'action_primary' => true,
+					)
+				);
+				?>
 			<?php endforeach; ?>
 		</ul>
 	<?php endif; ?>
@@ -179,17 +192,21 @@ MNS_UI::page_header(
 	<?php if ( ! empty( $complaints ) ) : ?>
 		<section class="mns-card">
 			<h2 class="mns-card__title"><?php echo esc_html__( 'پیگیری', 'medyar-nursing-services' ); ?></h2>
-			<ul class="mns-order-cards">
+			<ul class="mns-list">
 				<?php foreach ( $complaints as $c ) : ?>
-					<li class="mns-order-card mns-order-card--listed">
-						<span class="mns-order-card__main">
-							<span class="mns-order-card__top">
-								<span class="mns-order-card__service"><?php echo esc_html( (string) ( $c['subject'] ?? '' ) ); ?></span>
-								<span class="mns-status mns-status--waiting"><?php echo esc_html( (string) ( $c['label'] ?? '' ) ); ?></span>
-							</span>
-							<span class="mns-order-card__meta"><?php echo esc_html( MNS_Format::human( (string) ( $c['when'] ?? '' ) ) ); ?></span>
-						</span>
-					</li>
+					<?php
+					ob_start();
+					echo '<span class="mns-status mns-status--waiting">' . esc_html( (string) ( $c['label'] ?? '' ) ) . '</span>';
+					$badge = (string) ob_get_clean();
+					MNS_UI::list_item(
+						array(
+							'url'        => '#',
+							'title'      => (string) ( $c['subject'] ?? '' ),
+							'meta'       => MNS_Format::human( (string) ( $c['when'] ?? '' ) ),
+							'badge_html' => $badge,
+						)
+					);
+					?>
 				<?php endforeach; ?>
 			</ul>
 		</section>

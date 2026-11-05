@@ -1,6 +1,6 @@
 <?php
 /**
- * Nurse orders list (Phase 5).
+ * Nurse orders list (relative dates + panel_url).
  *
  * @package medyar-nursing-services
  */
@@ -9,48 +9,56 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$view = static function ( string $code ): string {
+$tz  = wp_timezone();
+$now = new DateTimeImmutable( 'now', $tz );
+$jy  = MNS_Format::g2j( (int) $now->format( 'Y' ), (int) $now->format( 'n' ), (int) $now->format( 'j' ) );
+$code = static function ( string $suffix ) use ( $jy ): string {
+	return 'MNS-' . $jy[0] . '-' . $suffix;
+};
+$t = static function ( string $modify, string $time ) use ( $now ): string {
+	$base = ( 'today' === $modify ) ? $now : $now->modify( $modify );
+	return $base->setTime( (int) substr( $time, 0, 2 ), (int) substr( $time, 3, 2 ) )->format( 'Y-m-d H:i' );
+};
+
+$view = static function ( string $tracking ): string {
 	return add_query_arg(
-		array(
-			'mns_panel' => 'nurse',
-			'mns_page'  => 'order-view',
-			'mns_order' => $code,
-		),
-		home_url( '/nursing-nurse-panel/' )
+		'mns_order',
+		$tracking,
+		MNS_Pages::panel_url( 'nurse', 'order-view' )
 	);
 };
 
 return array(
 	'items' => array(
 		array(
-			'tracking' => 'MNS-1403-1001',
+			'tracking' => $code( '1001' ),
 			'service'  => 'سرم‌تراپی',
 			'patient'  => 'حسن محمدی',
 			'area'     => 'ونک',
-			'when'     => '2026-11-05 10:00',
+			'when'     => $t( 'today', '10:00' ),
 			'status'   => 'assigned',
 			'tab'      => 'active',
-			'url'      => $view( 'MNS-1403-1001' ),
+			'url'      => $view( $code( '1001' ) ),
 		),
 		array(
-			'tracking' => 'MNS-1403-1002',
+			'tracking' => $code( '1002' ),
 			'service'  => 'تزریقات',
 			'patient'  => 'سارا محمدی',
 			'area'     => 'جردن',
-			'when'     => '2026-11-05 14:30',
+			'when'     => $t( 'today', '14:30' ),
 			'status'   => 'in_progress',
 			'tab'      => 'active',
-			'url'      => $view( 'MNS-1403-1002' ),
+			'url'      => $view( $code( '1002' ) ),
 		),
 		array(
-			'tracking' => 'MNS-1403-0980',
+			'tracking' => $code( '0980' ),
 			'service'  => 'پانسمان',
 			'patient'  => 'مریم محمدی',
 			'area'     => 'نیاوران',
-			'when'     => '2026-11-04 16:00',
+			'when'     => $t( '-1 day', '16:00' ),
 			'status'   => 'service_ended',
 			'tab'      => 'past',
-			'url'      => $view( 'MNS-1403-0980' ),
+			'url'      => $view( $code( '0980' ) ),
 		),
 	),
 );

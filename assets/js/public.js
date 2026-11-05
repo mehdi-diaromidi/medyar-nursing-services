@@ -463,11 +463,21 @@
 				return;
 			}
 			body.textContent = bits.join(' · ');
-			box.hidden = step < 2;
+			box.hidden = bits.length === 0;
 		}
 
 		function validateStep(n) {
 			if (n === 1) {
+				if (!categoryInput || !categoryInput.value || !serviceSelect || !serviceSelect.value) {
+					showNoticeNear(form, 'دسته و خدمت اصلی را انتخاب کنید.', true);
+					return false;
+				}
+				if (!genderInput || !genderInput.value) {
+					showNoticeNear(form, 'جنسیت پرستار را انتخاب کنید.', true);
+					return false;
+				}
+			}
+			if (n === 2) {
 				var phone = qs('input[name="phone"]', form);
 				if (!phone || !phone.value || phone.value.length < 11) {
 					showNoticeNear(form, 'شماره تماس معتبر وارد کنید.', true);
@@ -490,7 +500,7 @@
 					}
 				}
 			}
-			if (n === 2) {
+			if (n === 3) {
 				var urgent = urgentInput && urgentInput.value === '1';
 				if (!citySelect || !citySelect.value || !areaSelect || !areaSelect.value) {
 					showNoticeNear(form, 'شهر و منطقه را انتخاب کنید.', true);
@@ -508,16 +518,6 @@
 						showNoticeNear(form, 'تاریخ و ساعت مراجعه را وارد کنید یا سفارش فوری را فعال کنید.', true);
 						return false;
 					}
-				}
-			}
-			if (n === 3) {
-				if (!categoryInput || !categoryInput.value || !serviceSelect || !serviceSelect.value) {
-					showNoticeNear(form, 'دسته و خدمت اصلی را انتخاب کنید.', true);
-					return false;
-				}
-				if (!genderInput || !genderInput.value) {
-					showNoticeNear(form, 'جنسیت پرستار را انتخاب کنید.', true);
-					return false;
 				}
 			}
 			var notice = qs('[data-mns-notice]') || qs('.mns-form-notice');
@@ -596,6 +596,26 @@
 			serviceSelect.dispatchEvent(new Event('change'));
 		}
 
+		function selectPatientPick(value) {
+			var sel = qs('[data-mns-patient-select]', form);
+			if (sel) {
+				sel.value = value || '';
+				sel.dispatchEvent(new Event('change'));
+			}
+			qsa('[data-mns-patient-pick]', form).forEach(function (card) {
+				var on = card.getAttribute('data-value') === value;
+				card.classList.toggle('is-selected', on);
+				card.setAttribute('aria-checked', on ? 'true' : 'false');
+			});
+			updateOrderSummary();
+		}
+
+		qsa('[data-mns-patient-pick]', form).forEach(function (card) {
+			card.addEventListener('click', function () {
+				selectPatientPick(card.getAttribute('data-value') || '');
+			});
+		});
+
 		qsa('[data-mns-seg="patient_mode"] .mns-seg__btn', form).forEach(function (btn) {
 			btn.addEventListener('click', function () {
 				var val = btn.getAttribute('data-value');
@@ -610,6 +630,7 @@
 					panel.hidden = !show;
 					panel.classList.toggle('is-hidden', !show);
 				});
+				updateOrderSummary();
 			});
 		});
 
@@ -691,6 +712,23 @@
 				fillServices();
 			}
 		}
+
+		var prepatient = form.getAttribute('data-mns-prepatient') || '';
+		if (prepatient && prepatient !== 'self') {
+			if (modeInput) modeInput.value = 'saved';
+			qsa('[data-mns-seg="patient_mode"] .mns-seg__btn', form).forEach(function (b) {
+				var on = b.getAttribute('data-value') === 'saved';
+				b.classList.toggle('is-selected', on);
+				b.setAttribute('aria-checked', on ? 'true' : 'false');
+			});
+			qsa('[data-mns-panel-mode]', form).forEach(function (panel) {
+				var show = panel.getAttribute('data-mns-panel-mode') === 'saved';
+				panel.hidden = !show;
+				panel.classList.toggle('is-hidden', !show);
+			});
+			selectPatientPick(prepatient);
+		}
+		updateOrderSummary();
 	}
 
 	function initMockActions() {

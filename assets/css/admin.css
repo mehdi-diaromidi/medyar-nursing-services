@@ -132,6 +132,27 @@
 .mns-admin-nav-card span { font-size: 12px; color: var(--mns-a-muted); }
 .mns-admin-nav-card:hover { border-color: var(--mns-a-primary); background: var(--mns-a-soft); }
 
+.mns-admin-preview {
+	margin: 0 0 16px;
+}
+.mns-admin-filters {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+	margin-bottom: 12px;
+}
+.mns-admin-list a {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	text-decoration: none;
+	color: inherit;
+}
+.mns-admin-list a:hover strong {
+	color: var(--mns-a-primary);
+}
+
 @media (max-width: 960px) {
 	.mns-admin-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 	.mns-admin-grid,

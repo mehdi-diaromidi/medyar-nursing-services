@@ -1,6 +1,6 @@
 <?php
 /**
- * Nurse orders list (Phase 5).
+ * Nurse orders list — ListItem + counts (UX Phase D).
  *
  * @package medyar-nursing-services
  */
@@ -20,6 +20,17 @@ if ( ! in_array( $tab, array( 'active', 'past' ), true ) ) {
 
 if ( MNS_Dev::is( 'empty' ) ) {
 	$items = array();
+}
+
+$counts = array(
+	'active' => 0,
+	'past'   => 0,
+);
+foreach ( $items as $row ) {
+	$key = (string) ( $row['tab'] ?? 'active' );
+	if ( isset( $counts[ $key ] ) ) {
+		++$counts[ $key ];
+	}
 }
 
 $filtered = array();
@@ -42,19 +53,21 @@ MNS_UI::page_header(
 );
 ?>
 
-<div class="mns-tabs" role="tablist">
+<div class="mns-tabs" role="tablist" aria-label="<?php echo esc_attr__( 'وضعیت سفارش‌ها', 'medyar-nursing-services' ); ?>">
 	<?php foreach ( $tabs as $key => $label ) : ?>
 		<?php
-		$url = add_query_arg(
-			array(
-				'mns_panel' => 'nurse',
-				'mns_page'  => 'orders',
-				'mns_tab'   => $key,
-			),
-			home_url( '/nursing-nurse-panel/' )
-		);
+		$url   = add_query_arg( 'mns_tab', $key, MNS_Pages::panel_url( 'nurse', 'orders' ) );
+		$count = (int) ( $counts[ $key ] ?? 0 );
 		?>
-		<a class="mns-tabs__btn<?php echo $tab === $key ? ' is-active' : ''; ?>" href="<?php echo esc_url( $url ); ?>"><?php echo esc_html( $label ); ?></a>
+		<a
+			class="mns-tabs__btn<?php echo $tab === $key ? ' is-active' : ''; ?>"
+			role="tab"
+			aria-selected="<?php echo $tab === $key ? 'true' : 'false'; ?>"
+			href="<?php echo esc_url( $url ); ?>"
+		>
+			<?php echo esc_html( $label ); ?>
+			<span class="mns-tabs__count"><?php echo esc_html( MNS_Format::digits( (string) $count ) ); ?></span>
+		</a>
 	<?php endforeach; ?>
 </div>
 
@@ -69,25 +82,23 @@ MNS_UI::page_header(
 	);
 	?>
 <?php else : ?>
-	<ul class="mns-order-cards">
+	<ul class="mns-list">
 		<?php foreach ( $filtered as $row ) : ?>
-			<li class="mns-order-card mns-order-card--listed">
-				<a class="mns-order-card__main" href="<?php echo esc_url( (string) ( $row['url'] ?? '#' ) ); ?>">
-					<span class="mns-order-card__top">
-						<span class="mns-order-card__service"><?php echo esc_html( (string) ( $row['service'] ?? '' ) ); ?></span>
-						<?php MNS_UI::status_badge( (string) ( $row['status'] ?? 'assigned' ), array( 'size' => 'sm' ) ); ?>
-					</span>
-					<span class="mns-order-card__meta">
-						<?php echo esc_html( (string) ( $row['patient'] ?? '' ) ); ?>
-						· <?php echo esc_html( (string) ( $row['area'] ?? '' ) ); ?>
-						· <?php echo esc_html( MNS_Format::human( (string) ( $row['when'] ?? '' ) ) ); ?>
-					</span>
-					<span class="mns-order-card__code" dir="ltr"><?php echo esc_html( MNS_Format::digits( (string) ( $row['tracking'] ?? '' ) ) ); ?></span>
-				</a>
-				<a class="mns-order-card__cta mns-submit-btn mns-submit-btn--auto" href="<?php echo esc_url( (string) ( $row['url'] ?? '#' ) ); ?>">
-					<?php echo esc_html__( 'ورود به جزئیات', 'medyar-nursing-services' ); ?>
-				</a>
-			</li>
+			<?php
+			ob_start();
+			MNS_UI::status_badge( (string) ( $row['status'] ?? 'assigned' ) );
+			$badge = (string) ob_get_clean();
+			MNS_UI::list_item(
+				array(
+					'url'          => (string) ( $row['url'] ?? '#' ),
+					'title'        => (string) ( $row['service'] ?? '' ),
+					'meta'         => (string) ( $row['patient'] ?? '' ) . ' · ' . (string) ( $row['area'] ?? '' ) . ' · ' . MNS_Format::human( (string) ( $row['when'] ?? '' ) ),
+					'code'         => (string) ( $row['tracking'] ?? '' ),
+					'badge_html'   => $badge,
+					'action_label' => __( 'جزئیات', 'medyar-nursing-services' ),
+				)
+			);
+			?>
 		<?php endforeach; ?>
 	</ul>
 <?php endif; ?>

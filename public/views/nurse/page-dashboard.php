@@ -1,6 +1,6 @@
 <?php
 /**
- * Nurse dashboard (Phase 5) — hero + accepting + today list.
+ * Nurse dashboard — metrics + today's orders (UX Phase D).
  *
  * @package medyar-nursing-services
  */
@@ -19,6 +19,8 @@ $accepting = ! empty( $data['accepting'] );
 $name      = (string) ( $profile['display_name'] ?? __( 'پرستار', 'medyar-nursing-services' ) );
 $initial   = function_exists( 'mb_substr' ) ? mb_substr( $name, 0, 1 ) : substr( $name, 0, 1 );
 $hospital  = (string) ( $data['hospital'] ?? '' );
+$avail_url = MNS_Pages::panel_url( 'nurse', 'availability' );
+$ratings_u = MNS_Pages::panel_url( 'nurse', 'ratings' );
 
 if ( MNS_Dev::is( 'empty' ) ) {
 	$today = array();
@@ -30,7 +32,7 @@ if ( MNS_Dev::is( 'offline' ) ) {
 MNS_UI::page_header(
 	array(
 		'title' => __( 'داشبورد', 'medyar-nursing-services' ),
-		'lead'  => __( 'نوبت‌های امروز و وضعیت پذیرش.', 'medyar-nursing-services' ),
+		'lead'  => __( 'سفارش‌های امروز و وضعیت پذیرش.', 'medyar-nursing-services' ),
 	)
 );
 ?>
@@ -46,20 +48,21 @@ MNS_UI::page_header(
 			<?php endif; ?>
 		</p>
 	</div>
-	<div class="mns-nurse-hero__accept">
-		<span class="mns-nurse-hero__accept-label">
-			<strong><?php echo esc_html__( 'آماده پذیرش درخواست', 'medyar-nursing-services' ); ?></strong>
-			<small><?php echo $accepting ? esc_html__( 'آنلاین — در تخصیص پیشنهاد می‌شوید', 'medyar-nursing-services' ) : esc_html__( 'آفلاین — در تخصیص خودکار پیشنهاد نمی‌شوید.', 'medyar-nursing-services' ); ?></small>
-		</span>
-		<button
-			type="button"
-			class="mns-switch<?php echo $accepting ? ' is-on' : ''; ?>"
-			data-mns-switch
-			aria-pressed="<?php echo $accepting ? 'true' : 'false'; ?>"
-			aria-label="<?php echo esc_attr__( 'پذیرش درخواست', 'medyar-nursing-services' ); ?>"
-		></button>
-	</div>
 </section>
+
+<?php
+MNS_UI::alert_card(
+	array(
+		'tone'      => $accepting ? 'success' : 'warning',
+		'title'     => $accepting ? __( 'آماده پذیرش درخواست', 'medyar-nursing-services' ) : __( 'پذیرش خاموش است', 'medyar-nursing-services' ),
+		'text'      => $accepting
+			? __( 'در تخصیص خودکار پیشنهاد می‌شوید.', 'medyar-nursing-services' )
+			: __( 'تا روشن نشود در تخصیص خودکار پیشنهاد نمی‌شوید.', 'medyar-nursing-services' ),
+		'cta_label' => __( 'مدیریت پذیرش و برنامه', 'medyar-nursing-services' ),
+		'cta_url'   => $avail_url,
+	)
+);
+?>
 
 <div class="mns-metrics">
 	<div class="mns-metric mns-metric--hero">
@@ -70,42 +73,48 @@ MNS_UI::page_header(
 		<span class="mns-metric__label"><?php echo esc_html__( 'آینده', 'medyar-nursing-services' ); ?></span>
 		<span class="mns-metric__value"><?php echo esc_html( MNS_Format::digits( (string) ( $metrics['upcoming'] ?? 0 ) ) ); ?></span>
 	</div>
-	<div class="mns-metric">
+	<a class="mns-metric" href="<?php echo esc_url( $ratings_u ); ?>">
 		<span class="mns-metric__label"><?php echo esc_html__( 'میانگین امتیاز', 'medyar-nursing-services' ); ?></span>
 		<span class="mns-metric__value"><?php echo esc_html( MNS_Format::digits( number_format( (float) ( $metrics['rating_avg'] ?? 0 ), 1 ) ) ); ?></span>
-	</div>
+	</a>
 </div>
 
 <section class="mns-card">
-	<div class="mns-card__head-row">
-		<h2 class="mns-card__title"><?php echo esc_html__( 'نوبت‌های امروز', 'medyar-nursing-services' ); ?></h2>
-		<a class="mns-link-btn" href="<?php echo esc_url( MNS_Pages::panel_url( 'nurse', 'orders' ) ); ?>"><?php echo esc_html__( 'همه', 'medyar-nursing-services' ); ?></a>
-	</div>
+	<?php
+	MNS_UI::section_head(
+		array(
+			'title'      => __( 'سفارش‌های امروز', 'medyar-nursing-services' ),
+			'link_label' => __( 'همه', 'medyar-nursing-services' ),
+			'link_url'   => MNS_Pages::panel_url( 'nurse', 'orders' ),
+		)
+	);
+	?>
 	<?php if ( empty( $today ) ) : ?>
 		<?php
 		MNS_UI::empty_state(
 			array(
-				'title' => __( 'نوبتی برای امروز نیست', 'medyar-nursing-services' ),
+				'title' => __( 'سفارشی برای امروز نیست', 'medyar-nursing-services' ),
 				'text'  => __( 'وقتی سفارشی تخصیص یابد، اینجا می‌آید.', 'medyar-nursing-services' ),
 				'icon'  => 'calendar',
 			)
 		);
 		?>
 	<?php else : ?>
-		<ul class="mns-order-cards">
+		<ul class="mns-list">
 			<?php foreach ( $today as $row ) : ?>
-				<li>
-					<a class="mns-order-card" href="<?php echo esc_url( (string) ( $row['url'] ?? '#' ) ); ?>">
-						<span class="mns-order-card__top">
-							<span class="mns-order-card__service"><?php echo esc_html( (string) ( $row['service'] ?? '' ) ); ?></span>
-							<?php MNS_UI::status_badge( (string) ( $row['status'] ?? 'assigned' ), array( 'size' => 'sm' ) ); ?>
-						</span>
-						<span class="mns-order-card__meta">
-							<?php echo esc_html( MNS_Format::digits( (string) ( $row['time'] ?? '' ) ) ); ?>
-							· <?php echo esc_html( (string) ( $row['area'] ?? '' ) ); ?>
-						</span>
-					</a>
-				</li>
+				<?php
+				ob_start();
+				MNS_UI::status_badge( (string) ( $row['status'] ?? 'assigned' ) );
+				$badge = (string) ob_get_clean();
+				MNS_UI::list_item(
+					array(
+						'url'        => (string) ( $row['url'] ?? '#' ),
+						'title'      => (string) ( $row['service'] ?? '' ),
+						'meta'       => MNS_Format::digits( (string) ( $row['time'] ?? '' ) ) . ' · ' . (string) ( $row['area'] ?? '' ),
+						'badge_html' => $badge,
+					)
+				);
+				?>
 			<?php endforeach; ?>
 		</ul>
 	<?php endif; ?>

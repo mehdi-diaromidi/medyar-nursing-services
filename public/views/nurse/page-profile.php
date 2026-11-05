@@ -51,7 +51,25 @@ MNS_UI::page_header(
 		<h2 class="mns-card__title"><?php echo esc_html__( 'برنامه هفتگی', 'medyar-nursing-services' ); ?></h2>
 		<a class="mns-link-btn" href="<?php echo esc_url( $avail_url ); ?>"><?php echo esc_html__( 'ویرایش برنامه', 'medyar-nursing-services' ); ?></a>
 	</div>
-	<p class="mns-field-hint"><?php echo esc_html__( 'برای تغییر روزهای فعال یا لغو روز خاص به برنامه و دسترسی بروید.', 'medyar-nursing-services' ); ?></p>
+	<ul class="mns-kv">
+		<?php foreach ( (array) ( $p['week_summary'] ?? array() ) as $row ) : ?>
+			<li>
+				<span><?php echo esc_html( (string) ( $row['day'] ?? '' ) ); ?></span>
+				<strong><?php echo esc_html( (string) ( $row['hours'] ?? '' ) ); ?></strong>
+			</li>
+		<?php endforeach; ?>
+	</ul>
+	<?php if ( empty( $p['week_summary'] ) ) : ?>
+		<p class="mns-field-hint"><?php echo esc_html__( 'شنبه تا پنجشنبه فعال · جمعه تعطیل — جزئیات در برنامه و دسترسی.', 'medyar-nursing-services' ); ?></p>
+	<?php endif; ?>
+</section>
+
+<section class="mns-card">
+	<div class="mns-card__head-row">
+		<h2 class="mns-card__title"><?php echo esc_html__( 'امتیازها', 'medyar-nursing-services' ); ?></h2>
+		<a class="mns-link-btn" href="<?php echo esc_url( MNS_Pages::panel_url( 'nurse', 'ratings' ) ); ?>"><?php echo esc_html__( 'جزئیات', 'medyar-nursing-services' ); ?></a>
+	</div>
+	<p class="mns-field-hint"><?php echo esc_html__( 'میانگین‌ها بدون متن نظر بیمار نمایش داده می‌شود.', 'medyar-nursing-services' ); ?></p>
 </section>
 
 <section class="mns-accordion" aria-label="<?php echo esc_attr__( 'سؤالات پرتکرار', 'medyar-nursing-services' ); ?>">

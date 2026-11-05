@@ -1,6 +1,6 @@
 <?php
 /**
- * Patient invoices list (Phase 4).
+ * Patient invoices — ListItem + tab counts (UX Phase D).
  *
  * @package medyar-nursing-services
  */
@@ -32,6 +32,21 @@ $status_label = static function ( string $status ): string {
 	return $map[ $status ] ?? $status;
 };
 
+$counts = array(
+	'all'    => count( $items ),
+	'unpaid' => 0,
+	'paid'   => 0,
+);
+foreach ( $items as $row ) {
+	$st = (string) ( $row['status'] ?? '' );
+	if ( 'unpaid' === $st ) {
+		++$counts['unpaid'];
+	}
+	if ( 'paid' === $st ) {
+		++$counts['paid'];
+	}
+}
+
 $filtered = array();
 foreach ( $items as $row ) {
 	$st = (string) ( $row['status'] ?? '' );
@@ -61,17 +76,17 @@ MNS_UI::page_header(
 <div class="mns-tabs" role="tablist" aria-label="<?php echo esc_attr__( 'وضعیت فاکتورها', 'medyar-nursing-services' ); ?>">
 	<?php foreach ( $tabs as $key => $label ) : ?>
 		<?php
-		$url = add_query_arg(
-			array(
-				'mns_panel' => 'patient',
-				'mns_page'  => 'invoices',
-				'mns_tab'   => $key,
-			),
-			home_url( '/nursing-patient-panel/' )
-		);
+		$url   = add_query_arg( 'mns_tab', $key, MNS_Pages::panel_url( 'patient', 'invoices' ) );
+		$count = (int) ( $counts[ $key ] ?? 0 );
 		?>
-		<a class="mns-tabs__btn<?php echo $tab === $key ? ' is-active' : ''; ?>" role="tab" aria-selected="<?php echo $tab === $key ? 'true' : 'false'; ?>" href="<?php echo esc_url( $url ); ?>">
+		<a
+			class="mns-tabs__btn<?php echo $tab === $key ? ' is-active' : ''; ?>"
+			role="tab"
+			aria-selected="<?php echo $tab === $key ? 'true' : 'false'; ?>"
+			href="<?php echo esc_url( $url ); ?>"
+		>
 			<?php echo esc_html( $label ); ?>
+			<span class="mns-tabs__count"><?php echo esc_html( MNS_Format::digits( (string) $count ) ); ?></span>
 		</a>
 	<?php endforeach; ?>
 </div>
@@ -87,33 +102,28 @@ MNS_UI::page_header(
 	);
 	?>
 <?php else : ?>
-	<ul class="mns-invoice-cards">
+	<ul class="mns-list">
 		<?php foreach ( $filtered as $row ) : ?>
-			<?php $st = (string) ( $row['status'] ?? 'unpaid' ); ?>
-			<li class="mns-invoice-card">
-				<a class="mns-invoice-card__main" href="<?php echo esc_url( (string) ( $row['url'] ?? '#' ) ); ?>">
-					<span class="mns-invoice-card__top">
-						<span class="mns-invoice-card__service"><?php echo esc_html( (string) ( $row['service'] ?? '' ) ); ?></span>
-						<span class="mns-status mns-status--<?php echo esc_attr( 'unpaid' === $st ? 'waiting' : ( 'paid' === $st ? 'done' : 'muted' ) ); ?>">
-							<?php echo esc_html( $status_label( $st ) ); ?>
-						</span>
-					</span>
-					<span class="mns-invoice-card__meta">
-						<span dir="ltr"><?php echo esc_html( MNS_Format::digits( (string) ( $row['number'] ?? '' ) ) ); ?></span>
-						· <?php echo esc_html( MNS_Format::human( (string) ( $row['when'] ?? '' ) ) ); ?>
-					</span>
-					<span class="mns-invoice-card__amount"><?php echo esc_html( MNS_Format::toman( $row['amount'] ?? 0 ) ); ?></span>
-				</a>
-				<?php if ( ! empty( $row['payable'] ) ) : ?>
-					<a class="mns-invoice-card__cta mns-submit-btn mns-submit-btn--auto" href="<?php echo esc_url( (string) ( $row['url'] ?? '#' ) ); ?>">
-						<?php echo esc_html__( 'پرداخت', 'medyar-nursing-services' ); ?>
-					</a>
-				<?php else : ?>
-					<a class="mns-invoice-card__cta mns-outline-btn" href="<?php echo esc_url( (string) ( $row['url'] ?? '#' ) ); ?>">
-						<?php echo esc_html__( 'جزئیات', 'medyar-nursing-services' ); ?>
-					</a>
-				<?php endif; ?>
-			</li>
+			<?php
+			$st = (string) ( $row['status'] ?? 'unpaid' );
+			ob_start();
+			echo '<span class="mns-status mns-status--' . esc_attr( 'unpaid' === $st ? 'waiting' : ( 'paid' === $st ? 'done' : 'muted' ) ) . '">';
+			echo esc_html( $status_label( $st ) );
+			echo '</span>';
+			$badge = (string) ob_get_clean();
+			$action = ! empty( $row['payable'] ) ? __( 'پرداخت', 'medyar-nursing-services' ) : __( 'جزئیات', 'medyar-nursing-services' );
+			MNS_UI::list_item(
+				array(
+					'url'            => (string) ( $row['url'] ?? '#' ),
+					'title'          => (string) ( $row['service'] ?? '' ),
+					'meta'           => MNS_Format::human( (string) ( $row['when'] ?? '' ) ) . ' · ' . MNS_Format::toman( $row['amount'] ?? 0 ),
+					'code'           => (string) ( $row['number'] ?? '' ),
+					'badge_html'     => $badge,
+					'action_label'   => $action,
+					'action_primary' => ! empty( $row['payable'] ),
+				)
+			);
+			?>
 		<?php endforeach; ?>
 	</ul>
 <?php endif; ?>

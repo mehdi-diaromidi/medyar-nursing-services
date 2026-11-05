@@ -12,11 +12,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 $panel = isset( $panel ) ? (string) $panel : 'patient';
-MNS_UI::error_state(
+MNS_UI::empty_state(
 	array(
-		'title'       => MNS_Copy::t( 'state.not_found_title' ),
-		'text'        => MNS_Copy::t( 'state.not_found_body' ),
-		'retry_label' => MNS_Copy::t( 'action.go_dashboard' ),
-		'retry_url'   => MNS_Pages::panel_url( $panel, 'dashboard' ),
+		'title'     => MNS_Copy::t( 'state.not_found_title' ),
+		'text'      => MNS_Copy::t( 'state.not_found_body' ),
+		'cta_label' => MNS_Copy::t( 'action.go_dashboard' ),
+		'cta_url'   => MNS_Pages::panel_url( $panel, 'dashboard' ),
+		'icon'      => 'list',
 	)
 );

@@ -17,6 +17,11 @@ $cities     = isset( $data['cities'] ) && is_array( $data['cities'] ) ? $data['c
 $times      = isset( $data['times'] ) && is_array( $data['times'] ) ? $data['times'] : array();
 $phone      = isset( $data['default_phone'] ) ? (string) $data['default_phone'] : '';
 $preselect  = isset( $_GET['mns_service'] ) ? sanitize_key( wp_unslash( $_GET['mns_service'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+$prepatient = isset( $_GET['mns_patient'] ) ? sanitize_text_field( wp_unslash( $_GET['mns_patient'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+
+$tz_now = new DateTimeImmutable( 'now', wp_timezone() );
+$jy_now = MNS_Format::g2j( (int) $tz_now->format( 'Y' ), (int) $tz_now->format( 'n' ), (int) $tz_now->format( 'j' ) );
+$track_sample = 'MNS-' . $jy_now[0] . '-1102';
 
 $services_json = wp_json_encode( $services );
 $cities_json   = wp_json_encode( $cities );
@@ -28,7 +33,7 @@ if ( ! is_string( $cities_json ) ) {
 }
 
 if ( MNS_Dev::is( 'success' ) ) {
-	$track = 'MNS-1403-1102';
+	$track = $track_sample;
 	MNS_UI::page_header(
 		array(
 			'title' => __( 'درخواست ثبت شد', 'medyar-nursing-services' ),
@@ -44,12 +49,13 @@ if ( MNS_Dev::is( 'success' ) ) {
 			<button type="button" class="mns-link-btn" data-mns-copy="<?php echo esc_attr( $track ); ?>"><?php echo esc_html( MNS_Copy::t( 'action.copy' ) ); ?></button>
 		</p>
 		<ol class="mns-how__steps">
-			<li><span class="mns-how__num">۱</span><span><?php echo esc_html__( 'تخصیص پرستار', 'medyar-nursing-services' ); ?></span></li>
-			<li><span class="mns-how__num">۲</span><span><?php echo esc_html__( 'پیامک زمان مراجعه', 'medyar-nursing-services' ); ?></span></li>
-			<li><span class="mns-how__num">۳</span><span><?php echo esc_html__( 'انجام خدمت و فاکتور', 'medyar-nursing-services' ); ?></span></li>
+			<li><span class="mns-how__num">۱</span><span><?php echo esc_html__( 'درخواست ثبت شد', 'medyar-nursing-services' ); ?></span></li>
+			<li><span class="mns-how__num">۲</span><span><?php echo esc_html__( 'تخصیص پرستار و پیامک زمان', 'medyar-nursing-services' ); ?></span></li>
+			<li><span class="mns-how__num">۳</span><span><?php echo esc_html__( 'انجام خدمت و گزارش', 'medyar-nursing-services' ); ?></span></li>
+			<li><span class="mns-how__num">۴</span><span><?php echo esc_html__( 'فاکتور و پرداخت آنلاین', 'medyar-nursing-services' ); ?></span></li>
 		</ol>
 		<div class="mns-actions-row">
-			<a class="mns-submit-btn mns-submit-btn--auto" href="<?php echo esc_url( MNS_Pages::panel_url( 'patient', 'order-view' ) ); ?>"><?php echo esc_html__( 'مشاهده وضعیت', 'medyar-nursing-services' ); ?></a>
+			<a class="mns-submit-btn mns-submit-btn--auto" href="<?php echo esc_url( add_query_arg( 'mns_order', $track, MNS_Pages::panel_url( 'patient', 'order-view' ) ) ); ?>"><?php echo esc_html__( 'مشاهده وضعیت', 'medyar-nursing-services' ); ?></a>
 			<a class="mns-outline-btn" href="<?php echo esc_url( MNS_Pages::panel_url( 'patient', 'dashboard' ) ); ?>"><?php echo esc_html( MNS_Copy::t( 'action.go_dashboard' ) ); ?></a>
 		</div>
 	</section>
@@ -70,7 +76,7 @@ if ( MNS_Dev::is( 'no_nurse' ) ) {
 		MNS_UI::alert(
 			array(
 				'tone' => 'warning',
-				'text' => __( 'زمان دیگری انتخاب کنید یا با پشتیبانی تماس بگیرید. صف انتظار نداریم.', 'medyar-nursing-services' ),
+				'text' => __( 'زمان دیگری انتخاب کنید یا با پشتیبانی تماس بگیرید.', 'medyar-nursing-services' ),
 			)
 		);
 		?>
@@ -96,21 +102,21 @@ MNS_UI::page_header(
 
 <div class="mns-stepper-wrap" data-mns-stepper>
 	<p class="mns-stepper__compact" data-mns-step-compact aria-live="polite">
-		<?php echo esc_html( sprintf( MNS_Copy::t( 'label.step_of' ), MNS_Format::digits( '1' ), MNS_Format::digits( '4' ), __( 'بیمار و تماس', 'medyar-nursing-services' ) ) ); ?>
+		<?php echo esc_html( sprintf( MNS_Copy::t( 'label.step_of' ), MNS_Format::digits( '1' ), MNS_Format::digits( '4' ), __( 'خدمت و جزئیات', 'medyar-nursing-services' ) ) ); ?>
 	</p>
 	<div class="mns-stepper__progress" aria-hidden="true"><span class="mns-stepper__progress-bar" data-mns-step-progress style="width:25%"></span></div>
 	<nav class="mns-stepper" aria-label="<?php echo esc_attr__( 'مراحل ثبت سفارش', 'medyar-nursing-services' ); ?>">
-		<button type="button" class="mns-stepper__item is-current" data-mns-step-goto="1" data-mns-step-label="<?php echo esc_attr__( 'بیمار و تماس', 'medyar-nursing-services' ); ?>" aria-current="step">
+		<button type="button" class="mns-stepper__item is-current" data-mns-step-goto="1" data-mns-step-label="<?php echo esc_attr__( 'خدمت و جزئیات', 'medyar-nursing-services' ); ?>" aria-current="step">
 			<span class="mns-stepper__num">۱</span>
+			<span class="mns-stepper__label"><?php echo esc_html__( 'خدمت و جزئیات', 'medyar-nursing-services' ); ?></span>
+		</button>
+		<button type="button" class="mns-stepper__item" data-mns-step-goto="2" data-mns-step-label="<?php echo esc_attr__( 'بیمار و تماس', 'medyar-nursing-services' ); ?>">
+			<span class="mns-stepper__num">۲</span>
 			<span class="mns-stepper__label"><?php echo esc_html__( 'بیمار و تماس', 'medyar-nursing-services' ); ?></span>
 		</button>
-		<button type="button" class="mns-stepper__item" data-mns-step-goto="2" data-mns-step-label="<?php echo esc_attr__( 'مکان و زمان', 'medyar-nursing-services' ); ?>">
-			<span class="mns-stepper__num">۲</span>
-			<span class="mns-stepper__label"><?php echo esc_html__( 'مکان و زمان', 'medyar-nursing-services' ); ?></span>
-		</button>
-		<button type="button" class="mns-stepper__item" data-mns-step-goto="3" data-mns-step-label="<?php echo esc_attr__( 'خدمت و جزئیات', 'medyar-nursing-services' ); ?>">
+		<button type="button" class="mns-stepper__item" data-mns-step-goto="3" data-mns-step-label="<?php echo esc_attr__( 'مکان و زمان', 'medyar-nursing-services' ); ?>">
 			<span class="mns-stepper__num">۳</span>
-			<span class="mns-stepper__label"><?php echo esc_html__( 'خدمت و جزئیات', 'medyar-nursing-services' ); ?></span>
+			<span class="mns-stepper__label"><?php echo esc_html__( 'مکان و زمان', 'medyar-nursing-services' ); ?></span>
 		</button>
 		<button type="button" class="mns-stepper__item" data-mns-step-goto="4" data-mns-step-label="<?php echo esc_attr__( 'مرور و ثبت', 'medyar-nursing-services' ); ?>">
 			<span class="mns-stepper__num">۴</span>
@@ -132,148 +138,17 @@ MNS_UI::page_header(
 		data-mns-services="<?php echo esc_attr( $services_json ); ?>"
 		data-mns-cities="<?php echo esc_attr( $cities_json ); ?>"
 		data-mns-preselect="<?php echo esc_attr( $preselect ); ?>"
-		data-mns-success="<?php echo esc_attr__( 'درخواست ثبت شد. کد پیگیری: MNS-1403-1102', 'medyar-nursing-services' ); ?>"
+		data-mns-prepatient="<?php echo esc_attr( $prepatient ); ?>"
+		data-mns-success="<?php echo esc_attr( sprintf( /* translators: tracking */ __( 'درخواست ثبت شد. کد پیگیری: %s', 'medyar-nursing-services' ), $track_sample ) ); ?>"
 	>
 		<div class="mns-form-notice mns-notice" data-mns-notice hidden tabindex="-1"></div>
-		<input type="hidden" name="patient_mode" value="self" data-mns-patient-mode>
+		<input type="hidden" name="patient_mode" value="<?php echo '' !== $prepatient && 'self' !== $prepatient ? 'saved' : 'self'; ?>" data-mns-patient-mode>
 		<input type="hidden" name="nurse_gender" value="" data-mns-nurse-gender>
 		<input type="hidden" name="is_urgent" value="0" data-mns-is-urgent>
 		<input type="hidden" name="category_id" value="" data-mns-category>
 
 		<section class="mns-step is-active" data-mns-step="1" aria-labelledby="mns-step-1-title">
-			<h2 id="mns-step-1-title" class="mns-step__title"><?php echo esc_html__( 'بیمار و تماس', 'medyar-nursing-services' ); ?></h2>
-
-			<div class="mns-seg" role="radiogroup" aria-label="<?php echo esc_attr__( 'انتخاب بیمار', 'medyar-nursing-services' ); ?>" data-mns-seg="patient_mode">
-				<button type="button" class="mns-seg__btn is-selected" role="radio" aria-checked="true" data-value="self"><?php echo esc_html__( 'خودم', 'medyar-nursing-services' ); ?></button>
-				<button type="button" class="mns-seg__btn" role="radio" aria-checked="false" data-value="saved"><?php echo esc_html__( 'افراد ذخیره‌شده', 'medyar-nursing-services' ); ?></button>
-				<button type="button" class="mns-seg__btn" role="radio" aria-checked="false" data-value="new"><?php echo esc_html__( 'بیمار جدید', 'medyar-nursing-services' ); ?></button>
-			</div>
-
-			<div data-mns-panel-mode="saved" class="is-hidden" hidden>
-				<label class="mns-field-block">
-					<span class="mns-field-block__label"><?php echo esc_html__( 'بیمار', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></span>
-					<span class="mns-field-block__control mns-field-block__control--select">
-						<select class="mns-select-native" name="patient_id" data-mns-select data-mns-patient-select>
-							<option value=""><?php echo esc_html__( 'انتخاب کنید', 'medyar-nursing-services' ); ?></option>
-							<?php foreach ( $patients as $p ) : ?>
-								<option value="<?php echo esc_attr( (string) ( $p['id'] ?? '' ) ); ?>"><?php echo esc_html( (string) ( $p['label'] ?? $p['name'] ?? '' ) ); ?></option>
-							<?php endforeach; ?>
-						</select>
-						<span class="mns-field-block__chevron" aria-hidden="true">▾</span>
-					</span>
-				</label>
-			</div>
-
-			<div data-mns-panel-mode="new" class="is-hidden" hidden>
-				<div class="mns-form-row--2">
-					<label class="mns-field-block">
-						<span class="mns-field-block__label"><?php echo esc_html__( 'نام بیمار', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></span>
-						<span class="mns-field-block__control"><input type="text" name="new_patient_name" maxlength="100" autocomplete="name"></span>
-					</label>
-					<label class="mns-field-block">
-						<span class="mns-field-block__label"><?php echo esc_html__( 'سن', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></span>
-						<span class="mns-field-block__control"><input type="text" name="new_patient_age" inputmode="numeric" maxlength="3"></span>
-					</label>
-				</div>
-				<label class="mns-field-block">
-					<span class="mns-field-block__label"><?php echo esc_html__( 'جنسیت بیمار', 'medyar-nursing-services' ); ?></span>
-					<span class="mns-field-block__control mns-field-block__control--select">
-						<select class="mns-select-native" name="new_patient_gender" data-mns-select>
-							<option value=""><?php echo esc_html__( 'انتخاب کنید', 'medyar-nursing-services' ); ?></option>
-							<option value="female"><?php echo esc_html__( 'خانم', 'medyar-nursing-services' ); ?></option>
-							<option value="male"><?php echo esc_html__( 'آقا', 'medyar-nursing-services' ); ?></option>
-						</select>
-						<span class="mns-field-block__chevron" aria-hidden="true">▾</span>
-					</span>
-				</label>
-				<label class="mns-field-block">
-					<span class="mns-field-block__label"><?php echo esc_html__( 'بیماری‌های زمینه‌ای', 'medyar-nursing-services' ); ?></span>
-					<span class="mns-field-block__control mns-field-block__control--area">
-						<textarea name="new_patient_comorbidities" rows="2" maxlength="300" placeholder="<?php echo esc_attr__( 'اختیاری', 'medyar-nursing-services' ); ?>"></textarea>
-					</span>
-				</label>
-			</div>
-
-			<label class="mns-field-block">
-				<span class="mns-field-block__label"><?php echo esc_html__( 'شماره تماس', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></span>
-				<span class="mns-field-block__control">
-					<input type="text" name="phone" data-mns-iran-mobile required inputmode="tel" dir="ltr" placeholder="۰۹۱۲ ۱۲۳ ۴۵۶۷" autocomplete="tel" value="<?php echo esc_attr( MNS_Format::mobile( $phone ) ); ?>">
-				</span>
-			</label>
-
-			<div class="mns-step__nav">
-				<button type="button" class="mns-submit-btn" data-mns-step-next><?php echo esc_html__( 'ادامه', 'medyar-nursing-services' ); ?></button>
-			</div>
-		</section>
-
-		<section class="mns-step is-hidden" data-mns-step="2" hidden aria-hidden="true" aria-labelledby="mns-step-2-title">
-			<h2 id="mns-step-2-title" class="mns-step__title"><?php echo esc_html__( 'مکان و زمان', 'medyar-nursing-services' ); ?></h2>
-
-			<div class="mns-form-row--2">
-				<label class="mns-field-block">
-					<span class="mns-field-block__label"><?php echo esc_html__( 'شهر', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></span>
-					<span class="mns-field-block__control mns-field-block__control--select">
-						<select class="mns-select-native" name="city_id" data-mns-select data-mns-city required>
-							<option value=""><?php echo esc_html__( 'انتخاب کنید', 'medyar-nursing-services' ); ?></option>
-							<?php foreach ( $cities as $c ) : ?>
-								<option value="<?php echo esc_attr( (string) ( $c['id'] ?? '' ) ); ?>"><?php echo esc_html( (string) ( $c['name'] ?? '' ) ); ?></option>
-							<?php endforeach; ?>
-						</select>
-						<span class="mns-field-block__chevron" aria-hidden="true">▾</span>
-					</span>
-				</label>
-				<label class="mns-field-block">
-					<span class="mns-field-block__label"><?php echo esc_html__( 'منطقه', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></span>
-					<span class="mns-field-block__control mns-field-block__control--select">
-						<select class="mns-select-native" name="area_id" data-mns-select data-mns-area required>
-							<option value=""><?php echo esc_html__( 'ابتدا شهر را انتخاب کنید', 'medyar-nursing-services' ); ?></option>
-						</select>
-						<span class="mns-field-block__chevron" aria-hidden="true">▾</span>
-					</span>
-				</label>
-			</div>
-
-			<label class="mns-field-block">
-				<span class="mns-field-block__label"><?php echo esc_html__( 'آدرس دقیق', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></span>
-				<span class="mns-field-block__control">
-					<input type="text" name="address" required maxlength="191" placeholder="<?php echo esc_attr__( 'خیابان، پلاک، واحد', 'medyar-nursing-services' ); ?>">
-				</span>
-			</label>
-
-			<button type="button" class="mns-chip mns-chip--urgent" data-mns-urgent-chip aria-pressed="false">
-				<?php echo esc_html__( 'سفارش فوری', 'medyar-nursing-services' ); ?>
-			</button>
-			<p class="mns-field-hint is-hidden" data-mns-urgent-hint hidden><?php echo esc_html__( 'اولویت تخصیص؛ ممکن است شرایط قیمت یا زمان متفاوت باشد.', 'medyar-nursing-services' ); ?></p>
-
-			<div class="mns-form-row--2" data-mns-schedule-fields>
-				<label class="mns-field-block">
-					<span class="mns-field-block__label"><?php echo esc_html__( 'تاریخ شمسی', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></span>
-					<span class="mns-field-block__control">
-						<input type="text" name="preferred_date" placeholder="۱۴۰۳/۰۸/۲۰" autocomplete="off" data-mns-preferred-date>
-					</span>
-				</label>
-				<label class="mns-field-block">
-					<span class="mns-field-block__label"><?php echo esc_html__( 'ساعت', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></span>
-					<span class="mns-field-block__control mns-field-block__control--select">
-						<select class="mns-select-native" name="preferred_time" data-mns-select data-mns-preferred-time>
-							<option value=""><?php echo esc_html__( 'انتخاب کنید', 'medyar-nursing-services' ); ?></option>
-							<?php foreach ( $times as $t ) : ?>
-								<option value="<?php echo esc_attr( (string) $t ); ?>"><?php echo esc_html( (string) $t ); ?></option>
-							<?php endforeach; ?>
-						</select>
-						<span class="mns-field-block__chevron" aria-hidden="true">▾</span>
-					</span>
-				</label>
-			</div>
-
-			<div class="mns-step__nav">
-				<button type="button" class="mns-btn-outline" data-mns-step-prev><?php echo esc_html__( 'قبلی', 'medyar-nursing-services' ); ?></button>
-				<button type="button" class="mns-submit-btn" data-mns-step-next><?php echo esc_html__( 'ادامه', 'medyar-nursing-services' ); ?></button>
-			</div>
-		</section>
-
-		<section class="mns-step is-hidden" data-mns-step="3" hidden aria-hidden="true" aria-labelledby="mns-step-3-title">
-			<h2 id="mns-step-3-title" class="mns-step__title"><?php echo esc_html__( 'خدمت و جزئیات', 'medyar-nursing-services' ); ?></h2>
+			<h2 id="mns-step-1-title" class="mns-step__title"><?php echo esc_html__( 'خدمت و جزئیات', 'medyar-nursing-services' ); ?></h2>
 
 			<p class="mns-field-block__label" style="margin-bottom:8px"><?php echo esc_html__( 'دسته خدمت', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></p>
 			<div class="mns-chip-row" role="radiogroup" aria-label="<?php echo esc_attr__( 'دسته خدمت', 'medyar-nursing-services' ); ?>" data-mns-category-chips>
@@ -331,22 +206,161 @@ MNS_UI::page_header(
 				</label>
 			</div>
 
-			<?php
-			MNS_UI::alert(
-				array(
-					'tone'  => 'info',
-					'title' => __( 'داروی نسخه‌دار', 'medyar-nursing-services' ),
-					'text'  => __( 'آپلود نسخه به‌زودی فعال می‌شود. دارو فقط پس از تأیید پزشک مشاور به فاکتور اضافه می‌شود.', 'medyar-nursing-services' ),
-				)
-			);
-			?>
-
 			<label class="mns-field-block">
 				<span class="mns-field-block__label"><?php echo esc_html__( 'توضیحات تکمیلی', 'medyar-nursing-services' ); ?></span>
 				<span class="mns-field-block__control mns-field-block__control--area">
 					<textarea name="notes" rows="2" maxlength="400"></textarea>
 				</span>
 			</label>
+
+			<div class="mns-step__nav">
+				<button type="button" class="mns-submit-btn" data-mns-step-next><?php echo esc_html__( 'ادامه', 'medyar-nursing-services' ); ?></button>
+			</div>
+		</section>
+
+		<section class="mns-step is-hidden" data-mns-step="2" hidden aria-hidden="true" aria-labelledby="mns-step-2-title">
+			<h2 id="mns-step-2-title" class="mns-step__title"><?php echo esc_html__( 'بیمار و تماس', 'medyar-nursing-services' ); ?></h2>
+
+			<div class="mns-seg" role="radiogroup" aria-label="<?php echo esc_attr__( 'انتخاب بیمار', 'medyar-nursing-services' ); ?>" data-mns-seg="patient_mode">
+				<button type="button" class="mns-seg__btn<?php echo '' === $prepatient || 'self' === $prepatient ? ' is-selected' : ''; ?>" role="radio" aria-checked="<?php echo '' === $prepatient || 'self' === $prepatient ? 'true' : 'false'; ?>" data-value="self"><?php echo esc_html__( 'خودم', 'medyar-nursing-services' ); ?></button>
+				<button type="button" class="mns-seg__btn<?php echo '' !== $prepatient && 'self' !== $prepatient ? ' is-selected' : ''; ?>" role="radio" aria-checked="<?php echo '' !== $prepatient && 'self' !== $prepatient ? 'true' : 'false'; ?>" data-value="saved"><?php echo esc_html__( 'افراد ذخیره‌شده', 'medyar-nursing-services' ); ?></button>
+				<button type="button" class="mns-seg__btn" role="radio" aria-checked="false" data-value="new"><?php echo esc_html__( 'بیمار جدید', 'medyar-nursing-services' ); ?></button>
+			</div>
+
+			<div data-mns-panel-mode="saved" class="<?php echo '' !== $prepatient && 'self' !== $prepatient ? '' : 'is-hidden'; ?>" <?php echo '' !== $prepatient && 'self' !== $prepatient ? '' : 'hidden'; ?>>
+				<p class="mns-field-block__label"><?php echo esc_html__( 'بیمار', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></p>
+				<div class="mns-pick-list" role="radiogroup" aria-label="<?php echo esc_attr__( 'بیمار ذخیره‌شده', 'medyar-nursing-services' ); ?>" data-mns-patient-picks>
+					<?php foreach ( $patients as $p ) : ?>
+						<?php
+						$pid = (string) ( $p['id'] ?? '' );
+						$on  = $prepatient === $pid;
+						?>
+						<button
+							type="button"
+							class="mns-pick-card<?php echo $on ? ' is-selected' : ''; ?>"
+							role="radio"
+							aria-checked="<?php echo $on ? 'true' : 'false'; ?>"
+							data-mns-patient-pick
+							data-value="<?php echo esc_attr( $pid ); ?>"
+						>
+							<strong><?php echo esc_html( (string) ( $p['label'] ?? $p['name'] ?? '' ) ); ?></strong>
+							<?php if ( ! empty( $p['meta'] ) ) : ?>
+								<span><?php echo esc_html( (string) $p['meta'] ); ?></span>
+							<?php endif; ?>
+						</button>
+					<?php endforeach; ?>
+				</div>
+				<select class="screen-reader-text" name="patient_id" data-mns-patient-select tabindex="-1" aria-hidden="true">
+					<option value=""><?php echo esc_html__( 'انتخاب کنید', 'medyar-nursing-services' ); ?></option>
+					<?php foreach ( $patients as $p ) : ?>
+						<?php $pid = (string) ( $p['id'] ?? '' ); ?>
+						<option value="<?php echo esc_attr( $pid ); ?>" <?php selected( $prepatient, $pid ); ?>><?php echo esc_html( (string) ( $p['label'] ?? $p['name'] ?? '' ) ); ?></option>
+					<?php endforeach; ?>
+				</select>
+			</div>
+
+			<div data-mns-panel-mode="new" class="is-hidden" hidden>
+				<div class="mns-form-row--2">
+					<label class="mns-field-block">
+						<span class="mns-field-block__label"><?php echo esc_html__( 'نام بیمار', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></span>
+						<span class="mns-field-block__control"><input type="text" name="new_patient_name" maxlength="100" autocomplete="name"></span>
+					</label>
+					<label class="mns-field-block">
+						<span class="mns-field-block__label"><?php echo esc_html__( 'سن', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></span>
+						<span class="mns-field-block__control"><input type="text" name="new_patient_age" inputmode="numeric" maxlength="3"></span>
+					</label>
+				</div>
+				<label class="mns-field-block">
+					<span class="mns-field-block__label"><?php echo esc_html__( 'جنسیت بیمار', 'medyar-nursing-services' ); ?></span>
+					<span class="mns-field-block__control mns-field-block__control--select">
+						<select class="mns-select-native" name="new_patient_gender" data-mns-select>
+							<option value=""><?php echo esc_html__( 'انتخاب کنید', 'medyar-nursing-services' ); ?></option>
+							<option value="female"><?php echo esc_html__( 'خانم', 'medyar-nursing-services' ); ?></option>
+							<option value="male"><?php echo esc_html__( 'آقا', 'medyar-nursing-services' ); ?></option>
+						</select>
+						<span class="mns-field-block__chevron" aria-hidden="true">▾</span>
+					</span>
+				</label>
+				<label class="mns-field-block">
+					<span class="mns-field-block__label"><?php echo esc_html__( 'بیماری‌های زمینه‌ای', 'medyar-nursing-services' ); ?></span>
+					<span class="mns-field-block__control mns-field-block__control--area">
+						<textarea name="new_patient_comorbidities" rows="2" maxlength="300" placeholder="<?php echo esc_attr__( 'اختیاری', 'medyar-nursing-services' ); ?>"></textarea>
+					</span>
+				</label>
+			</div>
+
+			<label class="mns-field-block">
+				<span class="mns-field-block__label"><?php echo esc_html__( 'شماره تماس', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></span>
+				<span class="mns-field-block__control">
+					<input type="text" name="phone" data-mns-iran-mobile required inputmode="tel" dir="ltr" placeholder="۰۹۱۲ ۱۲۳ ۴۵۶۷" autocomplete="tel" value="<?php echo esc_attr( MNS_Format::mobile( $phone ) ); ?>">
+				</span>
+			</label>
+
+			<div class="mns-step__nav">
+				<button type="button" class="mns-btn-outline" data-mns-step-prev><?php echo esc_html__( 'قبلی', 'medyar-nursing-services' ); ?></button>
+				<button type="button" class="mns-submit-btn" data-mns-step-next><?php echo esc_html__( 'ادامه', 'medyar-nursing-services' ); ?></button>
+			</div>
+		</section>
+
+		<section class="mns-step is-hidden" data-mns-step="3" hidden aria-hidden="true" aria-labelledby="mns-step-3-title">
+			<h2 id="mns-step-3-title" class="mns-step__title"><?php echo esc_html__( 'مکان و زمان', 'medyar-nursing-services' ); ?></h2>
+
+			<div class="mns-form-row--2">
+				<label class="mns-field-block">
+					<span class="mns-field-block__label"><?php echo esc_html__( 'شهر', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></span>
+					<span class="mns-field-block__control mns-field-block__control--select">
+						<select class="mns-select-native" name="city_id" data-mns-select data-mns-city required>
+							<option value=""><?php echo esc_html__( 'انتخاب کنید', 'medyar-nursing-services' ); ?></option>
+							<?php foreach ( $cities as $c ) : ?>
+								<option value="<?php echo esc_attr( (string) ( $c['id'] ?? '' ) ); ?>"><?php echo esc_html( (string) ( $c['name'] ?? '' ) ); ?></option>
+							<?php endforeach; ?>
+						</select>
+						<span class="mns-field-block__chevron" aria-hidden="true">▾</span>
+					</span>
+				</label>
+				<label class="mns-field-block">
+					<span class="mns-field-block__label"><?php echo esc_html__( 'منطقه', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></span>
+					<span class="mns-field-block__control mns-field-block__control--select">
+						<select class="mns-select-native" name="area_id" data-mns-select data-mns-area required>
+							<option value=""><?php echo esc_html__( 'ابتدا شهر را انتخاب کنید', 'medyar-nursing-services' ); ?></option>
+						</select>
+						<span class="mns-field-block__chevron" aria-hidden="true">▾</span>
+					</span>
+				</label>
+			</div>
+
+			<label class="mns-field-block">
+				<span class="mns-field-block__label"><?php echo esc_html__( 'آدرس دقیق', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></span>
+				<span class="mns-field-block__control">
+					<input type="text" name="address" required maxlength="191" placeholder="<?php echo esc_attr__( 'خیابان، پلاک، واحد', 'medyar-nursing-services' ); ?>">
+				</span>
+			</label>
+
+			<button type="button" class="mns-chip mns-chip--urgent" data-mns-urgent-chip aria-pressed="false">
+				<?php echo esc_html__( 'سفارش فوری', 'medyar-nursing-services' ); ?>
+			</button>
+			<p class="mns-field-hint is-hidden" data-mns-urgent-hint hidden><?php echo esc_html__( 'اولویت تخصیص؛ ممکن است شرایط قیمت یا زمان متفاوت باشد.', 'medyar-nursing-services' ); ?></p>
+
+			<div class="mns-form-row--2" data-mns-schedule-fields>
+				<label class="mns-field-block">
+					<span class="mns-field-block__label"><?php echo esc_html__( 'تاریخ شمسی', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></span>
+					<span class="mns-field-block__control">
+						<input type="text" name="preferred_date" placeholder="۱۴۰۳/۰۸/۲۰" autocomplete="off" data-mns-preferred-date>
+					</span>
+				</label>
+				<label class="mns-field-block">
+					<span class="mns-field-block__label"><?php echo esc_html__( 'ساعت', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></span>
+					<span class="mns-field-block__control mns-field-block__control--select">
+						<select class="mns-select-native" name="preferred_time" data-mns-select data-mns-preferred-time>
+							<option value=""><?php echo esc_html__( 'انتخاب کنید', 'medyar-nursing-services' ); ?></option>
+							<?php foreach ( $times as $t ) : ?>
+								<option value="<?php echo esc_attr( (string) $t ); ?>"><?php echo esc_html( (string) $t ); ?></option>
+							<?php endforeach; ?>
+						</select>
+						<span class="mns-field-block__chevron" aria-hidden="true">▾</span>
+					</span>
+				</label>
+			</div>
 
 			<div class="mns-step__nav">
 				<button type="button" class="mns-btn-outline" data-mns-step-prev><?php echo esc_html__( 'قبلی', 'medyar-nursing-services' ); ?></button>

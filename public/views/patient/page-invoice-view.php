@@ -54,7 +54,7 @@ MNS_UI::page_header(
 			MNS_Format::digits( (string) ( $d['number'] ?? $number ) )
 		),
 		'back_url'   => $list_url,
-		'back_label' => __( 'فاکتورها', 'medyar-nursing-services' ),
+		'back_label' => __( 'فاکتورها و پرداخت‌ها', 'medyar-nursing-services' ),
 		'badge_html' => $badge,
 	)
 );
@@ -120,9 +120,6 @@ if ( 'void' === $status ) {
 			?>
 		</button>
 	<?php endif; ?>
-	<button type="button" class="mns-outline-btn" data-mns-mock-action data-mns-success="<?php echo esc_attr__( 'دانلود PDF به‌زودی فعال می‌شود.', 'medyar-nursing-services' ); ?>">
-		<?php echo esc_html__( 'دانلود PDF / چاپ', 'medyar-nursing-services' ); ?>
-	</button>
 	<?php if ( in_array( $status, array( 'unpaid', 'failed' ), true ) ) : ?>
 		<?php MNS_UI::support_call( array( 'variant' => 'text' ) ); ?>
 	<?php endif; ?>

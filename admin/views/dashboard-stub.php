@@ -32,11 +32,15 @@ $links = array(
 );
 ?>
 <div class="wrap mns-admin">
+	<p class="mns-admin__crumb"><?php echo esc_html__( 'خدمات پرستاری', 'medyar-nursing-services' ); ?></p>
 	<h1 class="mns-admin__title"><?php echo esc_html__( 'خدمات پرستاری', 'medyar-nursing-services' ); ?></h1>
 	<p class="mns-admin__lead">
-		<?php echo esc_html__( 'مرکز عملیات — اسکلت استاتیک فاز ۶؛ دادهٔ واقعی در فازهای بعدی.', 'medyar-nursing-services' ); ?>
+		<?php echo esc_html__( 'مرکز عملیات — اسکلت استاتیک؛ دادهٔ واقعی در فازهای بعدی.', 'medyar-nursing-services' ); ?>
 		<span class="mns-admin__ver">v<?php echo esc_html( MNS_VERSION ); ?></span>
 	</p>
+	<div class="notice notice-info inline mns-admin-preview">
+		<p><strong><?php echo esc_html__( 'پیش‌نمایش UI استاتیک', 'medyar-nursing-services' ); ?></strong> — <?php echo esc_html__( 'اعداد و صف‌ها نمونه هستند؛ کلیک‌ها فقط به اسکلت صفحات می‌روند.', 'medyar-nursing-services' ); ?></p>
+	</div>
 
 	<div class="mns-admin-bubbles" aria-label="<?php echo esc_attr__( 'هشدارهای فوری', 'medyar-nursing-services' ); ?>">
 		<a class="mns-admin-bubble" href="<?php echo esc_url( $links['nurses'] ); ?>">
@@ -80,7 +84,9 @@ $links = array(
 				<tbody>
 					<?php foreach ( $queue as $row ) : ?>
 						<tr class="<?php echo ! empty( $row['urgent'] ) ? 'mns-admin-row--urgent' : ''; ?>">
-							<td dir="ltr"><?php echo esc_html( (string) ( $row['code'] ?? '' ) ); ?></td>
+							<td dir="ltr">
+								<a href="<?php echo esc_url( $links['monitor'] ); ?>"><?php echo esc_html( (string) ( $row['code'] ?? '' ) ); ?></a>
+							</td>
 							<td><?php echo esc_html( (string) ( $row['service'] ?? '' ) ); ?></td>
 							<td><?php echo esc_html( (string) ( $row['city'] ?? '' ) ); ?></td>
 							<td><?php echo esc_html( (string) ( $row['label'] ?? '' ) ); ?></td>
@@ -98,8 +104,10 @@ $links = array(
 			<ul class="mns-admin-list">
 				<?php foreach ( $nurses as $n ) : ?>
 					<li>
-						<strong><?php echo esc_html( (string) ( $n['name'] ?? '' ) ); ?></strong>
-						<span><?php echo esc_html( (string) ( $n['hospital'] ?? '' ) ); ?></span>
+						<a href="<?php echo esc_url( $links['nurses'] ); ?>">
+							<strong><?php echo esc_html( (string) ( $n['name'] ?? '' ) ); ?></strong>
+							<span><?php echo esc_html( (string) ( $n['hospital'] ?? '' ) ); ?></span>
+						</a>
 					</li>
 				<?php endforeach; ?>
 			</ul>

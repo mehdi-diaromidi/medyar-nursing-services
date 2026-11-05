@@ -37,7 +37,7 @@ if ( MNS_Dev::is( 'long' ) && ! empty( $items ) ) {
 	<?php if ( MNS_Dev::is( 'loading' ) ) : ?>
 		<?php MNS_UI::skeleton( array( 'variant' => 'card', 'rows' => 6 ) ); ?>
 	<?php elseif ( MNS_Dev::is( 'error' ) ) : ?>
-		<?php MNS_UI::error_state( array( 'retry_url' => home_url( '/nursing-services/' ) ) ); ?>
+		<?php MNS_UI::error_state( array( 'retry_url' => MNS_Pages::catalog_url() ) ); ?>
 	<?php else : ?>
 
 		<header class="mns-catalog__intro">

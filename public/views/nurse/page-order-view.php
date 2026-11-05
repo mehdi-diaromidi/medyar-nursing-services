@@ -16,12 +16,14 @@ $by      = isset( $pack['by_status'] ) && is_array( $pack['by_status'] ) ? $pack
 $default = (string) ( $pack['default_status'] ?? MNS_Order_Status::ASSIGNED );
 
 $status = $default;
-$raw    = MNS_Dev::enabled() ? MNS_Dev::state() : '';
-if ( '' === $raw || 'default' === $raw ) {
-	$raw = isset( $_GET['mns_state'] ) ? sanitize_key( wp_unslash( $_GET['mns_state'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-}
-if ( MNS_Order_Status::is_valid( $raw ) && isset( $by[ $raw ] ) ) {
-	$status = $raw;
+if ( MNS_Dev::enabled() ) {
+	$raw = MNS_Dev::state();
+	if ( '' === $raw || 'default' === $raw ) {
+		$raw = isset( $_GET['mns_state'] ) ? sanitize_key( wp_unslash( $_GET['mns_state'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+	}
+	if ( MNS_Order_Status::is_valid( $raw ) && isset( $by[ $raw ] ) ) {
+		$status = $raw;
+	}
 }
 $d      = isset( $by[ $status ] ) && is_array( $by[ $status ] ) ? $by[ $status ] : ( $by[ $default ] ?? array() );
 $status = (string) ( $d['status'] ?? $status );

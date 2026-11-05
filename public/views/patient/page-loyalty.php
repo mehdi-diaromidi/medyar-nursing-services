@@ -40,11 +40,6 @@ MNS_UI::stamp_card(
 );
 ?>
 
-<details class="mns-details mns-card">
-	<summary class="mns-details__summary"><?php echo esc_html__( 'قوانین کارت مهر', 'medyar-nursing-services' ); ?></summary>
-	<p class="mns-field-hint" style="margin:0"><?php echo esc_html( (string) ( $d['rules'] ?? '' ) ); ?></p>
-</details>
-
 <section class="mns-card">
 	<h2 class="mns-card__title"><?php echo esc_html__( 'کدهای تخفیف فعال', 'medyar-nursing-services' ); ?></h2>
 	<?php if ( empty( $codes ) ) : ?>

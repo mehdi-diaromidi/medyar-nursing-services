@@ -1,6 +1,6 @@
 <?php
 /**
- * Nurse signup (Phase 6) — form + pending/rejected/suspended states.
+ * Nurse signup — form + pending/rejected/suspended/approved (UX Phase D).
  *
  * @package medyar-nursing-services
  */
@@ -11,57 +11,121 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 MNS_UI::boot_icons();
 
-$state = isset( $_GET['mns_state'] ) ? sanitize_key( wp_unslash( $_GET['mns_state'] ) ) : 'form'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-if ( ! in_array( $state, array( 'form', 'pending', 'rejected', 'suspended' ), true ) ) {
-	$state = 'form';
+$allowed = array( 'form', 'pending', 'rejected', 'suspended', 'approved' );
+$state   = 'form';
+if ( class_exists( 'MNS_Dev' ) && MNS_Dev::enabled() ) {
+	$raw = MNS_Dev::state();
+	if ( in_array( $raw, $allowed, true ) ) {
+		$state = $raw;
+	} elseif ( isset( $_GET['mns_state'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$cand = sanitize_key( wp_unslash( $_GET['mns_state'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( in_array( $cand, $allowed, true ) ) {
+			$state = $cand;
+		}
+	}
 }
-$track = 'MNS-APP-1403-2201';
+
+$tz    = wp_timezone();
+$now   = new DateTimeImmutable( 'now', $tz );
+$jy    = MNS_Format::g2j( (int) $now->format( 'Y' ), (int) $now->format( 'n' ), (int) $now->format( 'j' ) );
+$track = 'MNS-APP-' . $jy[0] . '-2201';
+$note  = __( 'مدارک ناقص یا ناخوانا. می‌توانید دوباره ارسال کنید؛ فرم از قبل پر شده است.', 'medyar-nursing-services' );
+$panel = MNS_Pages::panel_url( 'nurse', 'dashboard' );
 ?>
 <div class="mns-signup" dir="rtl">
+	<?php if ( class_exists( 'MNS_Dev' ) && MNS_Dev::enabled() ) : ?>
+		<p class="mns-preview-banner"><?php echo esc_html__( 'نمایشی استاتیک — وضعیت فقط برای پیش‌نمایش سوئیچ می‌شود.', 'medyar-nursing-services' ); ?></p>
+	<?php endif; ?>
+
 	<?php if ( 'pending' === $state ) : ?>
+		<?php
+		MNS_UI::page_header(
+			array(
+				'title' => __( 'درخواست در صف بررسی', 'medyar-nursing-services' ),
+				'lead'  => __( 'نتیجه با پیامک اعلام می‌شود. معمولاً تا ۴۸ ساعت کاری.', 'medyar-nursing-services' ),
+			)
+		);
+		MNS_UI::alert(
+			array(
+				'tone'  => 'info',
+				'title' => __( 'نیازی به ارسال مجدد نیست', 'medyar-nursing-services' ),
+				'text'  => __( 'تا اعلام نتیجه صبر کنید. در صورت نقص مدارک، پیامک جداگانه می‌آید.', 'medyar-nursing-services' ),
+			)
+		);
+		?>
 		<section class="mns-card mns-result-card">
 			<span class="mns-result-card__icon" aria-hidden="true"><?php echo mns_icon( 'clock' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
-			<h1 class="mns-dash__title"><?php echo esc_html__( 'درخواست در صف بررسی', 'medyar-nursing-services' ); ?></h1>
-			<p class="mns-dash__lead"><?php echo esc_html__( 'نتیجه با پیامک اعلام می‌شود. معمولاً تا ۴۸ ساعت کاری.', 'medyar-nursing-services' ); ?></p>
 			<p class="mns-result-card__code">
 				<?php echo esc_html( MNS_Copy::t( 'label.tracking_code' ) ); ?>
 				<strong dir="ltr"><?php echo esc_html( MNS_Format::digits( $track ) ); ?></strong>
 				<button type="button" class="mns-link-btn" data-mns-copy="<?php echo esc_attr( $track ); ?>"><?php echo esc_html( MNS_Copy::t( 'action.copy' ) ); ?></button>
 			</p>
+			<p class="mns-field-hint"><?php echo esc_html__( 'کد نمونهٔ نمایشی برای پیش‌نمایش استاتیک.', 'medyar-nursing-services' ); ?></p>
 			<?php MNS_UI::support_call( array( 'variant' => 'outline' ) ); ?>
 		</section>
-	<?php elseif ( 'suspended' === $state ) : ?>
+	<?php elseif ( 'approved' === $state ) : ?>
+		<?php
+		MNS_UI::page_header(
+			array(
+				'title' => __( 'عضویت تأیید شد', 'medyar-nursing-services' ),
+				'lead'  => __( 'نقش پرستار فعال است. برنامه و پذیرش را تنظیم کنید.', 'medyar-nursing-services' ),
+			)
+		);
+		?>
 		<section class="mns-card mns-result-card">
-			<?php
-			MNS_UI::alert(
-				array(
-					'tone'  => 'danger',
-					'title' => __( 'حساب تعلیق شده', 'medyar-nursing-services' ),
-					'text'  => __( 'دسترسی پنل پرستار فعلاً غیرفعال است. با پشتیبانی مدیار تماس بگیرید.', 'medyar-nursing-services' ),
-				)
-			);
-			?>
+			<span class="mns-result-card__icon" aria-hidden="true"><?php echo mns_icon( 'check-circle' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
+			<div class="mns-actions-row">
+				<a class="mns-submit-btn mns-submit-btn--auto" href="<?php echo esc_url( $panel ); ?>"><?php echo esc_html__( 'ورود به پنل پرستار', 'medyar-nursing-services' ); ?></a>
+			</div>
+		</section>
+	<?php elseif ( 'suspended' === $state ) : ?>
+		<?php
+		MNS_UI::page_header(
+			array(
+				'title' => __( 'حساب تعلیق شده', 'medyar-nursing-services' ),
+				'lead'  => __( 'دسترسی پنل پرستار فعلاً غیرفعال است.', 'medyar-nursing-services' ),
+			)
+		);
+		MNS_UI::alert(
+			array(
+				'tone'  => 'danger',
+				'title' => __( 'تعلیق دسترسی', 'medyar-nursing-services' ),
+				'text'  => __( 'با پشتیبانی مدیار تماس بگیرید تا وضعیت بررسی شود.', 'medyar-nursing-services' ),
+			)
+		);
+		?>
+		<section class="mns-card">
 			<?php MNS_UI::support_call( array( 'variant' => 'solid' ) ); ?>
 		</section>
 	<?php elseif ( 'rejected' === $state ) : ?>
-		<section class="mns-card">
-			<?php
-			MNS_UI::alert(
-				array(
-					'tone'  => 'warning',
-					'title' => __( 'درخواست رد شد', 'medyar-nursing-services' ),
-					'text'  => __( 'دلیل: مدارک ناقص یا ناخوانا. می‌توانید دوباره ارسال کنید؛ فرم از قبل پر شده است.', 'medyar-nursing-services' ),
-				)
-			);
-			?>
-		</section>
+		<?php
+		MNS_UI::page_header(
+			array(
+				'title' => __( 'درخواست رد شد', 'medyar-nursing-services' ),
+				'lead'  => __( 'می‌توانید پس از رفع نقص دوباره ارسال کنید.', 'medyar-nursing-services' ),
+			)
+		);
+		MNS_UI::alert(
+			array(
+				'tone'  => 'warning',
+				'title' => __( 'یادداشت بررسی', 'medyar-nursing-services' ),
+				'text'  => $note,
+			)
+		);
+		?>
 	<?php endif; ?>
 
 	<?php if ( in_array( $state, array( 'form', 'rejected' ), true ) ) : ?>
-		<header class="mns-page-header">
-			<h1 class="mns-dash__title"><?php echo esc_html__( 'عضویت پرستار', 'medyar-nursing-services' ); ?></h1>
-			<p class="mns-dash__lead"><?php echo esc_html__( 'همه اطلاعات را یکجا وارد کنید. مدارک فقط برای ادمین قابل مشاهده است.', 'medyar-nursing-services' ); ?></p>
-		</header>
+		<?php if ( 'form' === $state ) : ?>
+			<?php
+			MNS_UI::page_header(
+				array(
+					'title' => __( 'عضویت پرستار', 'medyar-nursing-services' ),
+					'lead'  => __( 'همه اطلاعات را یکجا وارد کنید. مدارک فقط برای ادمین قابل مشاهده است.', 'medyar-nursing-services' ),
+				)
+			);
+			?>
+		<?php endif; ?>
 
 		<div class="mns-form-notice mns-notice" data-mns-notice hidden tabindex="-1"></div>
 

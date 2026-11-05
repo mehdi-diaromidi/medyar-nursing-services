@@ -117,6 +117,9 @@ class MNS_UI {
 			if ( 'order-view' === $page ) {
 				return 'orders';
 			}
+			if ( 'ratings' === $page ) {
+				return 'profile';
+			}
 			return $page;
 		}
 		if ( 'order-view' === $page ) {

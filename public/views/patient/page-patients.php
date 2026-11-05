@@ -1,6 +1,6 @@
 <?php
 /**
- * Patient — saved people (Phase 4).
+ * Patient — saved people (UX Phase D).
  *
  * @package medyar-nursing-services
  */
@@ -19,6 +19,7 @@ if ( MNS_Dev::is( 'empty' ) ) {
 }
 
 $show_form = MNS_Dev::is( 'form' ) || ( isset( $_GET['mns_form'] ) && '1' === (string) wp_unslash( $_GET['mns_form'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+$new_order = MNS_Pages::panel_url( 'patient', 'new-order' );
 
 MNS_UI::page_header(
 	array(
@@ -26,7 +27,7 @@ MNS_UI::page_header(
 		'lead'    => __( 'افرادی که می‌توانید برایشان سفارش ثبت کنید.', 'medyar-nursing-services' ),
 		'actions' => $show_form
 			? ''
-			: '<a class="mns-submit-btn mns-submit-btn--auto" href="' . esc_url( add_query_arg( 'mns_form', '1' ) ) . '">' . esc_html__( 'افزودن بیمار', 'medyar-nursing-services' ) . '</a>',
+			: '<a class="mns-submit-btn mns-submit-btn--auto mns-page-header__cta-desktop" href="' . esc_url( add_query_arg( 'mns_form', '1' ) ) . '">' . esc_html__( 'افزودن بیمار', 'medyar-nursing-services' ) . '</a>',
 	)
 );
 ?>
@@ -95,36 +96,38 @@ MNS_UI::page_header(
 	);
 	?>
 <?php else : ?>
-	<ul class="mns-person-cards">
+	<ul class="mns-list">
 		<?php foreach ( $items as $row ) : ?>
-			<li class="mns-person-card">
-				<div class="mns-person-card__body">
-					<strong class="mns-person-card__name"><?php echo esc_html( (string) ( $row['name'] ?? '' ) ); ?></strong>
-					<span class="mns-person-card__meta">
-						<?php echo esc_html( (string) ( $row['relation'] ?? '' ) ); ?>
-						· <?php echo esc_html( MNS_Format::digits( (string) ( $row['age'] ?? '' ) ) ); ?> <?php echo esc_html__( 'سال', 'medyar-nursing-services' ); ?>
-						· <?php echo esc_html( (string) ( $row['gender_label'] ?? '' ) ); ?>
-					</span>
-					<?php if ( ! empty( $row['phone'] ) ) : ?>
-						<span class="mns-person-card__phone" dir="ltr"><?php echo esc_html( MNS_Format::mobile( (string) $row['phone'] ) ); ?></span>
-					<?php endif; ?>
-					<?php if ( ! empty( $row['comorbidities'] ) ) : ?>
-						<span class="mns-person-card__note"><?php echo esc_html( (string) $row['comorbidities'] ); ?></span>
-					<?php endif; ?>
-				</div>
-				<div class="mns-person-card__actions">
-					<a class="mns-outline-btn" href="<?php echo esc_url( add_query_arg( 'mns_service', 'serum', MNS_Pages::panel_url( 'patient', 'new-order' ) ) ); ?>">
-						<?php echo esc_html__( 'ثبت سفارش', 'medyar-nursing-services' ); ?>
-					</a>
-					<?php if ( empty( $row['is_self'] ) ) : ?>
-						<button type="button" class="mns-link-btn" data-mns-dialog-open="mns-del-patient-<?php echo esc_attr( (string) ( $row['id'] ?? '' ) ); ?>">
-							<?php echo esc_html__( 'حذف', 'medyar-nursing-services' ); ?>
-						</button>
-					<?php endif; ?>
-				</div>
-			</li>
 			<?php
-			if ( empty( $row['is_self'] ) ) {
+			$order_url = add_query_arg(
+				array(
+					'mns_patient' => (string) ( $row['id'] ?? '' ),
+				),
+				$new_order
+			);
+			$meta = (string) ( $row['relation'] ?? '' )
+				. ' · ' . MNS_Format::digits( (string) ( $row['age'] ?? '' ) ) . ' ' . __( 'سال', 'medyar-nursing-services' )
+				. ' · ' . (string) ( $row['gender_label'] ?? '' );
+			if ( ! empty( $row['phone'] ) ) {
+				$meta .= ' · ' . MNS_Format::mobile( (string) $row['phone'] );
+			}
+			MNS_UI::list_item(
+				array(
+					'url'          => $order_url,
+					'title'        => (string) ( $row['name'] ?? '' ),
+					'meta'         => $meta,
+					'meta2'        => (string) ( $row['comorbidities'] ?? '' ),
+					'action_label' => __( 'ثبت سفارش', 'medyar-nursing-services' ),
+				)
+			);
+			?>
+			<?php if ( empty( $row['is_self'] ) ) : ?>
+				<li class="mns-list-item mns-list-item--aside">
+					<button type="button" class="mns-link-btn" data-mns-dialog-open="mns-del-patient-<?php echo esc_attr( (string) ( $row['id'] ?? '' ) ); ?>">
+						<?php echo esc_html__( 'حذف این بیمار', 'medyar-nursing-services' ); ?>
+					</button>
+				</li>
+				<?php
 				ob_start();
 				echo '<p>' . esc_html__( 'این فرد از فهرست بیماران شما حذف می‌شود.', 'medyar-nursing-services' ) . '</p>';
 				$body = ob_get_clean();
@@ -142,8 +145,8 @@ MNS_UI::page_header(
 						'variant'     => 'sheet',
 					)
 				);
-			}
-			?>
+				?>
+			<?php endif; ?>
 		<?php endforeach; ?>
 	</ul>
 <?php endif; ?>

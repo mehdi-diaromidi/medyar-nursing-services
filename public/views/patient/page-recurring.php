@@ -65,9 +65,8 @@ MNS_UI::page_header(
 						</div>
 						<div class="mns-slot-list__actions">
 							<?php if ( ! empty( $slot['url'] ) ) : ?>
-								<a class="mns-outline-btn" href="<?php echo esc_url( (string) $slot['url'] ); ?>"><?php echo esc_html__( 'مشاهده', 'medyar-nursing-services' ); ?></a>
+								<a class="mns-outline-btn" href="<?php echo esc_url( (string) $slot['url'] ); ?>"><?php echo esc_html__( 'جزئیات', 'medyar-nursing-services' ); ?></a>
 							<?php else : ?>
-								<button type="button" class="mns-outline-btn" data-mns-mock-action data-mns-success="<?php echo esc_attr__( 'ویرایش زمان به‌زودی.', 'medyar-nursing-services' ); ?>"><?php echo esc_html__( 'ویرایش زمان', 'medyar-nursing-services' ); ?></button>
 								<button type="button" class="mns-link-btn" data-mns-dialog-open="mns-cancel-slot-<?php echo esc_attr( (string) ( $prog['id'] ?? 'r' ) . '-' . $i ); ?>"><?php echo esc_html__( 'لغو نوبت', 'medyar-nursing-services' ); ?></button>
 							<?php endif; ?>
 						</div>

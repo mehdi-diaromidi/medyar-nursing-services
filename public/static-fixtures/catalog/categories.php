@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$base = home_url( '/nursing-services/' );
+$base = MNS_Pages::catalog_url();
 
 return array(
 	'title' => 'خدمات پرستاری در منزل',

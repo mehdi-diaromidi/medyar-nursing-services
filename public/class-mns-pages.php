@@ -96,4 +96,26 @@ class MNS_Pages {
 			$url
 		);
 	}
+
+	/**
+	 * Public catalog archive URL (falls back to known slug).
+	 */
+	public static function catalog_url(): string {
+		$page = get_page_by_path( 'nursing-services' );
+		if ( $page instanceof WP_Post ) {
+			$link = get_permalink( $page );
+			if ( is_string( $link ) && '' !== $link ) {
+				return $link;
+			}
+		}
+		return home_url( '/nursing-services/' );
+	}
+
+	/**
+	 * Single catalog service deep link.
+	 */
+	public static function catalog_service_url( string $slug ): string {
+		$slug = sanitize_key( $slug );
+		return add_query_arg( 'mns_service', $slug, self::catalog_url() );
+	}
 }
