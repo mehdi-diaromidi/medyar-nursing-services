@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Medyar Nursing Services
  * Description: سامانه سفارش، تخصیص و انجام خدمات پرستاری در منزل (مدیار)
- * Version: 0.1.9
+ * Version: 0.2.0
  * Author: Medyar
  * Text Domain: medyar-nursing-services
  * Requires at least: 5.8
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'MNS_VERSION', '0.1.9' );
+define( 'MNS_VERSION', '0.2.0' );
 define( 'MNS_DB_VERSION', '0.0.0' );
 define( 'MNS_PLUGIN_FILE', __FILE__ );
 define( 'MNS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );

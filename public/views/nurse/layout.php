@@ -33,8 +33,11 @@ if ( empty( $nav ) ) {
 	);
 }
 
-$show_bottom = ! in_array( $page, array( 'order-view', 'ui-kit' ), true );
-$nav_active  = ( 'order-view' === $page ) ? 'orders' : $page;
+$show_bottom    = ! in_array( $page, array( 'order-view', 'ui-kit' ), true );
+$nav_active     = MNS_UI::nav_active( 'nurse', $page );
+$settlement_url = class_exists( 'MTW_MyAccount_UI' )
+	? MTW_MyAccount_UI::section_url( 'withdrawal' )
+	: ( trailingslashit( $account ) . 'wallet/?section=withdrawal' );
 ?>
 <div class="mns-dash<?php echo $show_bottom ? ' mns-dash--has-bottom' : ''; ?>" dir="rtl" data-mns-panel="nurse" data-mns-page="<?php echo esc_attr( $page ); ?>">
 	<aside class="mns-dash__sidebar" data-mns-sidebar>
@@ -51,7 +54,7 @@ $nav_active  = ( 'order-view' === $page ) ? 'orders' : $page;
 				$slug   = isset( $item['slug'] ) ? (string) $item['slug'] : '';
 				$label  = isset( $item['label'] ) ? (string) $item['label'] : '';
 				$icon   = isset( $item['icon'] ) ? (string) $item['icon'] : 'list';
-				$active = ( $slug === $page );
+				$active = MNS_UI::nav_item_is_active( 'nurse', $page, $slug );
 				$url    = MNS_Pages::panel_url( 'nurse', $slug );
 				?>
 				<a
@@ -64,13 +67,14 @@ $nav_active  = ( 'order-view' === $page ) ? 'orders' : $page;
 					<span><?php echo esc_html( $label ); ?></span>
 				</a>
 			<?php endforeach; ?>
-			<a class="mns-dash__nav-link" href="<?php echo esc_url( $account ); ?>" target="_blank" rel="noopener noreferrer">
+			<div class="mns-dash__nav-sep" role="presentation"></div>
+			<a class="mns-dash__nav-link mns-dash__nav-link--external" href="<?php echo esc_url( $settlement_url ); ?>" target="_blank" rel="noopener noreferrer">
 				<span class="mns-dash__nav-icon" aria-hidden="true"><?php echo mns_icon( 'wallet' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
-				<span><?php echo esc_html__( 'کیف پول / برداشت', 'medyar-nursing-services' ); ?></span>
+				<span><?php echo esc_html__( 'برداشت کیف پول', 'medyar-nursing-services' ); ?></span>
 				<?php echo MNS_UI::external_mark(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 				<span class="screen-reader-text"><?php echo esc_html( MNS_Copy::t( 'label.external' ) ); ?></span>
 			</a>
-			<a class="mns-dash__nav-link" href="<?php echo esc_url( $account ); ?>" target="_blank" rel="noopener noreferrer">
+			<a class="mns-dash__nav-link mns-dash__nav-link--external" href="<?php echo esc_url( $account ); ?>" target="_blank" rel="noopener noreferrer">
 				<span class="mns-dash__nav-icon" aria-hidden="true"><?php echo mns_icon( 'grid' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
 				<span><?php echo esc_html__( 'پنل مدیار', 'medyar-nursing-services' ); ?></span>
 				<?php echo MNS_UI::external_mark(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>

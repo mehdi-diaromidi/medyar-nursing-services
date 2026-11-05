@@ -405,16 +405,65 @@
 				if (!active) sec.setAttribute('aria-hidden', 'true');
 				else sec.removeAttribute('aria-hidden');
 			});
+			var currentLabel = '';
 			qsa('[data-mns-step-goto]').forEach(function (btn) {
 				var id = parseInt(btn.getAttribute('data-mns-step-goto'), 10);
 				btn.classList.toggle('is-current', id === step);
 				btn.classList.toggle('is-done', id < step);
-				if (id === step) btn.setAttribute('aria-current', 'step');
-				else btn.removeAttribute('aria-current');
+				btn.disabled = id > step;
+				btn.setAttribute('aria-disabled', id > step ? 'true' : 'false');
+				if (id === step) {
+					btn.setAttribute('aria-current', 'step');
+					currentLabel = btn.getAttribute('data-mns-step-label') || '';
+				} else {
+					btn.removeAttribute('aria-current');
+				}
 			});
+			var compact = qs('[data-mns-step-compact]');
+			if (compact) {
+				compact.textContent = 'مرحلهٔ ' + step + ' از ' + maxStep + (currentLabel ? ' — ' + currentLabel : '');
+			}
+			var bar = qs('[data-mns-step-progress]');
+			if (bar) {
+				bar.style.width = Math.round((step / maxStep) * 100) + '%';
+			}
+			updateOrderSummary();
 			if (step === 4) fillReview();
 			var activeSec = qs('[data-mns-step].is-active', form);
 			if (activeSec) activeSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+		}
+
+		function updateOrderSummary() {
+			var box = qs('[data-mns-order-summary]');
+			var body = qs('[data-mns-order-summary-body]');
+			if (!box || !body) return;
+			var bits = [];
+			var svc = serviceSelect && serviceSelect.options[serviceSelect.selectedIndex]
+				? serviceSelect.options[serviceSelect.selectedIndex].text
+				: '';
+			if (svc && serviceSelect.value) bits.push(svc);
+			var mode = modeInput ? modeInput.value : 'self';
+			if (mode === 'self') bits.push('خودم');
+			else if (mode === 'saved') {
+				var pid = qs('[data-mns-patient-select]', form);
+				if (pid && pid.value && pid.options[pid.selectedIndex]) bits.push(pid.options[pid.selectedIndex].text);
+			} else {
+				var nm = qs('input[name="new_patient_name"]', form);
+				if (nm && nm.value) bits.push(nm.value);
+			}
+			var urgent = urgentInput && urgentInput.value === '1';
+			if (urgent) bits.push('فوری');
+			else {
+				var date = qs('[data-mns-preferred-date]', form);
+				var time = qs('[data-mns-preferred-time]', form);
+				if (date && date.value) bits.push(date.value + (time && time.value ? ' · ' + time.value : ''));
+			}
+			if (!bits.length) {
+				box.hidden = true;
+				return;
+			}
+			body.textContent = bits.join(' · ');
+			box.hidden = step < 2;
 		}
 
 		function validateStep(n) {
@@ -771,6 +820,22 @@
 		initAlerts();
 		initDialogs();
 		initCopyButtons();
+		initLiveSearch();
+	}
+
+	function initLiveSearch() {
+		qsa('[data-mns-live-search]').forEach(function (form) {
+			var input = qs('[data-mns-live-search-input]', form);
+			var list = document.querySelector('[data-mns-live-search-list]');
+			if (!input || !list) return;
+			input.addEventListener('input', function () {
+				var q = (input.value || '').trim().toLowerCase();
+				qsa('.mns-list-item', list).forEach(function (li) {
+					var hay = (li.textContent || '').toLowerCase();
+					li.hidden = q !== '' && hay.indexOf(q) === -1;
+				});
+			});
+		});
 	}
 
 	// WP Rocket / delayed JS often runs after DOMContentLoaded — boot either way.

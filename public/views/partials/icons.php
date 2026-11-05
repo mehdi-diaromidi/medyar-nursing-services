@@ -56,6 +56,8 @@ if ( ! function_exists( 'mns_icon' ) ) {
 			'more'         => '<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>',
 			'timer'        => '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/>',
 			'repeat'       => '<path d="m17 1 4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>',
+			'bandage'      => '<path d="M12 12h.01"/><path d="M10 10v4h4v-4z"/><path d="m14.5 5.5 4 4a3.5 3.5 0 0 1-5 5l-4-4a3.5 3.5 0 0 1 5-5z"/><path d="m5.5 14.5 4 4a3.5 3.5 0 0 0 5-5l-4-4a3.5 3.5 0 0 0-5 5z"/>',
+			'droplet'      => '<path d="M12 2.7c.3 0 6 6.3 6 10.3a6 6 0 1 1-12 0c0-4 5.7-10.3 6-10.3z"/>',
 			'gift'         => '<rect x="3" y="8" width="18" height="13" rx="1"/><path d="M12 8v13M3 12h18M12 8H7.5a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8zM12 8h4.5a2.5 2.5 0 0 0 0-5C13 3 12 8 12 8z"/>',
 		);
 

@@ -29,7 +29,7 @@ if ( MNS_Dev::is( 'offline' ) ) {
 
 MNS_UI::page_header(
 	array(
-		'title' => __( 'خانه', 'medyar-nursing-services' ),
+		'title' => __( 'داشبورد', 'medyar-nursing-services' ),
 		'lead'  => __( 'نوبت‌های امروز و وضعیت پذیرش.', 'medyar-nursing-services' ),
 	)
 );

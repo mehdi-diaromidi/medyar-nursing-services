@@ -89,6 +89,71 @@ class MNS_UI {
 	}
 
 	/**
+	 * @param array<string,mixed> $args See alert-card.php.
+	 */
+	public static function alert_card( array $args ): void {
+		self::partial( 'alert-card', $args );
+	}
+
+	/**
+	 * @param array<string,mixed> $args See section-head.php.
+	 */
+	public static function section_head( array $args ): void {
+		self::partial( 'section-head', $args );
+	}
+
+	/**
+	 * @param array<string,mixed> $args See list-item.php.
+	 */
+	public static function list_item( array $args ): void {
+		self::partial( 'list-item', $args );
+	}
+
+	/**
+	 * Resolve sidebar/bottom-nav active key for a panel page slug.
+	 */
+	public static function nav_active( string $panel, string $page ): string {
+		if ( 'nurse' === $panel ) {
+			if ( 'order-view' === $page ) {
+				return 'orders';
+			}
+			return $page;
+		}
+		if ( 'order-view' === $page ) {
+			return 'orders';
+		}
+		if ( 'invoice-view' === $page ) {
+			return 'invoices';
+		}
+		/* Mobile "more" hub covers secondary patient pages. */
+		if ( in_array( $page, array( 'patients', 'recurring', 'loyalty', 'surveys' ), true ) ) {
+			return 'more';
+		}
+		return $page;
+	}
+
+	/**
+	 * Whether a sidebar item slug should show as active for the current page.
+	 */
+	public static function nav_item_is_active( string $panel, string $page, string $slug ): bool {
+		if ( $slug === $page ) {
+			return true;
+		}
+		$active = self::nav_active( $panel, $page );
+		if ( $slug === $active ) {
+			return true;
+		}
+		/* Parent highlight for detail pages on desktop sidebar. */
+		if ( 'order-view' === $page && 'orders' === $slug ) {
+			return true;
+		}
+		if ( 'invoice-view' === $page && 'invoices' === $slug ) {
+			return true;
+		}
+		return false;
+	}
+
+	/**
 	 * @param array<string,mixed> $args See support-call.php.
 	 */
 	public static function support_call( array $args = array() ): void {
@@ -153,11 +218,10 @@ class MNS_UI {
 	 */
 	public static function default_bottom_nav_items( string $panel ): array {
 		if ( 'nurse' === $panel ) {
-			$account = function_exists( 'wc_get_page_permalink' ) ? (string) wc_get_page_permalink( 'myaccount' ) : home_url( '/my-account/' );
 			return array(
 				array(
 					'key'   => 'dashboard',
-					'label' => MNS_Copy::t( 'nav.home' ),
+					'label' => MNS_Copy::t( 'nav.dashboard' ),
 					'icon'  => 'home',
 					'url'   => MNS_Pages::panel_url( 'nurse', 'dashboard' ),
 				),
@@ -174,11 +238,10 @@ class MNS_UI {
 					'url'   => MNS_Pages::panel_url( 'nurse', 'availability' ),
 				),
 				array(
-					'key'      => 'wallet',
-					'label'    => MNS_Copy::t( 'nav.wallet' ),
-					'icon'     => 'wallet',
-					'url'      => $account,
-					'external' => true,
+					'key'   => 'profile',
+					'label' => MNS_Copy::t( 'nav.profile' ),
+					'icon'  => 'user',
+					'url'   => MNS_Pages::panel_url( 'nurse', 'profile' ),
 				),
 			);
 		}
@@ -186,7 +249,7 @@ class MNS_UI {
 		return array(
 			array(
 				'key'   => 'dashboard',
-				'label' => MNS_Copy::t( 'nav.home' ),
+				'label' => MNS_Copy::t( 'nav.dashboard' ),
 				'icon'  => 'home',
 				'url'   => MNS_Pages::panel_url( 'patient', 'dashboard' ),
 			),
@@ -205,13 +268,13 @@ class MNS_UI {
 			),
 			array(
 				'key'   => 'invoices',
-				'label' => __( 'فاکتورها', 'medyar-nursing-services' ),
+				'label' => MNS_Copy::t( 'nav.invoices' ),
 				'icon'  => 'invoice',
 				'url'   => MNS_Pages::panel_url( 'patient', 'invoices' ),
 			),
 			array(
-				'key'   => 'patients',
-				'label' => __( 'بیشتر', 'medyar-nursing-services' ),
+				'key'   => 'more',
+				'label' => MNS_Copy::t( 'nav.more' ),
 				'icon'  => 'more',
 				'url'   => MNS_Pages::panel_url( 'patient', 'patients' ),
 			),
@@ -234,7 +297,7 @@ class MNS_UI {
 	public static function page_titles( string $panel ): array {
 		if ( 'nurse' === $panel ) {
 			return array(
-				'dashboard'    => __( 'داشبورد پرستار', 'medyar-nursing-services' ),
+				'dashboard'    => __( 'داشبورد', 'medyar-nursing-services' ),
 				'orders'       => __( 'سفارش‌های من', 'medyar-nursing-services' ),
 				'order-view'   => __( 'جزئیات سفارش', 'medyar-nursing-services' ),
 				'availability' => __( 'برنامه و دسترسی', 'medyar-nursing-services' ),
@@ -244,15 +307,15 @@ class MNS_UI {
 			);
 		}
 		return array(
-			'dashboard'  => __( 'خانهٔ پنل بیمار', 'medyar-nursing-services' ),
-			'new-order'  => __( 'ثبت سفارش پرستاری', 'medyar-nursing-services' ),
-			'orders'     => __( 'سفارش‌های من', 'medyar-nursing-services' ),
-			'order-view' => __( 'جزئیات سفارش', 'medyar-nursing-services' ),
-			'patients'   => __( 'بیماران من', 'medyar-nursing-services' ),
+			'dashboard'    => __( 'داشبورد', 'medyar-nursing-services' ),
+			'new-order'    => __( 'ثبت سفارش', 'medyar-nursing-services' ),
+			'orders'       => __( 'سفارش‌های من', 'medyar-nursing-services' ),
+			'order-view'   => __( 'جزئیات سفارش', 'medyar-nursing-services' ),
+			'patients'     => __( 'بیماران من', 'medyar-nursing-services' ),
 			'invoices'     => __( 'فاکتورها و پرداخت‌ها', 'medyar-nursing-services' ),
 			'invoice-view' => __( 'جزئیات فاکتور', 'medyar-nursing-services' ),
 			'recurring'    => __( 'خدمات دوره‌ای', 'medyar-nursing-services' ),
-			'loyalty'      => __( 'کارت وفاداری', 'medyar-nursing-services' ),
+			'loyalty'      => __( 'کارت وفاداری و تخفیف', 'medyar-nursing-services' ),
 			'surveys'      => __( 'پرسشنامه‌ها', 'medyar-nursing-services' ),
 			'ui-kit'       => __( 'کیت کامپوننت‌ها', 'medyar-nursing-services' ),
 		);

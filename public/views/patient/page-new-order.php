@@ -94,24 +94,34 @@ MNS_UI::page_header(
 );
 ?>
 
-<nav class="mns-stepper" data-mns-stepper aria-label="<?php echo esc_attr__( 'مراحل ثبت سفارش', 'medyar-nursing-services' ); ?>">
-	<button type="button" class="mns-stepper__item is-current" data-mns-step-goto="1" aria-current="step">
-		<span class="mns-stepper__num">۱</span>
-		<span class="mns-stepper__label"><?php echo esc_html__( 'بیمار و تماس', 'medyar-nursing-services' ); ?></span>
-	</button>
-	<button type="button" class="mns-stepper__item" data-mns-step-goto="2">
-		<span class="mns-stepper__num">۲</span>
-		<span class="mns-stepper__label"><?php echo esc_html__( 'مکان و زمان', 'medyar-nursing-services' ); ?></span>
-	</button>
-	<button type="button" class="mns-stepper__item" data-mns-step-goto="3">
-		<span class="mns-stepper__num">۳</span>
-		<span class="mns-stepper__label"><?php echo esc_html__( 'خدمت', 'medyar-nursing-services' ); ?></span>
-	</button>
-	<button type="button" class="mns-stepper__item" data-mns-step-goto="4">
-		<span class="mns-stepper__num">۴</span>
-		<span class="mns-stepper__label"><?php echo esc_html__( 'مرور و ثبت', 'medyar-nursing-services' ); ?></span>
-	</button>
-</nav>
+<div class="mns-stepper-wrap" data-mns-stepper>
+	<p class="mns-stepper__compact" data-mns-step-compact aria-live="polite">
+		<?php echo esc_html( sprintf( MNS_Copy::t( 'label.step_of' ), MNS_Format::digits( '1' ), MNS_Format::digits( '4' ), __( 'بیمار و تماس', 'medyar-nursing-services' ) ) ); ?>
+	</p>
+	<div class="mns-stepper__progress" aria-hidden="true"><span class="mns-stepper__progress-bar" data-mns-step-progress style="width:25%"></span></div>
+	<nav class="mns-stepper" aria-label="<?php echo esc_attr__( 'مراحل ثبت سفارش', 'medyar-nursing-services' ); ?>">
+		<button type="button" class="mns-stepper__item is-current" data-mns-step-goto="1" data-mns-step-label="<?php echo esc_attr__( 'بیمار و تماس', 'medyar-nursing-services' ); ?>" aria-current="step">
+			<span class="mns-stepper__num">۱</span>
+			<span class="mns-stepper__label"><?php echo esc_html__( 'بیمار و تماس', 'medyar-nursing-services' ); ?></span>
+		</button>
+		<button type="button" class="mns-stepper__item" data-mns-step-goto="2" data-mns-step-label="<?php echo esc_attr__( 'مکان و زمان', 'medyar-nursing-services' ); ?>">
+			<span class="mns-stepper__num">۲</span>
+			<span class="mns-stepper__label"><?php echo esc_html__( 'مکان و زمان', 'medyar-nursing-services' ); ?></span>
+		</button>
+		<button type="button" class="mns-stepper__item" data-mns-step-goto="3" data-mns-step-label="<?php echo esc_attr__( 'خدمت و جزئیات', 'medyar-nursing-services' ); ?>">
+			<span class="mns-stepper__num">۳</span>
+			<span class="mns-stepper__label"><?php echo esc_html__( 'خدمت و جزئیات', 'medyar-nursing-services' ); ?></span>
+		</button>
+		<button type="button" class="mns-stepper__item" data-mns-step-goto="4" data-mns-step-label="<?php echo esc_attr__( 'مرور و ثبت', 'medyar-nursing-services' ); ?>">
+			<span class="mns-stepper__num">۴</span>
+			<span class="mns-stepper__label"><?php echo esc_html__( 'مرور و ثبت', 'medyar-nursing-services' ); ?></span>
+		</button>
+	</nav>
+	<aside class="mns-order-summary" data-mns-order-summary hidden>
+		<p class="mns-order-summary__title"><?php echo esc_html__( 'خلاصهٔ سفارش', 'medyar-nursing-services' ); ?></p>
+		<p class="mns-order-summary__body" data-mns-order-summary-body></p>
+	</aside>
+</div>
 
 <div class="mns-form-grid">
 	<form
@@ -187,7 +197,7 @@ MNS_UI::page_header(
 			<label class="mns-field-block">
 				<span class="mns-field-block__label"><?php echo esc_html__( 'شماره تماس', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></span>
 				<span class="mns-field-block__control">
-					<input type="text" name="phone" data-mns-iran-mobile required placeholder="09123456789" autocomplete="tel" value="<?php echo esc_attr( $phone ); ?>">
+					<input type="text" name="phone" data-mns-iran-mobile required inputmode="tel" dir="ltr" placeholder="۰۹۱۲ ۱۲۳ ۴۵۶۷" autocomplete="tel" value="<?php echo esc_attr( MNS_Format::mobile( $phone ) ); ?>">
 				</span>
 			</label>
 
@@ -321,15 +331,15 @@ MNS_UI::page_header(
 				</label>
 			</div>
 
-			<div class="mns-med-lane">
-				<p class="mns-med-lane__title"><?php echo esc_html__( 'داروی نسخه‌دار (اختیاری)', 'medyar-nursing-services' ); ?></p>
-				<label class="mns-upload">
-					<span class="mns-upload__label"><?php echo esc_html__( 'آپلود عکس نسخه / کارت دارویی', 'medyar-nursing-services' ); ?></span>
-					<input type="file" name="prescription_files[]" accept="image/*,.pdf" disabled>
-					<span class="mns-upload__hint"><?php echo esc_html__( 'در فاز استاتیک فقط نمایش UI — آپلود واقعی بعداً.', 'medyar-nursing-services' ); ?></span>
-				</label>
-				<p class="mns-field-hint"><?php echo esc_html__( 'دارو فقط پس از تأیید پزشک مشاور به فاکتور اضافه می‌شود.', 'medyar-nursing-services' ); ?></p>
-			</div>
+			<?php
+			MNS_UI::alert(
+				array(
+					'tone'  => 'info',
+					'title' => __( 'داروی نسخه‌دار', 'medyar-nursing-services' ),
+					'text'  => __( 'آپلود نسخه به‌زودی فعال می‌شود. دارو فقط پس از تأیید پزشک مشاور به فاکتور اضافه می‌شود.', 'medyar-nursing-services' ),
+				)
+			);
+			?>
 
 			<label class="mns-field-block">
 				<span class="mns-field-block__label"><?php echo esc_html__( 'توضیحات تکمیلی', 'medyar-nursing-services' ); ?></span>

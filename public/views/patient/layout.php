@@ -37,16 +37,7 @@ if ( ! is_array( $nav ) || empty( $nav ) ) {
 }
 
 $show_bottom = ! in_array( $page, array( 'new-order', 'ui-kit' ), true );
-$more_pages  = array( 'patients', 'recurring', 'loyalty', 'surveys' );
-if ( 'order-view' === $page ) {
-	$nav_active = 'orders';
-} elseif ( 'invoice-view' === $page ) {
-	$nav_active = 'invoices';
-} elseif ( in_array( $page, $more_pages, true ) ) {
-	$nav_active = 'patients';
-} else {
-	$nav_active = $page;
-}
+$nav_active  = MNS_UI::nav_active( 'patient', $page );
 ?>
 <div class="mns-dash<?php echo $show_bottom ? ' mns-dash--has-bottom' : ''; ?>" dir="rtl" data-mns-panel="patient" data-mns-page="<?php echo esc_attr( $page ); ?>">
 	<aside class="mns-dash__sidebar" data-mns-sidebar>
@@ -63,7 +54,7 @@ if ( 'order-view' === $page ) {
 				$slug   = isset( $item['slug'] ) ? (string) $item['slug'] : '';
 				$label  = isset( $item['label'] ) ? (string) $item['label'] : '';
 				$icon   = isset( $item['icon'] ) ? (string) $item['icon'] : 'list';
-				$active = ( $slug === $page );
+				$active = MNS_UI::nav_item_is_active( 'patient', $page, $slug );
 				$url    = MNS_Pages::panel_url( 'patient', $slug );
 				?>
 				<a
@@ -76,7 +67,8 @@ if ( 'order-view' === $page ) {
 					<span><?php echo esc_html( $label ); ?></span>
 				</a>
 			<?php endforeach; ?>
-			<a class="mns-dash__nav-link" href="<?php echo esc_url( $account ); ?>" title="<?php echo esc_attr__( 'پنل مدیار', 'medyar-nursing-services' ); ?>" target="_blank" rel="noopener noreferrer">
+			<div class="mns-dash__nav-sep" role="presentation"></div>
+			<a class="mns-dash__nav-link mns-dash__nav-link--external" href="<?php echo esc_url( $account ); ?>" title="<?php echo esc_attr__( 'پنل مدیار (حساب کاربری)', 'medyar-nursing-services' ); ?>" target="_blank" rel="noopener noreferrer">
 				<span class="mns-dash__nav-icon" aria-hidden="true"><?php echo mns_icon( 'grid' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
 				<span><?php echo esc_html__( 'پنل مدیار', 'medyar-nursing-services' ); ?></span>
 				<?php echo MNS_UI::external_mark(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
