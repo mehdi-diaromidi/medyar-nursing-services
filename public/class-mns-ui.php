@@ -249,11 +249,12 @@ class MNS_UI {
 			'orders'     => __( 'سفارش‌های من', 'medyar-nursing-services' ),
 			'order-view' => __( 'جزئیات سفارش', 'medyar-nursing-services' ),
 			'patients'   => __( 'بیماران من', 'medyar-nursing-services' ),
-			'invoices'   => __( 'فاکتورها و پرداخت‌ها', 'medyar-nursing-services' ),
-			'recurring'  => __( 'خدمات دوره‌ای', 'medyar-nursing-services' ),
-			'loyalty'    => __( 'کارت وفاداری', 'medyar-nursing-services' ),
-			'surveys'    => __( 'پرسشنامه‌ها', 'medyar-nursing-services' ),
-			'ui-kit'     => __( 'کیت کامپوننت‌ها', 'medyar-nursing-services' ),
+			'invoices'     => __( 'فاکتورها و پرداخت‌ها', 'medyar-nursing-services' ),
+			'invoice-view' => __( 'جزئیات فاکتور', 'medyar-nursing-services' ),
+			'recurring'    => __( 'خدمات دوره‌ای', 'medyar-nursing-services' ),
+			'loyalty'      => __( 'کارت وفاداری', 'medyar-nursing-services' ),
+			'surveys'      => __( 'پرسشنامه‌ها', 'medyar-nursing-services' ),
+			'ui-kit'       => __( 'کیت کامپوننت‌ها', 'medyar-nursing-services' ),
 		);
 	}
 

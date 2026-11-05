@@ -319,6 +319,11 @@
 						b.classList.toggle('is-on', i <= index);
 					});
 					group.setAttribute('data-value', String(index + 1));
+					var name = group.getAttribute('data-name');
+					if (name) {
+						var hidden = qs('[data-mns-star-value="' + name + '"]');
+						if (hidden) hidden.value = String(index + 1);
+					}
 				});
 			});
 		});

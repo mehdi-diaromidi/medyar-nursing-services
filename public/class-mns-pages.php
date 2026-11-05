@@ -39,6 +39,7 @@ class MNS_Pages {
 			'order-view',
 			'patients',
 			'invoices',
+			'invoice-view',
 			'recurring',
 			'loyalty',
 			'surveys',

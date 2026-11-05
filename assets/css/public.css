@@ -3018,3 +3018,142 @@ html.mns-drawer-open body {
 	.mns-quick-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 	.mns-shortcut-row { grid-template-columns: 1fr; }
 }
+
+/* —— Phase 4: patients / invoices / recurring / loyalty / surveys —— */
+.mns-person-cards,
+.mns-invoice-cards {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+.mns-person-card,
+.mns-invoice-card {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 14px 16px;
+	border-radius: 14px;
+	border: 1px solid var(--mns-border);
+	background: #fff;
+}
+.mns-person-card__body,
+.mns-invoice-card__main {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	flex: 1;
+	min-width: 0;
+	text-decoration: none;
+	color: inherit;
+}
+.mns-person-card__name,
+.mns-invoice-card__service { font-weight: 800; color: var(--mns-heading); }
+.mns-person-card__meta,
+.mns-person-card__note,
+.mns-invoice-card__meta {
+	font-size: 0.8125rem;
+	color: var(--mns-muted-strong);
+}
+.mns-person-card__phone,
+.mns-invoice-card__amount {
+	font-size: 0.875rem;
+	font-weight: 700;
+	color: var(--mns-heading);
+	font-variant-numeric: tabular-nums;
+}
+.mns-person-card__actions,
+.mns-invoice-card__cta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.mns-invoice-card__top {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+}
+
+.mns-slot-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+.mns-slot-list__item {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	padding: 12px;
+	border-radius: 12px;
+	border: 1px solid var(--mns-border);
+	background: #fffcf9;
+}
+.mns-slot-list__when {
+	display: block;
+	margin-top: 2px;
+	font-size: 0.8125rem;
+	color: var(--mns-muted-strong);
+}
+.mns-slot-list__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.mns-code-list {
+	list-style: none;
+	margin: 0 0 var(--mns-space-4);
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+.mns-code-list__item {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 12px 14px;
+	border-radius: 12px;
+	border: 1px dashed var(--mns-border);
+	background: #fff;
+}
+.mns-code-list__item code {
+	display: block;
+	font-weight: 800;
+	font-size: 1rem;
+	color: var(--mns-primary);
+}
+.mns-code-list__item span,
+.mns-code-list__item small {
+	display: block;
+	font-size: 0.8125rem;
+	color: var(--mns-muted-strong);
+}
+
+.mns-details { padding: var(--mns-space-4) var(--mns-space-5); }
+.mns-details__summary {
+	cursor: pointer;
+	font-weight: 700;
+	color: var(--mns-heading);
+}
+.mns-details[open] .mns-details__summary { margin-bottom: var(--mns-space-3); }
+
+.mns-stars[data-mns-stars] {
+	display: inline-flex;
+	gap: 4px;
+	margin: 4px 0 8px;
+}
+.mns-stars[data-mns-stars] button {
+	border: 0;
+	background: transparent;
+	color: #cbd5e1;
+	font-size: 1.5rem;
+	line-height: 1;
+	cursor: pointer;
+	padding: 4px;
+}
+.mns-stars[data-mns-stars] button.is-on { color: #f59e0b; }

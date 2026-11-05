@@ -62,6 +62,25 @@ class MNS_Public {
 				)
 			);
 		}
+		if ( 'patient' === $panel && 'patients' === $page ) {
+			return array_merge( $states, array( 'form' => __( 'فرم افزودن', 'medyar-nursing-services' ) ) );
+		}
+		if ( 'patient' === $panel && 'invoice-view' === $page ) {
+			return array_merge(
+				$states,
+				array(
+					'paid'   => __( 'پرداخت‌شده', 'medyar-nursing-services' ),
+					'failed' => __( 'پرداخت ناموفق', 'medyar-nursing-services' ),
+					'paying' => __( 'در حال پرداخت', 'medyar-nursing-services' ),
+				)
+			);
+		}
+		if ( 'patient' === $panel && 'loyalty' === $page ) {
+			return array_merge( $states, array( 'full' => __( 'کارت کامل', 'medyar-nursing-services' ) ) );
+		}
+		if ( 'patient' === $panel && 'surveys' === $page ) {
+			return array_merge( $states, array( 'submitted' => __( 'ارسال‌شده', 'medyar-nursing-services' ) ) );
+		}
 		return $states;
 	}
 

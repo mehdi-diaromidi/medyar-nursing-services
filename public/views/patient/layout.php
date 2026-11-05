@@ -40,6 +40,8 @@ $show_bottom = ! in_array( $page, array( 'new-order', 'ui-kit' ), true );
 $more_pages  = array( 'patients', 'recurring', 'loyalty', 'surveys' );
 if ( 'order-view' === $page ) {
 	$nav_active = 'orders';
+} elseif ( 'invoice-view' === $page ) {
+	$nav_active = 'invoices';
 } elseif ( in_array( $page, $more_pages, true ) ) {
 	$nav_active = 'patients';
 } else {
