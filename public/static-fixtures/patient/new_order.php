@@ -22,8 +22,8 @@ return array(
 		array(
 			'id'        => 'self',
 			'name'      => 'سارا محمدی',
-			'label'     => 'خودم — سارا محمدی',
-			'meta'      => '۳۴ سال · خانم',
+			'label'     => 'خودم',
+			'meta'      => 'سارا محمدی',
 			'age_group' => 'adult',
 			'gender'    => 'female',
 		),
@@ -31,17 +31,9 @@ return array(
 			'id'        => '4',
 			'name'      => 'فاطمه کریمی',
 			'label'     => 'فاطمه کریمی',
-			'meta'      => '۴۲ سال · خانم',
+			'meta'      => 'بیمار ثبت‌شده قبلی',
 			'age_group' => 'adult',
 			'gender'    => 'female',
-		),
-		array(
-			'id'        => '2',
-			'name'      => 'حسن محمدی',
-			'label'     => 'پدر — حسن محمدی',
-			'meta'      => '۶۸ سال · آقا · دیابت نوع ۲',
-			'age_group' => 'elder',
-			'gender'    => 'male',
 		),
 	),
 	'cities'        => array(
@@ -57,12 +49,13 @@ return array(
 		),
 	),
 	'time_slots'    => array(
-		array( 'id' => '8-10', 'label' => '۸ تا ۱۰' ),
-		array( 'id' => '10-12', 'label' => '۱۰ تا ۱۲' ),
-		array( 'id' => '12-14', 'label' => '۱۲ تا ۱۴' ),
-		array( 'id' => '14-16', 'label' => '۱۴ تا ۱۶' ),
-		array( 'id' => '16-18', 'label' => '۱۶ تا ۱۸' ),
-		array( 'id' => '18-20', 'label' => '۱۸ تا ۲۰' ),
+		/* Six 4-hour slots (client decision, 10 Nov 2026); hours are admin settings in the real backend. `disabled` = no nurse in that slot. */
+		array( 'id' => '0-4', 'label' => '۰ تا ۴', 'disabled' => true ),
+		array( 'id' => '4-8', 'label' => '۴ تا ۸' ),
+		array( 'id' => '8-12', 'label' => '۸ تا ۱۲' ),
+		array( 'id' => '12-16', 'label' => '۱۲ تا ۱۶' ),
+		array( 'id' => '16-20', 'label' => '۱۶ تا ۲۰' ),
+		array( 'id' => '20-24', 'label' => '۲۰ تا ۲۴' ),
 	),
 	'service_fields' => array(
 		'serum_types' => array( 'نرمال سالین', 'دکستروز', 'رینگر', 'تقویتی و ویتامین', 'طبق نسخه پزشک' ),
@@ -82,6 +75,6 @@ return array(
 		'red_area_gender' => array(
 			'نیاوران' => 'male',
 		),
-		'alt_slots'       => array( '12-14', '14-16', '16-18' ),
+		'alt_slots'       => array( '12-16', '16-20', '20-24' ),
 	),
 );

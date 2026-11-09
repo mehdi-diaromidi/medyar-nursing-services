@@ -17,11 +17,9 @@ $data     = MNS_Static_Fixtures::get( 'patient/invoices' );
 $items    = isset( $data['items'] ) && is_array( $data['items'] ) ? $data['items'] : array();
 $patients = isset( $data['patients'] ) && is_array( $data['patients'] ) ? $data['patients'] : array();
 $services = isset( $data['services'] ) && is_array( $data['services'] ) ? $data['services'] : array();
-$wallet   = isset( $data['wallet'] ) && is_array( $data['wallet'] ) ? $data['wallet'] : array();
 
 if ( MNS_Dev::is( 'empty' ) ) {
-	$items  = array();
-	$wallet = array();
+	$items = array();
 }
 foreach ( $items as $i => $row ) {
 	$items[ $i ]['patient_name'] = (string) ( $patients[ $row['patient_id'] ] ?? '' );
@@ -53,17 +51,14 @@ $unpaid_all = array_values(
 	)
 );
 $unpaid_sum = array_sum( array_map( static function ( $r ) { return (int) $r['amount']; }, $unpaid_all ) );
-$balance    = (int) ( $wallet['balance'] ?? 0 );
-$txns       = isset( $wallet['transactions'] ) && is_array( $wallet['transactions'] ) ? $wallet['transactions'] : array();
 
 $result      = MNS_Patient_Invoices::query( $items, $state );
 $counts      = $result['counts'];
 $tabs        = MNS_Patient_Invoices::tabs();
-$types       = MNS_Patient_Invoices::types();
 $no_items    = empty( $items );
 $has_filters = MNS_Patient_Invoices::has_filters( $state );
-$adv_filters = ! empty( $state['from'] ) || ! empty( $state['to'] ) || '' !== $state['service'] || '' !== $state['type'];
-$clear_url   = MNS_Patient_Invoices::url( $state, array( 'q' => null, 'from' => null, 'to' => null, 'service' => null, 'type' => null, 'mns_p' => null ) );
+$adv_filters = ! empty( $state['from'] ) || ! empty( $state['to'] ) || '' !== $state['service'];
+$clear_url   = MNS_Patient_Invoices::url( $state, array( 'q' => null, 'from' => null, 'to' => null, 'service' => null, 'mns_p' => null ) );
 $show_unpaid = 'paid' !== $state['tab'];
 $show_paid   = 'unpaid' !== $state['tab'];
 $paged       = MNS_Patient_Orders::paginate( $show_paid ? $result['paid'] : array(), $state['page'] );
@@ -110,7 +105,7 @@ $chevron_svg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
 		</div>
 	<?php else : ?>
 
-		<?php if ( ! empty( $unpaid_all ) || $balance > 0 || ! empty( $txns ) ) : ?>
+		<?php if ( ! empty( $unpaid_all ) ) : ?>
 			<div class="mns-inv-summary">
 				<?php if ( ! empty( $unpaid_all ) ) : ?>
 					<?php
@@ -143,19 +138,6 @@ $chevron_svg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
 					</div>
 				<?php endif; ?>
 
-				<?php if ( $balance > 0 || ! empty( $txns ) ) : ?>
-					<div class="mns-inv-wallet">
-						<span class="mns-inv-wallet__icon" aria-hidden="true"><?php echo mns_icon( 'card' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
-						<div class="mns-inv-wallet__text">
-							<span class="mns-inv-wallet__label"><?php echo esc_html__( 'اعتبار کیف پول', 'medyar-nursing-services' ); ?></span>
-							<span class="mns-inv-wallet__amount"><strong><?php echo esc_html( MNS_Format::number( $balance ) ); ?></strong> <?php echo esc_html__( 'تومان', 'medyar-nursing-services' ); ?></span>
-							<button type="button" class="mns-inv-wallet__link" data-mns-dialog-open="mns-wallet-dialog">
-								<?php echo esc_html__( 'مشاهده تراکنش‌ها', 'medyar-nursing-services' ); ?>
-								<?php echo mns_icon( 'chevron' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-							</button>
-						</div>
-					</div>
-				<?php endif; ?>
 			</div>
 		<?php endif; ?>
 
@@ -218,18 +200,6 @@ $chevron_svg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
 							<option value=""><?php echo esc_html__( 'همه خدمات', 'medyar-nursing-services' ); ?></option>
 							<?php foreach ( $services as $slug => $label ) : ?>
 								<option value="<?php echo esc_attr( $slug ); ?>" <?php selected( $state['service'], $slug ); ?>><?php echo esc_html( $label ); ?></option>
-							<?php endforeach; ?>
-						</select>
-						<span class="arp-field-block__chevron" aria-hidden="true"><?php echo $chevron_svg; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
-					</span>
-				</label>
-				<label class="arp-field-block">
-					<span class="arp-field-block__label"><?php echo esc_html__( 'نوع فاکتور', 'medyar-nursing-services' ); ?></span>
-					<span class="arp-field-block__control arp-field-block__control--select">
-						<select name="type" class="arp-select-native" data-arp-select data-arp-autosubmit>
-							<option value=""><?php echo esc_html__( 'همه انواع', 'medyar-nursing-services' ); ?></option>
-							<?php foreach ( $types as $slug => $label ) : ?>
-								<option value="<?php echo esc_attr( $slug ); ?>" <?php selected( $state['type'], $slug ); ?>><?php echo esc_html( $label ); ?></option>
 							<?php endforeach; ?>
 						</select>
 						<span class="arp-field-block__chevron" aria-hidden="true"><?php echo $chevron_svg; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
@@ -339,29 +309,5 @@ $chevron_svg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
 		<h2 class="mns-order-sheet__title" id="mns-order-sheet-title" data-mns-order-sheet-title></h2>
 		<p class="mns-order-sheet__sub"><?php echo esc_html__( 'اقدام‌های این فاکتور', 'medyar-nursing-services' ); ?></p>
 		<ul class="mns-order-sheet__list" role="menu" data-mns-order-sheet-list></ul>
-	</div>
-</div>
-
-<div class="mns-dialog mns-order-sheet mns-wallet-dialog" id="mns-wallet-dialog" hidden data-mns-dialog>
-	<div class="mns-dialog__backdrop" data-mns-dialog-close tabindex="-1"></div>
-	<div class="mns-dialog__panel" role="dialog" aria-modal="true" aria-labelledby="mns-wallet-title" tabindex="-1">
-		<span class="mns-order-sheet__handle" aria-hidden="true"></span>
-		<h2 class="mns-order-sheet__title" id="mns-wallet-title"><?php echo esc_html__( 'تراکنش‌های کیف پول', 'medyar-nursing-services' ); ?></h2>
-		<p class="mns-order-sheet__sub">
-			<?php
-			/* translators: %s: balance */
-			echo esc_html( sprintf( __( 'اعتبار فعلی: %s تومان', 'medyar-nursing-services' ), MNS_Format::number( $balance ) ) );
-			?>
-		</p>
-		<?php // TODO(backend): read from the existing wallet plugin (Wallet_Manager / Sheyda) for the current account. ?>
-		<ul class="mns-wallet-txns">
-			<?php foreach ( $txns as $tx ) : ?>
-				<li>
-					<span class="mns-wallet-txns__title"><?php echo esc_html( (string) $tx['title'] ); ?></span>
-					<span class="mns-wallet-txns__at"><?php echo esc_html( MNS_Patient_Invoices::full_day( (string) $tx['at'] ) ); ?></span>
-					<span class="mns-wallet-txns__amount<?php echo (int) $tx['amount'] < 0 ? ' is-neg' : ''; ?>" dir="ltr"><?php echo esc_html( ( (int) $tx['amount'] < 0 ? '−' : '+' ) . MNS_Format::number( abs( (int) $tx['amount'] ) ) ); ?></span>
-				</li>
-			<?php endforeach; ?>
-		</ul>
 	</div>
 </div>

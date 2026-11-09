@@ -6,11 +6,6 @@
 | ARP | affiliate-referral (طرح همکاران مدیار)؛ مرجع UI/UX |
 | MSQ | Medyar SMS Queue — صف پیامک |
 | MTW | Medyar Toman Wallet — کیف پول تومانی |
-| MCP | Medyar Chat Pro |
-| MMAD | Medyar My Account Dashboard |
-| PWSMS | persian-woocommerce-sms (پچ‌شده) |
-| Sheyda | کیف پول داخلی قالب Doctor Plus |
-| Faraz / IranPayamak | سرویس پیامک پترنی |
 | پترن | قالب پیامک ازپیش‌تأییدشده با متغیر |
 | fixture | دادهٔ نمونهٔ PHP برای UI استاتیک (`public/static-fixtures/`) |
 | `MNS_UI_STATIC` | حالت فرانت استاتیک (بدون بک‌اند) |

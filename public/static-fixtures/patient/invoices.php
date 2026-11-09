@@ -3,7 +3,7 @@
  * Patient invoices — mirrors desgin/png/فاکتورها و پرداخت ها/medyar-invoices-*.png + medyar-invoice-detail-desktop.png.
  *
  * Item: number, service, category, patient_id, order (5-digit tracking), issued (Y-m-d),
- * amount, status unpaid|dispute|paid, type normal|prepay|supplement, revised (bool),
+ * amount, status unpaid|dispute|paid, type normal, revised (bool),
  * paid_at (Y-m-d H:i), pay_method online|manual, txn.
  *
  * @package medyar-nursing-services
@@ -28,7 +28,7 @@ $items = array(
 		'issued'     => $j( 8, 12 ),
 		'amount'     => 1250000,
 		'status'     => 'unpaid',
-		'type'       => 'supplement',
+		'type'       => 'normal',
 		'revised'    => array( 'version' => 2, 'at' => $j( 8, 14 ) ),
 	),
 	array(
@@ -49,9 +49,9 @@ $items = array(
 		'patient_id' => 'p1',
 		'order'      => '48190',
 		'issued'     => $j( 8, 3 ),
-		'amount'     => 3280000,
+		'amount'     => 1080000,
 		'status'     => 'paid',
-		'type'       => 'prepay',
+		'type'       => 'normal',
 		'paid_at'    => $j( 8, 3, '11:20' ),
 		'pay_method' => 'online',
 		'txn'        => '842196375',
@@ -146,12 +146,6 @@ return array(
 		'sampling'  => 'نمونه‌گیری',
 		'elderly'   => 'مراقبت سالمند',
 	),
-	'wallet'   => array(
-		'balance'      => 80000,
-		'transactions' => array(
-			array( 'at' => $j( 8, 10 ), 'title' => 'بازگشت مابه‌التفاوت پیش‌پرداخت، سرم‌تراپی، نوبت ۳', 'amount' => 80000 ),
-		),
-	),
 	'items'    => $items,
 	'lines'    => array(
 		'INV-2031' => $lines_2031,
@@ -159,16 +153,6 @@ return array(
 	),
 	'service_at' => array(
 		'INV-2018' => $j( 8, 3, '10:00' ),
-	),
-	'related'  => array(
-		'INV-2031' => array(
-			'items'  => array( 'INV-2018', 'INV-2031' ),
-			'refund' => array( 'amount' => 80000, 'at' => $j( 8, 10 ) ),
-		),
-		'INV-2018' => array(
-			'items'  => array( 'INV-2018', 'INV-2031' ),
-			'refund' => array( 'amount' => 80000, 'at' => $j( 8, 10 ) ),
-		),
 	),
 	'default_number' => 'INV-2031',
 );

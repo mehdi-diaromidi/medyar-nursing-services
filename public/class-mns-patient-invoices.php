@@ -3,10 +3,10 @@
  * Patient «invoices & payments»: list state, filtering, actions and detail helpers.
  *
  * Static phase reads `patient/invoices`. Shares paging/date helpers with MNS_Patient_Orders.
- * TODO(backend): one AJAX endpoint (tab, q, from, to, service, type, sort, page) returning
- * invoices + tab counts + unpaid total + wallet balance; ownership check per invoice;
+ * TODO(backend): one AJAX endpoint (tab, q, from, to, service, sort, page) returning
+ * invoices + tab counts + unpaid total; ownership check per invoice;
  * versioned invoices (send version with the pay request); server-side gateway verify with a
- * unique key; wallet refund of prepay difference once per invoice.
+ * unique key. (No prepay / supplementary invoices / patient wallet credit — removed by client decision.)
  *
  * @package medyar-nursing-services
  */
@@ -33,9 +33,7 @@ class MNS_Patient_Invoices {
 	 */
 	public static function types(): array {
 		return array(
-			'normal'     => __( 'عادی', 'medyar-nursing-services' ),
-			'prepay'     => __( 'پیش‌پرداخت', 'medyar-nursing-services' ),
-			'supplement' => __( 'مکمل', 'medyar-nursing-services' ),
+			'normal' => __( 'عادی', 'medyar-nursing-services' ),
 		);
 	}
 

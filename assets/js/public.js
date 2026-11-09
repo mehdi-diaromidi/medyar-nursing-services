@@ -454,7 +454,8 @@
 		var patGenderInput = qs('[data-mns-patient-gender]', form);
 		var step2Next = qs('[data-mns-step-2-next]', form);
 		var availBox = qs('[data-mns-avail]', form);
-		var DRAFT_KEY = 'mns_order_wizard_draft_v1';
+		var DRAFT_KEY = 'mns_order_wizard_draft_v2';
+		var wizardReady = false;
 
 		function setChipGroup(rootSel, value, hiddenInput) {
 			var root = qs(rootSel, form);
@@ -573,30 +574,44 @@
 					btn.removeAttribute('aria-current');
 				}
 			});
-			var compact = qs('[data-mns-step-compact]');
-			if (compact) {
-				compact.textContent =
-					'مرحلهٔ ' + toFaDigits(step) + ' از ' + toFaDigits(maxStep) + (currentLabel ? ' — ' + currentLabel : '');
-			}
-			var bar = qs('[data-mns-step-progress]');
-			if (bar) bar.style.width = Math.round((step / maxStep) * 100) + '%';
+			setWizardStep(step);
 			updateSideSummary();
 			if (step === 4) fillReview();
 			syncMobileBar();
 			saveDraft();
-			var activeSec = qs('[data-mns-step].is-active', form);
-			if (activeSec) activeSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+			if (wizardReady) {
+				var anchor = qs('[data-mns-stepper]', wizard || document) || qs('[data-mns-step].is-active', form);
+				if (anchor) anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+			}
+		}
+
+		function setWizardStep(n) {
+			if (!wizard) return;
+			wizard.setAttribute('data-mns-current-step', String(n));
+			var leadEl = qs('[data-mns-ow-lead]', wizard);
+			var leads = {};
+			try {
+				leads = JSON.parse(wizard.getAttribute('data-mns-leads') || '{}') || {};
+			} catch (eLead) {
+				leads = {};
+			}
+			var leadKey = n === 5 ? 'done' : n;
+			if (leadEl && leads[leadKey]) leadEl.textContent = leads[leadKey];
 		}
 
 		function syncMobileBar() {
 			var mobBtn = qs('[data-mns-mob-continue]');
 			if (!mobBtn) return;
+			var label = qs('[data-mns-mob-label]', mobBtn);
+			var svc = qs('[data-mns-mob-svc]');
 			if (step >= maxStep) {
-				mobBtn.textContent = 'ثبت درخواست';
+				if (label) label.textContent = 'ثبت درخواست';
 				mobBtn.setAttribute('data-mns-mob-mode', 'submit');
+				if (svc) svc.textContent = 'بازه قیمت تقریبی';
 			} else {
-				mobBtn.textContent = 'ادامه';
+				if (label) label.textContent = 'ادامه';
 				mobBtn.setAttribute('data-mns-mob-mode', 'next');
+				if (svc) svc.textContent = svcLabel;
 			}
 		}
 
@@ -681,38 +696,26 @@
 		function fillReview() {
 			var box = qs('[data-mns-review]', form);
 			if (!box) return;
-			var phone = (qs('input[name="phone"]', form) || {}).value || '—';
+			var phone = (qs('input[name="phone"]', form) || {}).value || '';
 			var cityLabel = citySelect && citySelect.options[citySelect.selectedIndex] ? citySelect.options[citySelect.selectedIndex].text : '—';
 			var areaLabel = areaSelect && areaSelect.options[areaSelect.selectedIndex] ? areaSelect.options[areaSelect.selectedIndex].text : '—';
-			var addr = (qs('textarea[name="address"]', form) || {}).value || '—';
-			var svcBits = serviceDetailSummary();
+			var addr = (qs('textarea[name="address"]', form) || {}).value || '';
 			var presc = qs('[data-mns-prescription-file]', form);
 			var hasRx = presc && presc.files && presc.files.length;
-			var rows = [
-				{ key: 'patient', icon: 'user', label: 'بیمار', value: patientSummary() + ' — ' + phone, step: 1 },
-				{ key: 'service', icon: 'droplet', label: 'خدمت', value: svcLabel + '، ' + svcBits + (hasRx ? '' : '، بدون نسخه'), step: 3 },
-				{ key: 'time', icon: 'calendar', label: 'زمان', value: whenSummary(), step: 2 },
-				{ key: 'address', icon: 'map-pin', label: 'آدرس', value: cityLabel + '، ' + areaLabel + ' — ' + addr, step: 2 },
-				{ key: 'nurse', icon: 'shield', label: 'جنسیت پرستار', value: genderNurseLabel(genderInput ? genderInput.value : ''), step: 2 }
-			];
-			box.innerHTML = rows
-				.map(function (r) {
-					return (
-						'<div class="mns-review-edit__row">' +
-						'<span class="mns-review-edit__main">' +
-						'<span class="mns-review-edit__ico" aria-hidden="true"></span>' +
-						'<span><span class="mns-review-edit__label">' +
-						r.label +
-						'</span><strong>' +
-						r.value +
-						'</strong></span></span>' +
-						'<button type="button" class="mns-review-edit__link" data-mns-review-edit="' +
-						r.step +
-						'">ویرایش</button></div>'
-					);
-				})
-				.join('');
+			var vals = {
+				patient: patientSummary() + (phone ? ' · ⁦' + phone + '⁩' : ''),
+				service: svcLabel + ' · ' + serviceDetailSummary() + (hasRx ? '' : ' · بدون نسخه'),
+				time: whenSummary(),
+				address: cityLabel + '، ' + areaLabel + (addr ? '، ' + addr : ''),
+				nurse: genderNurseLabel(genderInput ? genderInput.value : '')
+			};
+			Object.keys(vals).forEach(function (k) {
+				var el = qs('[data-mns-review-val="' + k + '"]', box);
+				if (el) el.textContent = vals[k];
+			});
 			qsa('[data-mns-review-edit]', box).forEach(function (btn) {
+				if (btn.getAttribute('data-mns-bound')) return;
+				btn.setAttribute('data-mns-bound', '1');
 				btn.addEventListener('click', function () {
 					goStep(parseInt(btn.getAttribute('data-mns-review-edit'), 10) || 1);
 				});
@@ -736,28 +739,37 @@
 			scheduleAvailability();
 		}
 
+		var AV_ICON = {
+			check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>',
+			clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+			alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>',
+			phone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>'
+		};
+
 		function renderAvailability(state, alts) {
 			if (!availBox) return;
 			availBox.hidden = false;
 			availBox.className = 'mns-avail mns-avail--' + state;
 			if (state === 'green') {
-				availBox.innerHTML = '<p>برای این زمان و منطقه پرستار موجود است</p>';
+				availBox.innerHTML =
+					'<span class="mns-avail__ico" aria-hidden="true">' + AV_ICON.check + '</span>' +
+					'<div class="mns-avail__body"><strong>برای این زمان و منطقه پرستار موجود است</strong>' +
+					'<p>می‌توانید ادامه دهید؛ ثبت نهایی بعد از مرحله بررسی انجام می‌شود.</p></div>';
 			} else if (state === 'yellow') {
+				var dayWord = dateLabel ? dateLabel.split('،')[0] : '';
 				var chips = (alts || [])
-					.map(function (id) {
+					.map(function (id, i) {
 						return (
-							'<button type="button" class="mns-slot-chips__item" data-mns-avail-alt="' +
-							id +
-							'">' +
-							timeLabelById(id) +
+							'<button type="button" class="mns-avail__alt' + (i === 0 ? ' is-primary' : '') + '" data-mns-avail-alt="' + id + '">' +
+							(dayWord ? dayWord + ' ' : '') + timeLabelById(id) +
 							'</button>'
 						);
 					})
 					.join('');
 				availBox.innerHTML =
-					'<p>در این بازه پرستاری نداریم. نزدیک‌ترین زمان‌های موجود:</p><div class="mns-slot-chips mns-avail__alts">' +
-					chips +
-					'</div>';
+					'<span class="mns-avail__ico" aria-hidden="true">' + AV_ICON.clock + '</span>' +
+					'<div class="mns-avail__body"><strong>در این بازه پرستاری نداریم</strong>' +
+					'<p>نزدیک‌ترین زمان‌های موجود:</p><div class="mns-avail__alts">' + chips + '</div></div>';
 				qsa('[data-mns-avail-alt]', availBox).forEach(function (btn) {
 					btn.addEventListener('click', function () {
 						var id = btn.getAttribute('data-mns-avail-alt');
@@ -773,9 +785,10 @@
 			} else if (state === 'red') {
 				var supportTel = form.getAttribute('data-mns-support-tel') || 'tel:02188607015';
 				availBox.innerHTML =
-					'<p>فعلاً برای این منطقه و جنسیت پرستار نداریم.</p><p><a class="mns-link-btn" href="' +
-					supportTel +
-					'">تماس با پشتیبانی</a></p>';
+					'<span class="mns-avail__ico" aria-hidden="true">' + AV_ICON.alert + '</span>' +
+					'<div class="mns-avail__body"><strong>فعلاً برای این منطقه و جنسیت پرستار نداریم</strong>' +
+					'<p>جنسیت را فقط خود بیمار می‌تواند تغییر دهد.</p>' +
+					'<a class="mns-avail__call" href="' + supportTel + '">' + AV_ICON.phone + '<span>تماس با پشتیبانی</span></a></div>';
 			} else {
 				availBox.hidden = true;
 			}
@@ -1001,6 +1014,9 @@
 		function showConfirmation(code) {
 			var confirm = qs('[data-mns-order-confirm]');
 			if (!confirm) return;
+			var doneCard = qs('[data-mns-done-card]');
+			if (doneCard) doneCard.hidden = false;
+			setWizardStep(5);
 			form.hidden = true;
 			form.classList.add('is-hidden');
 			var mobBar = qs('[data-mns-owizard-mob-bar]');
@@ -1012,7 +1028,7 @@
 			confirm.hidden = false;
 			confirm.classList.remove('is-hidden');
 			var codeEl = qs('[data-mns-confirm-code]', confirm);
-			if (codeEl) codeEl.textContent = toFaDigits(code);
+			if (codeEl) codeEl.textContent = code;
 			var copyBtn = qs('[data-mns-confirm-copy]', confirm);
 			if (copyBtn) copyBtn.setAttribute('data-mns-copy', code);
 			var track = qs('[data-mns-confirm-track]', confirm);
@@ -1222,6 +1238,7 @@
 		goStep(1);
 		updateSideSummary();
 		syncMobileBar();
+		wizardReady = true;
 
 		var prepatient = form.getAttribute('data-mns-prepatient') || '';
 		if (prepatient && prepatient !== 'self') {
@@ -1381,28 +1398,7 @@
 		var root = qs('[data-mns-invoice]');
 		if (!root) return;
 		var total = parseInt(root.getAttribute('data-mns-invoice-total') || '0', 10) || 0;
-		var wallet = parseInt(root.getAttribute('data-mns-invoice-wallet') || '0', 10) || 0;
-		var toggles = qsa('[data-mns-invoice-wallet-toggle]');
 		var payBtns = qsa('[data-mns-invoice-pay]');
-		var fmt = function (n) {
-			return toFaDigits(String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '٬'));
-		};
-
-		function payLabel() {
-			var useWallet = toggles.some(function (el) { return el.checked; });
-			var due = Math.max(0, total - (useWallet ? wallet : 0));
-			/* TODO(backend): when wallet covers the whole invoice, settle without the gateway. */
-			var text = due === 0 ? t('pay_with_wallet', 'پرداخت با اعتبار کیف پول') : t('pay_online', 'پرداخت آنلاین') + ' ' + fmt(due) + ' ' + t('toman', 'تومان');
-			qsa('[data-mns-pay-label]', root).forEach(function (el) { el.textContent = text; });
-		}
-
-		toggles.forEach(function (el) {
-			el.addEventListener('change', function () {
-				toggles.forEach(function (other) { other.checked = el.checked; });
-				payLabel();
-			});
-		});
-
 		payBtns.forEach(function (btn) {
 			btn.addEventListener('click', function () {
 				if (btn.disabled) return;

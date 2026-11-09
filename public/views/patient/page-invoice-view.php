@@ -15,7 +15,6 @@ MNS_UI::boot_icons();
 $pack     = MNS_Static_Fixtures::get( 'patient/invoices' );
 $items    = isset( $pack['items'] ) && is_array( $pack['items'] ) ? $pack['items'] : array();
 $patients = isset( $pack['patients'] ) && is_array( $pack['patients'] ) ? $pack['patients'] : array();
-$wallet   = isset( $pack['wallet'] ) && is_array( $pack['wallet'] ) ? $pack['wallet'] : array();
 $default  = (string) ( $pack['default_number'] ?? 'INV-2031' );
 // phpcs:disable WordPress.Security.NonceVerification.Recommended -- read-only view params.
 $number  = isset( $_GET['mns_invoice'] ) ? sanitize_text_field( wp_unslash( $_GET['mns_invoice'] ) ) : $default;
@@ -54,12 +53,10 @@ $lines     = $lines_all[ $number ] ?? array(
 );
 $sum      = MNS_Patient_Invoices::totals( $lines );
 $total    = $sum['total'];
-$balance  = (int) ( $wallet['balance'] ?? 0 );
 $kinds    = MNS_Patient_Invoices::line_kinds();
 $types    = MNS_Patient_Invoices::types();
 $list_url = MNS_Pages::panel_url( 'patient', 'invoices' );
 $order    = (string) ( $inv['order'] ?? '' );
-$related  = $pack['related'][ $number ] ?? null;
 $patient  = (string) ( $patients[ $inv['patient_id'] ?? '' ] ?? '' );
 
 $status_chip = static function ( string $st ): string {
@@ -110,7 +107,7 @@ endif;
 
 $revised = isset( $inv['revised'] ) && is_array( $inv['revised'] ) ? $inv['revised'] : null;
 ?>
-<section class="mns-invd mns-invd--<?php echo esc_attr( $status ); ?>" data-mns-invoice data-mns-invoice-total="<?php echo esc_attr( (string) $total ); ?>" data-mns-invoice-wallet="<?php echo esc_attr( (string) $balance ); ?>">
+<section class="mns-invd mns-invd--<?php echo esc_attr( $status ); ?>" data-mns-invoice data-mns-invoice-total="<?php echo esc_attr( (string) $total ); ?>">
 	<a class="mns-invd__back" href="<?php echo esc_url( $list_url ); ?>"><?php echo mns_icon( 'chevron', 'mns-icon--flip' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><span><?php echo esc_html__( 'بازگشت به فاکتورها', 'medyar-nursing-services' ); ?></span></a>
 
 	<header class="mns-invd__head">
@@ -207,20 +204,6 @@ $revised = isset( $inv['revised'] ) && is_array( $inv['revised'] ) ? $inv['revis
 			<?php else : ?>
 				<section class="mns-invd__card mns-invd__pay" id="mns-pay">
 					<h2 class="mns-invd__card-title"><span class="mns-invd__card-icon is-warn" aria-hidden="true"><?php echo mns_icon( 'card' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span><?php echo esc_html__( 'پرداخت فاکتور', 'medyar-nursing-services' ); ?></h2>
-					<?php if ( $balance > 0 ) : ?>
-						<label class="mns-invd__wallet">
-							<span class="mns-invd__wallet-text">
-								<strong><?php echo esc_html__( 'استفاده از اعتبار کیف پول', 'medyar-nursing-services' ); ?></strong>
-								<small>
-									<?php
-									/* translators: %s: balance */
-									echo esc_html( sprintf( __( '%s تومان موجود است', 'medyar-nursing-services' ), MNS_Format::number( $balance ) ) );
-									?>
-								</small>
-							</span>
-							<input type="checkbox" class="mns-invd__switch" data-mns-invoice-wallet-toggle <?php disabled( 'dispute' === $status ); ?>>
-						</label>
-					<?php endif; ?>
 					<?php // TODO(backend): server re-checks unpaid + no dispute + same version before redirecting to Zarinpal. ?>
 					<button type="button" class="mns-obtn mns-obtn--primary mns-invd__paybtn" data-mns-invoice-pay data-mns-pay-url="<?php echo esc_url( MNS_Patient_Invoices::view_url( $number, array( 'mns_result' => 'success' ) ) ); ?>" <?php disabled( 'dispute' === $status ); ?>>
 						<?php echo mns_icon( 'dispute' === $status ? 'lock' : 'card' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
@@ -239,45 +222,6 @@ $revised = isset( $inv['revised'] ) && is_array( $inv['revised'] ) ? $inv['revis
 				</section>
 			<?php endif; ?>
 
-			<?php if ( $related ) : ?>
-				<section class="mns-invd__card mns-invd__related">
-					<h2 class="mns-invd__card-title"><?php echo esc_html__( 'فاکتورهای مرتبط', 'medyar-nursing-services' ); ?></h2>
-					<ul>
-						<?php foreach ( (array) $related['items'] as $rn ) : ?>
-							<?php
-							$r = $by_number[ $rn ] ?? null;
-							if ( ! $r ) {
-								continue;
-							}
-							$self = $rn === $number;
-							?>
-							<li>
-								<span class="mns-invd__rel-icon" aria-hidden="true"><?php echo mns_icon( 'file-text' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
-								<span class="mns-invd__rel-text">
-									<a href="<?php echo esc_url( MNS_Patient_Invoices::view_url( $rn ) ); ?>"><?php echo esc_html( ( $types[ $r['type'] ] ?? '' ) . ' · ' ); ?><span dir="ltr"><?php echo esc_html( $rn ); ?></span></a>
-									<small><?php echo $self ? esc_html__( 'همین فاکتور', 'medyar-nursing-services' ) : esc_html( MNS_Format::toman( (int) $r['amount'] ) ); ?></small>
-								</span>
-								<?php echo $status_chip( $self ? $status : (string) $r['status'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-							</li>
-						<?php endforeach; ?>
-						<?php if ( ! empty( $related['refund'] ) ) : ?>
-							<li class="mns-invd__refund">
-								<span class="mns-invd__rel-icon is-ok" aria-hidden="true"><?php echo mns_icon( 'check' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
-								<span class="mns-invd__rel-text">
-									<span>
-										<?php
-										/* translators: %s: amount */
-										echo esc_html( sprintf( __( 'مابه‌التفاوت %s تومان به کیف پول شما برگشت داده شد', 'medyar-nursing-services' ), MNS_Format::number( (int) $related['refund']['amount'] ) ) );
-										?>
-									</span>
-									<small><?php echo esc_html( MNS_Patient_Invoices::full_day( (string) $related['refund']['at'] ) ); ?></small>
-								</span>
-							</li>
-						<?php endif; ?>
-					</ul>
-				</section>
-			<?php endif; ?>
-
 			<section class="mns-invd__card mns-invd__links">
 				<a class="mns-obtn mns-obtn--outline" href="<?php echo esc_url( MNS_UI::support_tel_href() ); ?>"><?php echo mns_icon( 'headphones' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><span><?php echo esc_html( MNS_Copy::t( 'action.support' ) ); ?></span></a>
 				<a class="mns-obtn mns-obtn--outline" href="<?php echo esc_url( MNS_Patient_Invoices::order_url( $order ) ); ?>"><?php echo esc_html__( 'مشاهده سفارش', 'medyar-nursing-services' ); ?></a>
@@ -287,17 +231,6 @@ $revised = isset( $inv['revised'] ) && is_array( $inv['revised'] ) ? $inv['revis
 
 	<?php if ( 'paid' !== $status ) : ?>
 		<div class="mns-invd__paybar" data-mns-paybar>
-			<?php if ( $balance > 0 ) : ?>
-				<label class="mns-invd__wallet mns-invd__wallet--bar">
-					<span class="mns-invd__wallet-text"><strong>
-						<?php
-						/* translators: %s: balance */
-						echo esc_html( sprintf( __( 'استفاده از اعتبار کیف پول (%s تومان)', 'medyar-nursing-services' ), MNS_Format::number( $balance ) ) );
-						?>
-					</strong></span>
-					<input type="checkbox" class="mns-invd__switch" data-mns-invoice-wallet-toggle <?php disabled( 'dispute' === $status ); ?>>
-				</label>
-			<?php endif; ?>
 			<button type="button" class="mns-obtn mns-obtn--primary mns-invd__paybtn" data-mns-invoice-pay data-mns-pay-url="<?php echo esc_url( MNS_Patient_Invoices::view_url( $number, array( 'mns_result' => 'success' ) ) ); ?>" <?php disabled( 'dispute' === $status ); ?>>
 				<span data-mns-pay-label>
 					<?php
