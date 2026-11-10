@@ -1735,6 +1735,7 @@
 .mns-select__trigger {
 	display: flex;
 	align-items: center;
+	justify-content: flex-start;
 	width: 100%;
 	min-height: 32px;
 	border: 0;
@@ -6652,15 +6653,6 @@ html.mns-drawer-open body {
 	-webkit-mask: var(--ow-check) center / contain no-repeat;
 	mask: var(--ow-check) center / contain no-repeat;
 }
-.mns-owizard .mns-ow-row2 {
-	display: grid;
-	grid-template-columns: auto minmax(0, 1fr);
-	gap: 20px 56px;
-	align-items: start;
-}
-.mns-owizard .mns-ow-row2 .mns-chip-row {
-	margin-bottom: 22px;
-}
 
 /* ---- Step 1: patient cards ----------------------------------------------- */
 .mns-owizard .mns-patient-cards {
@@ -6682,7 +6674,7 @@ html.mns-drawer-open body {
 	background: #fff;
 	text-align: start;
 	cursor: pointer;
-	transition: background 150ms ease, border-color 150ms ease;
+	transition: background 150ms ease, border-color 150ms ease, transform 120ms ease;
 }
 .mns-owizard .mns-patient-cards__item:hover {
 	border-color: rgba(2, 114, 177, 0.45);
@@ -6695,7 +6687,8 @@ html.mns-drawer-open body {
 	box-sizing: border-box;
 	border: 1.5px solid #cdd6df;
 	border-radius: 50%;
-	background: #fff;
+	background: #fff var(--ow-check-w) center / 0 no-repeat;
+	transition: background-color 150ms ease, border-color 150ms ease, background-size 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 .mns-owizard .mns-patient-cards__item.is-selected {
 	border-color: var(--mns-primary);
@@ -6734,6 +6727,10 @@ html.mns-drawer-open body {
 	line-height: 1.5;
 	color: var(--ow-sub);
 }
+.mns-owizard :is(.mns-patient-cards__item, .mns-nurse-gender__card):active {
+	transform: scale(0.99);
+}
+
 /* "Add a new patient" is a side path: dashed and quiet until it is chosen. */
 .mns-owizard .mns-patient-cards__item[data-mns-patient-card="new"] {
 	border-style: dashed;
@@ -6854,9 +6851,6 @@ html.mns-drawer-open body {
 	width: auto;
 	padding: 0 28px;
 }
-.mns-owizard .mns-step[data-mns-step="1"] .mns-step__nav .mns-submit-btn {
-	flex: 0 1 66%;
-}
 .mns-owizard .mns-step__nav .mns-btn-outline {
 	display: inline-flex;
 	flex: 0 0 auto;
@@ -6886,75 +6880,78 @@ html.mns-drawer-open body {
 /* ---- Step 2: date / time / nurse ----------------------------------------- */
 .mns-owizard .mns-nurse-gender {
 	display: grid;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
-	gap: 16px;
+	grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+	gap: 12px;
 	margin: 0;
 }
 .mns-owizard .mns-nurse-gender__card {
-	position: relative;
-	display: flex;
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr) auto;
+	grid-template-areas: "ico text radio";
 	align-items: center;
-	gap: 16px;
-	min-height: 108px;
-	padding: 18px 22px;
+	column-gap: 12px;
+	min-height: 72px;
+	padding: 12px 14px;
 	border: 1px solid var(--ow-line);
 	border-radius: var(--mns-radius);
 	background: #fff;
 	text-align: start;
 	cursor: pointer;
-	transition: background 150ms ease, border-color 150ms ease;
+	transition: background 150ms ease, border-color 150ms ease, transform 120ms ease;
 }
 .mns-owizard .mns-nurse-gender__card:hover {
-	border-color: #b9d3ea;
+	border-color: rgba(2, 114, 177, 0.45);
 }
 .mns-owizard .mns-nurse-gender__card::before {
 	content: "";
-	position: absolute;
-	top: 50%;
-	inset-inline-end: 20px;
-	width: 26px;
-	height: 26px;
-	border: 2px solid #cdd6df;
+	grid-area: radio;
+	width: 20px;
+	height: 20px;
+	box-sizing: border-box;
+	border: 1.5px solid #cdd6df;
 	border-radius: 50%;
-	background: #fff;
-	transform: translateY(-50%);
+	background: #fff var(--ow-check-w) center / 0 no-repeat;
+	transition: background-color 150ms ease, border-color 150ms ease, background-size 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 .mns-owizard .mns-nurse-gender__card.is-selected {
 	border-color: var(--mns-primary);
-	background: #eaf4fd;
+	background: var(--ow-soft-2);
 }
 .mns-owizard .mns-nurse-gender__card.is-selected::before {
 	border-color: var(--mns-primary);
-	background: var(--mns-primary) var(--ow-check-w) center / 15px no-repeat;
+	background: var(--mns-primary) var(--ow-check-w) center / 12px no-repeat;
 }
 .mns-owizard .mns-nurse-gender__ico {
+	grid-area: ico;
 	display: grid;
 	place-items: center;
-	width: 68px;
-	height: 68px;
-	flex: none;
+	width: 40px;
+	height: 40px;
 	border-radius: 50%;
-	background: linear-gradient(180deg, #eaf4fd, #d3e6f7);
+	background: var(--mns-primary-soft);
 	color: var(--mns-primary);
 }
 .mns-owizard .mns-nurse-gender__ico .mns-icon {
-	width: 30px;
-	height: 30px;
+	width: 20px;
+	height: 20px;
 }
 .mns-owizard .mns-nurse-gender__text {
+	grid-area: text;
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
+	gap: 0;
 	min-width: 0;
-	padding-inline-end: 36px;
+	line-height: 1.5;
 }
 .mns-owizard .mns-nurse-gender__text strong {
-	font-size: 1.0625rem;
-	font-weight: 800;
+	font-size: 0.9375rem;
+	font-weight: 700;
+	line-height: 1.5;
 	color: var(--ow-ink);
 }
 .mns-owizard .mns-nurse-gender__text small {
 	font-size: 0.8125rem;
+	line-height: 1.5;
 	color: var(--ow-sub);
 }
 .mns-owizard .mns-avail {
@@ -7190,139 +7187,8 @@ html.mns-drawer-open body {
 	font-weight: 800;
 	color: var(--ow-ink);
 }
-.mns-owizard .mns-upload-zone {
-	display: flex;
-	align-items: center;
-	gap: 18px;
-	margin: 0 0 26px;
-	padding: 20px 22px;
-	border: 1px dashed #c9d5de;
-	border-radius: var(--mns-radius);
-	background: #f8fafc;
-	text-align: start;
-}
-.mns-owizard .mns-upload-zone__ico {
-	display: grid;
-	place-items: center;
-	width: 60px;
-	height: 60px;
-	flex: none;
-	border-radius: var(--mns-radius);
-	background: #fff;
-	color: var(--mns-primary);
-}
-.mns-owizard .mns-upload-zone__ico .mns-icon {
-	width: 26px;
-	height: 26px;
-}
-.mns-owizard .mns-upload-zone__text {
-	flex: 1 1 auto;
-	min-width: 0;
-}
-.mns-owizard .mns-upload-zone__title {
-	margin: 0;
-	font-size: 1.0625rem;
-	font-weight: 800;
-	color: var(--ow-ink);
-}
-.mns-owizard .mns-upload-zone__hint {
-	margin: 4px 0 0;
-	font-size: 0.8125rem;
-	line-height: 1.7;
-	color: var(--ow-sub);
-}
-.mns-owizard .mns-upload-zone__btn {
-	display: inline-flex;
-	flex: none;
-	align-items: center;
-	gap: 10px;
-	min-height: 54px;
-	max-width: 210px;
-	padding: 0 22px;
-	border-radius: var(--mns-radius);
-	background: var(--mns-primary);
-	font-size: 0.875rem;
-	font-weight: 600;
-	line-height: 1.5;
-	color: #fff;
-	cursor: pointer;
-}
-.mns-owizard .mns-upload-zone__btn .mns-icon {
-	width: 20px;
-	height: 20px;
-}
 
 /* ---- Step 4: review / recurring / otp ------------------------------------ */
-.mns-owizard .mns-review-edit {
-	margin: 0 0 22px;
-	padding: 0;
-	background: transparent;
-}
-.mns-owizard .mns-review-edit__title {
-	display: none;
-}
-.mns-owizard .mns-review-edit__row {
-	display: flex;
-	align-items: center;
-	gap: 18px;
-	margin: 0;
-	padding: 17px 0;
-	border: 0;
-	border-bottom: 1px solid var(--ow-line);
-	background: transparent;
-}
-.mns-owizard .mns-review-edit__ico {
-	display: grid;
-	place-items: center;
-	width: 56px;
-	height: 56px;
-	flex: none;
-	border-radius: 16px;
-	background: #e1eefa;
-	color: var(--mns-primary);
-}
-.mns-owizard .mns-review-edit__ico .mns-icon {
-	width: 24px;
-	height: 24px;
-}
-.mns-owizard .mns-review-edit__main {
-	display: flex;
-	flex: 1 1 auto;
-	flex-direction: column;
-	gap: 3px;
-	min-width: 0;
-}
-.mns-owizard .mns-review-edit__label {
-	font-size: 0.8125rem;
-	color: var(--ow-sub);
-}
-.mns-owizard .mns-review-edit__main strong {
-	font-size: 1.0625rem;
-	font-weight: 500;
-	line-height: 1.7;
-	color: var(--ow-ink);
-	overflow-wrap: anywhere;
-}
-.mns-owizard .mns-review-edit__link {
-	display: inline-flex;
-	flex: none;
-	align-items: center;
-	gap: 8px;
-	min-height: 46px;
-	padding: 0 20px;
-	border: 1px solid var(--ow-line);
-	border-radius: 14px;
-	background: #fff;
-	font-size: 0.9375rem;
-	font-weight: 800;
-	color: var(--mns-primary);
-	cursor: pointer;
-	text-decoration: none;
-}
-.mns-owizard .mns-review-edit__link .mns-icon {
-	width: 16px;
-	height: 16px;
-}
 .mns-owizard .mns-ow-paynote {
 	display: none;
 }
@@ -7374,68 +7240,6 @@ html.mns-drawer-open body {
 }
 .mns-owizard .mns-switch.is-on::after {
 	inset-inline-start: 32px;
-}
-.mns-owizard .mns-otp {
-	display: flex;
-	align-items: center;
-	gap: 18px;
-	margin: 0 0 6px;
-	padding: 22px 24px;
-	border: 1px dashed #b9d3ea;
-	border-radius: var(--mns-radius);
-	background: #f6fafe;
-}
-.mns-owizard .mns-otp__ico {
-	display: grid;
-	place-items: center;
-	width: 52px;
-	height: 52px;
-	flex: none;
-	border-radius: 16px;
-	background: #e1eefa;
-	color: var(--mns-primary);
-}
-.mns-owizard .mns-otp__ico .mns-icon {
-	width: 22px;
-	height: 22px;
-}
-.mns-owizard .mns-otp__text {
-	flex: 1 1 auto;
-	min-width: 0;
-}
-.mns-owizard .mns-otp__title {
-	margin: 0;
-	font-size: 1.0625rem;
-	font-weight: 800;
-}
-.mns-owizard .mns-otp__sent {
-	margin: 4px 0 0;
-	font-size: 0.8125rem;
-	line-height: 1.8;
-	color: var(--ow-sub);
-}
-.mns-owizard .mns-otp__boxes {
-	display: flex;
-	flex: none;
-	gap: 12px;
-	margin: 0;
-}
-.mns-owizard .mns-otp__digit {
-	width: 56px;
-	height: 56px;
-	padding: 0;
-	border: 1px solid var(--ow-line);
-	border-radius: 16px;
-	background: #fff;
-	text-align: center;
-	font-size: 1.5rem;
-	font-weight: 800;
-	color: var(--mns-primary);
-}
-.mns-owizard .mns-otp__digit:focus {
-	border-color: var(--mns-primary);
-	outline: none;
-	box-shadow: 0 0 0 3px rgba(2, 114, 177, 0.16);
 }
 .mns-owizard .mns-step[data-mns-step="3"] .mns-step__nav {
 	margin-top: 26px;
@@ -7667,29 +7471,6 @@ html.mns-drawer-open body {
 .mns-owizard[data-mns-current-step="3"] .mns-osum__card--primary {
 	padding: 26px 26px 22px;
 }
-.mns-owizard .mns-osum__paycard {
-	display: none;
-	align-items: flex-start;
-	gap: 12px;
-	margin: 0;
-	padding: 20px 22px;
-	border: 1px solid #d6e7f6;
-	border-radius: var(--mns-radius);
-	background: #eef6fd;
-	font-size: 0.9375rem;
-	line-height: 2;
-	color: #3b4858;
-}
-.mns-owizard .mns-osum__paycard .mns-icon {
-	width: 22px;
-	height: 22px;
-	margin-top: 6px;
-	color: var(--mns-primary);
-}
-.mns-owizard[data-mns-current-step="3"] .mns-osum__paycard {
-	display: flex;
-}
-
 /* ---- Confirmation --------------------------------------------------------- */
 .mns-owizard .mns-owizard__done-card {
 	position: relative;
@@ -7994,11 +7775,6 @@ html.mns-drawer-open body {
 		padding: 18px 16px 20px;
 		border-radius: var(--mns-radius);
 	}
-	.mns-owizard[data-mns-current-step="3"] .mns-owizard__form {
-		padding: 0;
-		border: 0;
-		background: transparent;
-	}
 	.mns-owizard .mns-step__head {
 		gap: 10px;
 		margin-bottom: 18px;
@@ -8012,9 +7788,6 @@ html.mns-drawer-open body {
 		font-size: 1.0625rem;
 	}
 	.mns-owizard .mns-step__sub {
-		display: none;
-	}
-	.mns-owizard[data-mns-current-step="3"] .mns-step__head {
 		display: none;
 	}
 	.mns-owizard .mns-patient-cards__new {
@@ -8038,31 +7811,6 @@ html.mns-drawer-open body {
 		min-height: 44px;
 		padding: 0 16px;
 	}
-	.mns-owizard .mns-nurse-gender {
-		gap: 12px;
-	}
-	.mns-owizard .mns-nurse-gender__card {
-		flex-direction: column;
-		justify-content: center;
-		gap: 10px;
-		min-height: 150px;
-		padding: 16px 10px;
-		text-align: center;
-	}
-	.mns-owizard .mns-nurse-gender__card::before {
-		display: none;
-	}
-	.mns-owizard .mns-nurse-gender__ico {
-		width: 62px;
-		height: 62px;
-	}
-	.mns-owizard .mns-nurse-gender__text {
-		padding: 0;
-		align-items: center;
-	}
-	.mns-owizard .mns-nurse-gender__text small {
-		display: none;
-	}
 	.mns-owizard .mns-avail {
 		align-items: flex-start;
 		gap: 12px;
@@ -8076,58 +7824,10 @@ html.mns-drawer-open body {
 		width: 22px;
 		height: 22px;
 	}
-	.mns-owizard .mns-upload-zone {
-		padding: 16px;
-	}
-	.mns-owizard .mns-upload-zone__btn {
-		min-height: 50px;
-	}
 	.mns-owizard .mns-step__nav {
 		display: none;
 	}
 	/* review becomes the blue summary card on phones */
-	.mns-owizard .mns-review-edit {
-		padding: 18px 18px 8px;
-		border-radius: 24px;
-		background: var(--mns-primary);
-		color: #fff;
-	}
-	.mns-owizard .mns-review-edit__title {
-		display: block;
-		margin: 0 0 6px;
-		font-size: 1.25rem;
-		font-weight: 800;
-		color: #fff;
-	}
-	.mns-owizard .mns-review-edit__row {
-		gap: 10px;
-		padding: 14px 0;
-		border-bottom: 1.5px dashed rgba(255, 255, 255, 0.3);
-	}
-	.mns-owizard .mns-review-edit__row:last-child {
-		border-bottom: 0;
-	}
-	.mns-owizard .mns-review-edit__ico {
-		display: none;
-	}
-	.mns-owizard .mns-review-edit__label {
-		color: rgba(255, 255, 255, 0.75);
-	}
-	.mns-owizard .mns-review-edit__main strong {
-		font-size: 1rem;
-		font-weight: 600;
-		color: #fff;
-	}
-	.mns-owizard .mns-review-edit__link {
-		order: 2;
-		min-height: 36px;
-		padding: 0 12px;
-		border-color: rgba(255, 255, 255, 0.5);
-		border-radius: 12px;
-		background: transparent;
-		font-size: 0.8125rem;
-		color: #fff;
-	}
 	.mns-owizard .mns-ow-paynote {
 		display: flex;
 		align-items: flex-start;
@@ -8150,18 +7850,6 @@ html.mns-drawer-open body {
 	.mns-owizard .mns-switch-row {
 		padding: 14px 16px;
 		border-radius: var(--mns-radius);
-	}
-	.mns-owizard .mns-otp {
-		flex-wrap: wrap;
-		padding: 16px;
-	}
-	.mns-owizard .mns-otp__boxes {
-		width: 100%;
-		justify-content: center;
-	}
-	.mns-owizard .mns-otp__digit {
-		width: 56px;
-		height: 56px;
 	}
 	.mns-owizard .mns-osum {
 		display: none;
@@ -8368,30 +8056,8 @@ html.mns-drawer-open body {
 }
 
 @container ow (max-width: 880px) {
-	.mns-owizard .mns-otp__digit {
-		width: 54px;
-		height: 54px;
-	}
-	.mns-owizard .mns-otp__boxes {
-		gap: 10px;
-	}
 }
 @container ow (max-width: 640px) {
-	.mns-owizard .mns-upload-zone {
-		flex-wrap: wrap;
-	}
-	.mns-owizard .mns-upload-zone__btn {
-		max-width: none;
-		width: 100%;
-		justify-content: center;
-	}
-	.mns-owizard .mns-otp {
-		flex-wrap: wrap;
-	}
-	.mns-owizard .mns-otp__boxes {
-		width: 100%;
-		justify-content: center;
-	}
 }
 
 @media (max-width: 767px) {
@@ -8699,4 +8365,1174 @@ html.mns-drawer-open body {
 .pdp-mns .monthSelect li.disableMonth {
 	color: #c5c5c5 !important;
 	cursor: not-allowed;
+}
+
+/* ---- Theme guard: Dr Plus paints every button :hover/:focus with --primary-200 (#0f3e4f) and keeps the
+button's own (dark) text colour, so buttons without their own state styles turn dark text on dark teal.
+Components that rely on a transparent / base background say so explicitly. --------------------------- */
+.mns-select__trigger:hover,
+.mns-select__trigger:focus,
+.mns-select__trigger:focus-within {
+	background-color: transparent;
+	border-color: transparent;
+}
+.mns-switch:not(.is-on):hover,
+.mns-switch:not(.is-on):focus,
+.mns-switch:not(.is-on):focus-within {
+	background-color: #d1d5db;
+	border-color: transparent;
+}
+.mns-link-btn:hover,
+.mns-link-btn:focus,
+.mns-link-btn:focus-within {
+	background-color: var(--mns-primary-soft);
+	border-color: transparent;
+	color: var(--mns-primary);
+}
+
+/* ---- Nurse gender cards: name + radio only; the "not available here" tag sits beside the name ---------- */
+.mns-owizard .mns-nurse-gender__card {
+	min-height: 56px;
+}
+.mns-owizard .mns-nurse-gender__text {
+	flex-direction: row;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 2px 8px;
+}
+.mns-owizard .mns-nurse-gender__note {
+	margin: 0;
+	padding: 0 8px;
+	font-size: 0.75rem;
+	line-height: 1.8;
+	white-space: nowrap;
+}
+
+/* ---- Availability box (red state): compact ------------------------------------------------------------ */
+.mns-owizard .mns-avail {
+	gap: 12px;
+	margin: -12px 0 22px;
+	padding: 12px 14px;
+}
+.mns-owizard .mns-avail .mns-avail__ico {
+	width: 32px;
+	height: 32px;
+	box-shadow: none;
+}
+.mns-owizard .mns-avail .mns-avail__ico svg {
+	width: 16px;
+	height: 16px;
+}
+.mns-owizard .mns-avail__body strong {
+	font-size: 0.9375rem;
+	line-height: 1.5;
+}
+.mns-owizard .mns-avail__body p {
+	margin: 2px 0 0;
+	font-size: 0.8125rem;
+	line-height: 1.6;
+}
+.mns-owizard .mns-avail__alts {
+	margin-top: 8px;
+}
+.mns-owizard .mns-avail__call {
+	min-height: 36px;
+	margin-top: 8px;
+	padding: 0 12px;
+	font-size: 0.8125rem;
+}
+
+/* ====== Review step: compact list, service details inside it, repeat, phone verification ============= */
+.mns-owizard .mns-review {
+	margin: 0 0 20px;
+	padding: 0 16px;
+	border: 1px solid var(--ow-line);
+	border-radius: var(--mns-radius);
+	background: #fff;
+}
+.mns-owizard .mns-review__row {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	min-height: 56px;
+	padding: 6px 0;
+}
+.mns-owizard .mns-review__row + .mns-review__row,
+.mns-owizard .mns-review .mns-svcd + .mns-review__row {
+	border-top: 1px solid var(--ow-line);
+}
+.mns-owizard .mns-review__label {
+	flex: none;
+	width: 84px;
+	font-size: 0.8125rem;
+	color: var(--ow-sub);
+}
+.mns-owizard .mns-review__val {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	gap: 6px;
+	min-width: 0;
+	font-size: 0.9375rem;
+	line-height: 1.7;
+	color: var(--ow-ink);
+	overflow-wrap: anywhere;
+}
+.mns-owizard .mns-review__val strong {
+	font-weight: 500;
+}
+.mns-owizard .mns-review__tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+.mns-owizard .mns-review__tags:empty {
+	display: none;
+}
+.mns-owizard .mns-review__tag {
+	padding: 0 10px;
+	border-radius: 999px;
+	background: #eef1f5;
+	font-size: 0.75rem;
+	line-height: 1.9;
+	color: #3b4858;
+}
+.mns-owizard .mns-review__tag.is-ok {
+	background: #e9f6ee;
+	color: #0f6a3c;
+}
+.mns-owizard .mns-review__tag.is-warn {
+	background: #fff6dd;
+	color: #7a4b00;
+	font-weight: 500;
+}
+.mns-owizard .mns-review__edit {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	gap: 4px;
+	min-width: 44px;
+	min-height: 44px;
+	padding: 0 8px;
+	border: 0;
+	border-radius: 12px;
+	background: transparent;
+	font: inherit;
+	font-size: 0.8125rem;
+	font-weight: 500;
+	color: var(--mns-primary);
+	cursor: pointer;
+	transition: background 150ms ease;
+}
+/* The theme paints every button :hover/:focus dark teal: say what ours do. */
+.mns-owizard .mns-review__edit:hover,
+.mns-owizard .mns-review__edit:focus,
+.mns-owizard .mns-review__edit:focus-within {
+	border-color: transparent;
+	background: var(--mns-primary-soft);
+	color: var(--mns-primary);
+}
+.mns-owizard .mns-review__edit .mns-icon {
+	width: 16px;
+	height: 16px;
+	transition: transform 200ms ease;
+}
+.mns-owizard .mns-review__edit[aria-expanded="true"] .mns-icon {
+	transform: rotate(180deg);
+}
+
+/* ---- Service details panel (opens under the "service" row) ------------------------------------------- */
+.mns-owizard .mns-svcd__panel {
+	margin: 4px -16px 10px;
+	padding: 16px;
+	background: var(--ow-soft-2);
+}
+.mns-owizard .mns-svcd__lead {
+	margin: 0 0 14px;
+	font-size: 0.8125rem;
+	line-height: 1.7;
+	color: var(--ow-sub);
+}
+.mns-owizard :is(.mns-svcd__panel, .mns-recurring) .mns-form-row--2 {
+	align-items: start;
+	gap: 14px 16px;
+	margin-bottom: 14px;
+}
+.mns-owizard .mns-svcd__panel .mns-field-block,
+.mns-owizard .mns-recurring .mns-field-block {
+	margin: 0;
+}
+.mns-owizard .mns-svcd__panel .mns-field-group,
+.mns-owizard .mns-svcd__rx {
+	margin-bottom: 14px;
+}
+.mns-owizard .mns-svcd__panel .mns-field-block__label,
+.mns-owizard .mns-recurring .mns-field-block__label {
+	margin-bottom: 8px;
+}
+.mns-owizard .mns-svcd__panel [data-mns-allergy-collapse] .mns-field-block {
+	margin-bottom: 14px;
+}
+.mns-owizard .mns-svcd__panel .mns-chip-row {
+	margin: 0;
+	gap: 8px;
+}
+.mns-owizard .mns-svcd__panel .mns-chip {
+	min-height: 44px;
+	padding: 0 14px;
+	font-size: 0.875rem;
+}
+.mns-owizard .mns-qty__btn:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+.mns-owizard .mns-field-block__opt.is-required {
+	background: #fff6dd;
+	color: #7a4b00;
+}
+.mns-owizard .mns-field-block__control--area {
+	position: relative;
+}
+.mns-owizard .mns-field-block__control--area textarea {
+	padding-bottom: 20px;
+}
+.mns-owizard .mns-field-block__count {
+	position: absolute;
+	inset-block-end: 8px;
+	inset-inline-start: 16px;
+	font-size: 0.75rem;
+	color: var(--ow-sub);
+	pointer-events: none;
+}
+
+/* ---- Prescription photo -------------------------------------------------------------------------------- */
+.mns-owizard .mns-upload__empty,
+.mns-owizard .mns-upload__file {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 10px 14px;
+	border-radius: var(--mns-radius);
+	background: #fff;
+}
+.mns-owizard .mns-upload__empty {
+	border: 1px dashed #c9d5de;
+	background: #f8fafc;
+}
+.mns-owizard .mns-upload__file {
+	border: 1px solid var(--ow-line);
+	animation: mns-rise 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.mns-owizard .mns-upload__ico {
+	display: grid;
+	place-items: center;
+	flex: none;
+	color: var(--mns-primary);
+}
+.mns-owizard .mns-upload__ico .mns-icon {
+	width: 20px;
+	height: 20px;
+}
+.mns-owizard .mns-upload__text {
+	flex: 1 1 auto;
+	min-width: 0;
+	font-size: 0.8125rem;
+	line-height: 1.7;
+	color: var(--ow-ink);
+}
+.mns-owizard .mns-upload__btn {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	min-height: 40px;
+	padding: 0 14px;
+	border: 1px solid var(--mns-primary);
+	border-radius: 12px;
+	background: #fff;
+	font-size: 0.8125rem;
+	font-weight: 500;
+	color: var(--mns-primary);
+	cursor: pointer;
+	transition: background 150ms ease;
+}
+.mns-owizard .mns-upload__btn:hover {
+	background: var(--mns-primary-soft);
+}
+.mns-owizard .mns-upload__thumb {
+	flex: none;
+	width: 48px;
+	height: 48px;
+	border-radius: 12px;
+	background: #eaf2fa;
+	object-fit: cover;
+}
+.mns-owizard .mns-upload__meta {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	min-width: 0;
+	line-height: 1.5;
+}
+.mns-owizard .mns-upload__name {
+	overflow: hidden;
+	font-size: 0.8125rem;
+	color: var(--ow-ink);
+	text-align: end;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.mns-owizard .mns-upload__size {
+	font-size: 0.75rem;
+	color: var(--ow-sub);
+}
+.mns-owizard .mns-upload__remove {
+	flex: none;
+	min-height: 40px;
+	padding: 0 12px;
+	border: 0;
+	border-radius: 12px;
+	background: #fde9ee;
+	font: inherit;
+	font-size: 0.8125rem;
+	font-weight: 500;
+	color: var(--mns-danger);
+	cursor: pointer;
+}
+.mns-owizard .mns-upload__remove:hover,
+.mns-owizard .mns-upload__remove:focus,
+.mns-owizard .mns-upload__remove:focus-within {
+	background: #fbd5de;
+	border-color: transparent;
+	color: var(--mns-danger);
+}
+
+/* ---- Repeat: frequency + count, live dates and cost ------------------------------------------------------ */
+.mns-owizard .mns-recurring {
+	margin: 0 0 20px;
+	padding: 16px;
+	border: 1px solid var(--ow-line);
+	border-radius: var(--mns-radius);
+	background: #fff;
+}
+.mns-owizard .mns-recurring__sum {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 14px;
+	border-radius: var(--mns-radius);
+	background: var(--ow-soft-2);
+}
+.mns-owizard .mns-recurring__line {
+	font-size: 0.9375rem;
+	font-weight: 500;
+	line-height: 1.6;
+	color: var(--ow-ink);
+}
+.mns-owizard .mns-recurring__dates {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+.mns-owizard .mns-recurring__date {
+	padding: 0 12px;
+	border: 1px solid var(--ow-line);
+	border-radius: 999px;
+	background: #fff;
+	font-size: 0.8125rem;
+	line-height: 2;
+	color: var(--ow-ink);
+}
+.mns-owizard .mns-recurring__date.is-first {
+	border-color: var(--mns-primary);
+	background: var(--mns-primary);
+	color: #fff;
+}
+.mns-owizard .mns-recurring__more {
+	align-self: center;
+	font-size: 0.8125rem;
+	color: var(--ow-sub);
+}
+.mns-owizard .mns-recurring__cost {
+	font-size: 0.8125rem;
+	line-height: 1.7;
+	color: var(--ow-sub);
+}
+
+/* ---- Phone verification: a verified number needs nothing; a changed one gets a real code flow -------------- */
+.mns-owizard .mns-verify {
+	margin: 0 0 6px;
+}
+.mns-owizard .mns-verify__ok {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin: 0 0 14px;
+	font-size: 0.875rem;
+	color: #0f6a3c;
+}
+.mns-owizard .mns-verify__ok-ico {
+	display: grid;
+	place-items: center;
+	flex: none;
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	background: #e9f6ee;
+}
+.mns-owizard .mns-verify__ok-ico .mns-icon {
+	width: 14px;
+	height: 14px;
+}
+.mns-owizard .mns-otp {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	margin: 0 0 14px;
+	padding: 16px;
+	border: 1px dashed #b9d3ea;
+	border-radius: var(--mns-radius);
+	background: #f6fafe;
+}
+.mns-owizard .mns-otp__title {
+	margin: 0;
+	font-size: 0.9375rem;
+	font-weight: 700;
+	color: var(--ow-ink);
+}
+.mns-owizard .mns-otp__sent {
+	margin: 2px 0 0;
+	font-size: 0.8125rem;
+	color: var(--ow-sub);
+}
+.mns-owizard .mns-otp__send {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 12px;
+}
+.mns-owizard .mns-otp__timer {
+	font-size: 0.8125rem;
+	color: var(--ow-sub);
+}
+.mns-owizard .mns-otp__boxes {
+	display: flex;
+	gap: 8px;
+	margin: 0;
+	padding-top: 2px;
+}
+.mns-owizard .mns-otp__digit {
+	width: 52px;
+	height: 56px;
+	padding: 0;
+	border: 1px solid var(--ow-line);
+	border-radius: var(--mns-radius);
+	background: #fff;
+	text-align: center;
+	font-size: 1.25rem;
+	font-weight: 700;
+	color: var(--mns-primary);
+	transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.mns-owizard .mns-otp__digit:focus {
+	border-color: var(--mns-primary);
+	outline: none;
+	box-shadow: var(--mns-focus-ring);
+}
+
+/* ---- Phone sticky bar: continue + back ------------------------------------------------------------------------ */
+.mns-owizard .mns-owizard__mob-bar-row {
+	display: flex;
+	gap: 8px;
+}
+.mns-owizard .mns-owizard__mob-bar-row .mns-owizard__mob-bar-btn {
+	flex: 1 1 auto;
+	width: auto;
+}
+.mns-owizard .mns-owizard__mob-bar-back {
+	flex: none;
+	gap: 6px;
+	min-width: 96px;
+	min-height: 52px;
+}
+
+/* ====== v3 (final layer): stepper, review step, summary aside ======================================== */
+
+/* ---- Stepper: no legacy bordered boxes, a solid progress track instead of dots ------------------------ */
+.mns-owizard .mns-owizard__stepper-wrap {
+	padding: 20px 24px 18px;
+}
+.mns-owizard .mns-owizard__step {
+	gap: 8px;
+	min-height: 0 !important;
+	padding: 0 !important;
+	border: 0 !important;
+	border-radius: 0 !important;
+	background: transparent !important;
+	box-shadow: none !important;
+	opacity: 1 !important;
+	color: inherit !important;
+}
+.mns-owizard .mns-owizard__step:not(:last-child)::after {
+	top: 26px;
+	inset-inline-start: calc(50% + 44px);
+	inset-inline-end: calc(-50% + 44px);
+	height: 4px;
+	border: 0;
+	border-radius: 4px;
+	background: #e3eaf2;
+	transition: background 300ms ease;
+}
+.mns-owizard .mns-owizard__step.is-done:not(:last-child)::after {
+	border: 0;
+	background: var(--mns-primary);
+}
+.mns-owizard .mns-owizard__step .mns-stepper__label {
+	color: #66758a;
+}
+.mns-owizard .mns-owizard__step.is-done .mns-stepper__label {
+	color: #3b4a5a;
+}
+.mns-owizard .mns-owizard__step.is-current .mns-stepper__label {
+	color: var(--mns-primary);
+}
+@media (max-width: 767px) {
+	.mns-owizard .mns-owizard__stepper-wrap {
+		padding: 14px 8px 12px;
+	}
+	.mns-owizard .mns-owizard__step:not(:last-child)::after {
+		top: 18px;
+		inset-inline-start: calc(50% + 32px);
+		inset-inline-end: calc(-50% + 32px);
+		height: 3px;
+	}
+}
+
+/* ---- Review list: icon tile + label over value + a clear "edit" button ------------------------------- */
+.mns-owizard .mns-review {
+	padding: 0;
+	overflow: hidden;
+}
+.mns-owizard .mns-review__row {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	min-height: 68px;
+	padding: 12px 16px;
+}
+.mns-owizard .mns-review__ico {
+	display: grid;
+	flex: none;
+	place-items: center;
+	align-self: flex-start;
+	width: 40px;
+	height: 40px;
+	border-radius: 12px;
+	background: var(--ow-soft);
+	color: var(--mns-primary);
+}
+.mns-owizard .mns-review__ico .mns-icon {
+	width: 20px;
+	height: 20px;
+}
+.mns-owizard .mns-review__body {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+.mns-owizard .mns-review__label {
+	width: auto;
+	font-size: 0.75rem;
+	line-height: 1.6;
+	color: var(--ow-sub);
+}
+.mns-owizard .mns-review__val {
+	font-size: 0.9375rem;
+	line-height: 1.7;
+}
+.mns-owizard .mns-review__val strong {
+	font-weight: 700;
+	color: var(--ow-ink);
+}
+.mns-owizard .mns-review__edit {
+	gap: 6px;
+	min-width: 44px;
+	padding: 0 12px;
+	border: 1px solid var(--ow-line);
+	background: #fff;
+	font-size: 0.8125rem;
+}
+.mns-owizard .mns-review__edit .mns-icon {
+	width: 15px;
+	height: 15px;
+}
+.mns-owizard .mns-review__edit[aria-expanded="true"] {
+	border-color: var(--mns-primary);
+	background: var(--mns-primary-soft);
+}
+.mns-owizard .mns-review__edit[aria-expanded="true"] .mns-icon {
+	transform: none;
+}
+.mns-owizard .mns-review__edit:hover,
+.mns-owizard .mns-review__edit:focus,
+.mns-owizard .mns-review__edit:focus-within {
+	border-color: var(--mns-primary);
+	background: var(--mns-primary-soft);
+	color: var(--mns-primary);
+}
+.mns-owizard .mns-review .mns-svcd__panel {
+	margin: 0;
+	padding: 16px;
+	border-top: 1px solid var(--ow-line);
+}
+.mns-owizard .mns-switch-row {
+	margin-bottom: 16px;
+}
+
+/* ---- Pay note sits right above the submit button, on every screen size -------------------------------- */
+.mns-owizard .mns-ow-paynote {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin: 18px 0 0;
+	padding: 12px 16px;
+	border: 0;
+	border-radius: var(--mns-radius);
+	background: var(--ow-soft-2);
+	font-size: 0.8125rem;
+	line-height: 1.8;
+	color: #3b4858;
+}
+.mns-owizard .mns-ow-paynote .mns-icon {
+	flex: none;
+	width: 18px;
+	height: 18px;
+	margin: 0;
+	color: var(--mns-primary);
+}
+.mns-owizard .mns-step[data-mns-step="3"] .mns-step__nav {
+	margin-top: 14px;
+}
+@media (max-width: 767px) {
+	.mns-owizard .mns-review__row {
+		gap: 12px;
+		padding: 12px;
+	}
+	.mns-owizard .mns-ow-paynote {
+		margin: 0 0 14px;
+	}
+	.mns-owizard .mns-review .mns-svcd__panel {
+		padding: 14px 12px;
+	}
+}
+
+/* ---- Summary aside: light card, one header line (service + price), compact tiles ----------------------- */
+.mns-owizard .mns-osum {
+	gap: 14px;
+}
+.mns-owizard .mns-osum__card--primary {
+	position: relative;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	gap: 16px 24px;
+	align-items: center;
+	overflow: hidden;
+	padding: 22px 24px 20px;
+	border: 1px solid var(--ow-line);
+	border-radius: var(--mns-radius-shell);
+	background: #fff;
+	box-shadow: none;
+	color: var(--ow-ink);
+}
+.mns-owizard .mns-osum__card--primary::before {
+	content: "";
+	position: absolute;
+	inset-block-start: 0;
+	inset-inline: 0;
+	height: 3px;
+	background: var(--mns-primary);
+}
+.mns-owizard .mns-osum__head,
+.mns-owizard[data-mns-current-step="3"] .mns-osum__head {
+	display: flex;
+	grid-column: 1;
+	align-items: center;
+	gap: 12px;
+	margin: 0;
+}
+.mns-owizard .mns-osum__ico {
+	width: 44px;
+	height: 44px;
+	border-radius: 12px;
+	background: var(--ow-soft);
+	color: var(--mns-primary);
+}
+.mns-owizard .mns-osum__ico .mns-icon {
+	width: 20px;
+	height: 20px;
+}
+.mns-owizard .mns-osum__head small {
+	font-size: 0.75rem;
+	line-height: 1.6;
+	color: var(--ow-sub);
+	opacity: 1;
+}
+.mns-owizard .mns-osum__svc {
+	margin: 0;
+	font-size: 1.0625rem;
+	font-weight: 800;
+	line-height: 1.5;
+	color: var(--ow-ink);
+}
+.mns-owizard .mns-osum__pricebox,
+.mns-owizard[data-mns-current-step="3"] .mns-osum__pricebox {
+	display: flex;
+	grid-column: 2;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 0 6px;
+	margin: 0;
+	padding: 10px 16px;
+	border-radius: var(--mns-radius);
+	background: var(--ow-soft);
+	color: var(--ow-ink);
+}
+.mns-owizard .mns-osum__pricebox small {
+	display: block;
+	font-size: 0.75rem;
+	color: var(--ow-sub);
+	opacity: 1;
+}
+.mns-owizard .mns-osum__pricebox small:first-child {
+	flex-basis: 100%;
+}
+.mns-owizard .mns-osum__price {
+	display: inline;
+	margin: 0;
+	font-size: 1.375rem;
+	font-weight: 800;
+	line-height: 1.5;
+	color: var(--mns-primary);
+}
+.mns-owizard .mns-osum__list {
+	display: grid;
+	grid-column: 1 / -1;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: 10px;
+	margin: 0;
+}
+.mns-owizard .mns-osum__list li {
+	align-items: center;
+	gap: 10px;
+	padding: 10px 12px;
+	border: 0;
+	border-radius: 12px;
+	background: var(--ow-soft-2);
+}
+.mns-owizard .mns-osum__list li[hidden],
+.mns-owizard .mns-osum__factors[hidden] {
+	display: none;
+}
+.mns-owizard .mns-osum__row-ico {
+	flex: none;
+	margin: 0;
+	color: var(--mns-primary);
+	opacity: 1;
+}
+.mns-owizard .mns-osum__row-ico .mns-icon {
+	width: 18px;
+	height: 18px;
+}
+.mns-owizard .mns-osum__row-text {
+	gap: 0;
+	font-size: 0.875rem;
+	font-weight: 700;
+	line-height: 1.6;
+	color: var(--ow-ink);
+}
+.mns-owizard .mns-osum__row-text small {
+	font-size: 0.75rem;
+	font-weight: 400;
+	color: var(--ow-sub);
+	opacity: 1;
+}
+.mns-owizard .mns-osum__card--primary .mns-osum__pay-note {
+	grid-column: 1 / -1;
+	align-items: center;
+	gap: 8px;
+	margin: 0;
+	padding: 0;
+	background: transparent;
+	font-size: 0.8125rem;
+	line-height: 1.8;
+	color: var(--ow-sub);
+}
+.mns-owizard .mns-osum__pay-note .mns-icon {
+	flex: none;
+	width: 16px;
+	height: 16px;
+	margin: 0;
+	color: var(--mns-primary);
+}
+.mns-owizard .mns-osum__factors {
+	display: flex;
+	grid-column: 1 / -1;
+	flex-wrap: wrap;
+	gap: 8px;
+	padding: 0;
+	border: 0;
+}
+.mns-owizard .mns-osum__factors li {
+	gap: 6px;
+	padding: 4px 12px;
+	border-radius: 999px;
+	background: var(--ow-soft);
+	font-size: 0.8125rem;
+	color: var(--ow-ink);
+}
+.mns-owizard .mns-osum__factors .mns-icon {
+	order: 0;
+	width: 14px;
+	height: 14px;
+	margin: 0;
+	color: var(--mns-primary);
+}
+/* review step: the list repeats the review, the pay note sits by the button */
+.mns-owizard[data-mns-current-step="3"] .mns-osum__card--primary {
+	padding: 22px 24px 20px;
+}
+@container ow (max-width: 640px) {
+	.mns-owizard .mns-osum__card--primary {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.mns-owizard .mns-osum__pricebox,
+	.mns-owizard[data-mns-current-step="3"] .mns-osum__pricebox {
+		grid-column: 1;
+	}
+	.mns-owizard .mns-osum__list {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+/* "what happens next": same light language, smaller badges */
+.mns-owizard .mns-osum__how {
+	padding: 20px 24px 22px;
+	border-radius: var(--mns-radius-shell);
+}
+.mns-owizard .mns-how__title {
+	margin: 0 0 16px;
+	font-size: 0.9375rem;
+}
+.mns-owizard .mns-how__num {
+	width: 40px;
+	height: 40px;
+}
+.mns-owizard .mns-how__num .mns-icon {
+	width: 18px;
+	height: 18px;
+}
+.mns-owizard .mns-how__steps strong {
+	font-size: 0.875rem;
+}
+.mns-owizard .mns-how__steps small {
+	line-height: 1.6;
+}
+
+/* ---- Review rows on narrow phones: the row is only ~280px wide, so drop the icon tile and make "edit" icon-only ---- */
+@media (max-width: 480px) {
+	.mns-owizard .mns-review__ico {
+		display: none;
+	}
+	.mns-owizard .mns-review__row {
+		min-height: 0;
+		padding: 10px 6px 10px 12px;
+	}
+	.mns-owizard .mns-review__edit {
+		width: 44px;
+		padding: 0;
+	}
+	.mns-owizard .mns-review__edit span {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip: rect(0 0 0 0);
+		white-space: nowrap;
+	}
+}
+
+/* ====== v4: three-step flow, alignment, calmer summary, loading button, confirmation ================== */
+
+/* review rows: icon, text and edit button share one centre line (also the taller service row with tags) */
+.mns-owizard .mns-review__ico {
+	align-self: center;
+}
+.mns-owizard .mns-review__row--service .mns-review__val {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 6px;
+}
+.mns-owizard .mns-review__edit {
+	align-self: center;
+}
+@media (max-width: 767px) {
+	/* no frame around the list on phones: the rows are separated by hairlines inside the form card */
+	.mns-owizard .mns-review {
+		border: 0;
+		border-radius: 0;
+		background: transparent;
+	}
+	.mns-owizard .mns-review__row {
+		padding-inline: 0;
+	}
+	.mns-owizard .mns-review__row + .mns-review__row {
+		border-top-color: var(--ow-line);
+	}
+}
+
+/* serum row: wide dropdown, slim stepper (same for "how many repeats") */
+.mns-owizard :is(.mns-svcd__panel, .mns-recurring) .mns-form-row--2:has(.mns-qty) {
+	grid-template-columns: minmax(0, 1fr) auto;
+}
+.mns-owizard .mns-qty {
+	width: 136px;
+}
+.mns-owizard .mns-qty__btn {
+	flex: none;
+	width: 42px;
+}
+.mns-owizard .mns-qty__val {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+/* a picked option keeps its weight: colour and border already say "selected" */
+.mns-owizard .mns-chip.is-selected,
+.mns-owizard .mns-chip[aria-checked="true"],
+.mns-owizard .mns-chip[aria-pressed="true"] {
+	font-weight: 500 !important;
+}
+
+/* submit: the label fades out first, then a round spinner fades in */
+.mns-owizard .mns-submit-btn > * {
+	transition: opacity 180ms ease;
+}
+.mns-owizard .mns-submit-btn.is-loading,
+.mns-owizard .mns-submit-btn.is-loading:disabled {
+	position: relative;
+	opacity: 1;
+	pointer-events: none;
+	cursor: progress;
+}
+.mns-owizard .mns-submit-btn.is-loading > * {
+	opacity: 0;
+}
+.mns-owizard .mns-submit-btn.is-loading::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	width: 22px;
+	height: 22px;
+	margin: auto;
+	border: 2.5px solid rgba(255, 255, 255, 0.35);
+	border-top-color: #fff;
+	border-radius: 50%;
+	opacity: 0;
+	animation: mns-spin 700ms linear infinite, mns-fade-in 200ms ease 180ms forwards;
+}
+@keyframes mns-fade-in {
+	to {
+		opacity: 1;
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.mns-owizard .mns-submit-btn.is-loading::after {
+		animation: mns-fade-in 1ms forwards;
+	}
+}
+
+/* ---- Summary aside: neutral surfaces, one accent colour, small radii ---------------------------------- */
+.mns-owizard .mns-osum__card--primary {
+	border-radius: 14px;
+	padding: 20px 22px;
+}
+.mns-owizard .mns-osum__card--primary::before {
+	display: none;
+}
+.mns-owizard .mns-osum__ico {
+	border-radius: 10px;
+	background: #f1f5f9;
+}
+.mns-owizard .mns-osum__pricebox,
+.mns-owizard[data-mns-current-step="2"] .mns-osum__pricebox,
+.mns-owizard[data-mns-current-step="3"] .mns-osum__pricebox {
+	border-radius: 10px;
+	background: #f6f8fb;
+}
+.mns-owizard .mns-osum__list li {
+	border-radius: 10px;
+	background: #f6f8fb;
+}
+.mns-owizard .mns-osum__factors li {
+	border-radius: 8px;
+	background: #f1f5f9;
+}
+.mns-owizard .mns-osum__factors .mns-icon,
+.mns-owizard .mns-osum__row-ico,
+.mns-owizard .mns-osum__pay-note .mns-icon {
+	color: #5c6b7d;
+}
+.mns-owizard .mns-osum__how {
+	padding: 18px 22px 20px;
+	border: 1px solid var(--ow-line);
+	border-radius: 14px;
+	background: #fff;
+}
+.mns-owizard .mns-how__num {
+	width: 36px;
+	height: 36px;
+	border: 0;
+	border-radius: 10px;
+	background: #f1f5f9;
+	color: #5c6b7d;
+}
+.mns-owizard .mns-how__num .mns-icon {
+	width: 18px;
+	height: 18px;
+}
+/* the aside list only repeats the review on the last step */
+.mns-owizard[data-mns-current-step="3"] .mns-osum__list,
+.mns-owizard[data-mns-current-step="3"] .mns-osum__card--primary .mns-osum__pay-note,
+.mns-owizard[data-mns-current-step="3"] .mns-how__step--pay {
+	display: none;
+}
+.mns-owizard[data-mns-current-step="3"] .mns-osum__head {
+	display: flex;
+}
+
+/* ---- Confirmation timeline: same language as the stepper, solid track instead of dots ----------------- */
+.mns-owizard .mns-oconfirm__timeline {
+	padding: 22px 24px;
+	border: 1px solid var(--ow-line);
+	border-radius: 14px;
+	background: #fff;
+}
+.mns-owizard .mns-oconfirm__timeline li {
+	gap: 10px;
+}
+.mns-owizard .mns-oconfirm__timeline li:not(:last-child)::after {
+	top: 20px;
+	inset-inline-start: calc(50% + 34px);
+	inset-inline-end: calc(-50% + 34px);
+	height: 4px;
+	border: 0;
+	border-radius: 4px;
+	background: #e3eaf2;
+}
+.mns-owizard .mns-oconfirm__timeline li.is-done:not(:last-child)::after {
+	border: 0;
+	background: linear-gradient(to left, var(--mns-primary) 0 38%, #e3eaf2 38%);
+}
+.mns-owizard .mns-oconfirm__tl-ico {
+	width: 44px;
+	height: 44px;
+	border: 2px solid #e3eaf2;
+	border-radius: 50%;
+	background: #fff;
+	color: #8a97a6;
+}
+.mns-owizard .mns-oconfirm__tl-ico .mns-icon {
+	width: 20px;
+	height: 20px;
+}
+.mns-owizard .mns-oconfirm__timeline li.is-done .mns-oconfirm__tl-ico {
+	border-color: var(--mns-primary);
+	background: var(--mns-primary);
+	box-shadow: 0 0 0 5px rgba(2, 114, 177, 0.12);
+	color: #fff;
+}
+.mns-owizard .mns-oconfirm__tl-text strong {
+	font-size: 0.875rem;
+	color: #5c6b7d;
+}
+.mns-owizard .mns-oconfirm__timeline li.is-done .mns-oconfirm__tl-text strong {
+	font-weight: 700;
+}
+
+@media (max-width: 767px) {
+	.mns-owizard .mns-owizard__svc-chip {
+		margin-top: 10px;
+	}
+	.mns-owizard .mns-oconfirm {
+		margin-top: 20px;
+	}
+	.mns-owizard .mns-oconfirm__timeline {
+		padding: 16px 16px 12px;
+	}
+	.mns-owizard .mns-oconfirm__timeline li {
+		gap: 14px;
+		padding: 0 0 18px;
+	}
+	.mns-owizard .mns-oconfirm__timeline li:last-child {
+		padding-bottom: 0;
+	}
+	.mns-owizard .mns-oconfirm__timeline li:not(:last-child)::after {
+		top: 40px;
+		bottom: 4px;
+		inset-inline-start: 19px;
+		inset-inline-end: auto;
+		width: 3px;
+		height: auto;
+		border: 0;
+		border-radius: 3px;
+		background: #e3eaf2;
+	}
+	.mns-owizard .mns-oconfirm__timeline li.is-done:not(:last-child)::after {
+		background: linear-gradient(to bottom, var(--mns-primary) 0 40%, #e3eaf2 40%);
+	}
+	.mns-owizard .mns-oconfirm__tl-ico {
+		flex: none;
+		width: 40px;
+		height: 40px;
+		border-radius: 50%;
+	}
+	/* confirmation actions: two buttons, half the width each */
+	.mns-owizard .mns-oconfirm__actions {
+		flex-direction: row;
+		align-items: stretch;
+		gap: 10px;
+	}
+	.mns-owizard .mns-oconfirm__actions .mns-submit-btn,
+	.mns-owizard .mns-oconfirm__actions a:not(.mns-submit-btn),
+	.mns-owizard .mns-oconfirm__actions .mns-support-call,
+	.mns-owizard .mns-oconfirm__actions .mns-btn-outline {
+		flex: 1 1 0;
+		width: auto;
+		min-width: 0;
+		padding-inline: 10px;
+	}
+}
+
+/* service details are a regular step now: no tinted panel, no negative margins */
+.mns-owizard .mns-svcd__panel {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: transparent;
+}
+
+@media (max-width: 767px) {
+	.mns-owizard :is(.mns-svcd__panel, .mns-recurring) .mns-form-row--2:has(.mns-qty) {
+		gap: 10px;
+	}
+	.mns-owizard .mns-qty {
+		width: 112px;
+		height: 48px;
+	}
+	.mns-owizard .mns-qty__btn {
+		width: 36px;
+	}
 }

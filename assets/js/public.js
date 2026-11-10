@@ -182,7 +182,11 @@
 					li.textContent = opt.textContent;
 					if (opt.disabled) li.classList.add('is-disabled');
 					if (opt.selected) li.classList.add('is-selected');
-					li.addEventListener('click', function () {
+					li.addEventListener('click', function (e) {
+						/* Keep this click from reaching the control's "click anywhere to open" handler, otherwise a rebuilt option list re-opens the menu right after a pick. */
+						e.stopPropagation();
+						/* The control sits inside a <label>: without this the browser forwards the click to the native <select>, which re-opens the menu. */
+						e.preventDefault();
 						if (opt.disabled) return;
 						native.selectedIndex = index;
 						native.dispatchEvent(new Event('change', { bubbles: true }));
@@ -214,7 +218,7 @@
 			});
 			control.addEventListener('click', function (e) {
 				if (e.target === trigger || trigger.contains(e.target)) return;
-				if (menu.contains(e.target)) return;
+				if (e.target === native || menu.contains(e.target)) return;
 				if (!menu.classList.contains('is-open')) open();
 			});
 			native.addEventListener('change', syncLabel);
@@ -449,6 +453,19 @@
 		var serumTypeInput = qs('[data-mns-serum-type]', form);
 		var veinInput = qs('[data-mns-vein-access]', form);
 		var allergyInput = qs('[data-mns-allergy]', form);
+		var detailsEl = qs('[data-mns-details]', form);
+		var detailsToggle = qs('[data-mns-details-toggle]', form);
+		var allergyCollapse = qs('[data-mns-allergy-collapse]', form);
+		var allergyDetail = qs('[data-mns-allergy-detail]', form);
+		var rxInput = qs('[data-mns-prescription-file]', form);
+		var phoneInput = qs('input[name="phone"]', form);
+		var rxTypes = [];
+		try {
+			rxTypes = JSON.parse(form.getAttribute('data-mns-rx-types') || '[]') || [];
+		} catch (e5) {
+			rxTypes = [];
+		}
+		var verifiedPhone = normalizeIranMobile(form.getAttribute('data-mns-verified-phone') || '');
 		var qtyInput = qs('[data-mns-serum-qty]', form);
 		var ageGroupInput = qs('[data-mns-age-group]', form);
 		var patGenderInput = qs('[data-mns-patient-gender]', form);
@@ -458,7 +475,6 @@
 		var availGenderBox = qs('[data-mns-avail-gender]', form);
 		var pickEdit = qs('[data-mns-pick-edit]', form);
 		var pickChange = qs('[data-mns-pick-change]', form);
-		var DRAFT_KEY = 'mns_order_wizard_draft_v3';
 		var wizardReady = false;
 
 		function setChipGroup(rootSel, value, hiddenInput) {
@@ -545,15 +561,15 @@
 				elDetailRow.classList.toggle('is-hidden', !showDetail);
 			}
 			if (factors) {
-				factors.hidden = step < 3;
-				factors.classList.toggle('is-hidden', step < 3);
+				factors.hidden = step < 2;
+				factors.classList.toggle('is-hidden', step < 2);
 			}
 			var otpPhone = qs('[data-mns-otp-phone]', form);
 			var phone = qs('input[name="phone"]', form);
 			if (otpPhone && phone) otpPhone.textContent = phone.value || '';
 		}
 
-		function goStep(n) {
+		function goStep(n, focusSel) {
 			step = Math.max(1, Math.min(maxStep, n));
 			qsa('[data-mns-step]', form).forEach(function (sec) {
 				var id = parseInt(sec.getAttribute('data-mns-step'), 10);
@@ -580,12 +596,18 @@
 			});
 			setWizardStep(step);
 			updateSideSummary();
+			if (step === 2) syncRxTag();
 			if (step === 3) fillReview();
 			syncMobileBar();
-			saveDraft();
 			if (wizardReady) {
-				var anchor = qs('[data-mns-stepper]', wizard || document) || qs('[data-mns-step].is-active', form);
-				if (anchor) anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+				var target = focusSel ? qs(focusSel, form) : null;
+				var anchor = target || qs('[data-mns-stepper]', wizard || document) || qs('[data-mns-step].is-active', form);
+				if (anchor) anchor.scrollIntoView({ behavior: 'smooth', block: target ? 'center' : 'start' });
+				if (target) {
+					/* "Edit" in the review lands on the exact field, not at the top of the step. */
+					var focusable = target.matches('button, input, select, textarea') ? target : qs('button:not([disabled]), input, select, textarea', target);
+					if (focusable) focusable.focus({ preventScroll: true });
+				}
 			}
 		}
 
@@ -608,6 +630,8 @@
 			if (!mobBtn) return;
 			var label = qs('[data-mns-mob-label]', mobBtn);
 			var svc = qs('[data-mns-mob-svc]');
+			var back = qs('[data-mns-mob-back]');
+			if (back) back.hidden = step <= 1;
 			if (step >= maxStep) {
 				if (label) label.textContent = 'ثبت درخواست';
 				mobBtn.setAttribute('data-mns-mob-mode', 'submit');
@@ -645,7 +669,8 @@
 			err.className = 'mns-field-error';
 			err.setAttribute('role', 'alert');
 			err.textContent = msg;
-			host.insertAdjacentElement('afterend', err);
+			if (host.parentElement && /mns-form-row--2/.test(host.parentElement.className)) host.appendChild(err);
+			else host.insertAdjacentElement('afterend', err);
 			host.scrollIntoView({ behavior: 'smooth', block: 'center' });
 			if (target.matches('input, textarea')) target.focus({ preventScroll: true });
 			return false;
@@ -682,35 +707,247 @@
 				var addr = qs('textarea[name="address"]', form) || qs('input[name="address"]', form);
 				if (!addr || !addr.value.trim()) return fail('آدرس را کامل‌تر بنویسید.', addr);
 			}
-			if (n === 2) {
-				if (!serumTypeInput || !serumTypeInput.value) {
-					showNoticeNear(form, 'نوع سرم را انتخاب کنید.', true);
-					return false;
+			if (n === 2) return validateReview();
+			return true;
+		}
+
+		/* ---- Review step: service details (inside the review), repeat, phone verification ----------------- */
+		function isRxRequired() {
+			return !!(serumTypeInput && rxTypes.indexOf(serumTypeInput.value) !== -1);
+		}
+
+		function hasRx() {
+			return !!(rxInput && rxInput.files && rxInput.files.length);
+		}
+
+		/* Service details are their own step now; kept as a no-op for the validators below. */
+		function setDetailsOpen() {}
+
+		function syncAllergy() {
+			var yes = !!(allergyInput && allergyInput.value === 'yes');
+			setCollapse(allergyCollapse, yes);
+			if (!yes && allergyDetail) allergyDetail.value = '';
+		}
+
+		function syncRxTag() {
+			var tag = qs('[data-mns-rx-tag]', form);
+			if (!tag) return;
+			var req = isRxRequired();
+			tag.textContent = req ? 'برای این نوع سرم لازم است' : 'اختیاری';
+			tag.classList.toggle('is-required', req);
+		}
+
+		function chipLabel(rootSel, value) {
+			var hit = qsa('[data-value]', qs(rootSel, form) || document).filter(function (b) {
+				return b.getAttribute('data-value') === value;
+			})[0];
+			return hit ? hit.textContent.trim() : '';
+		}
+
+		function stepperInput(name) {
+			return name === 'serum' ? qtyInput : qs('[data-mns-rep-count]', form);
+		}
+
+		function setStepper(name, val) {
+			var root = qs('[data-mns-stepper="' + name + '"]', form);
+			if (!root) return;
+			var min = parseInt(root.getAttribute('data-min'), 10) || 1;
+			var max = parseInt(root.getAttribute('data-max'), 10) || 9;
+			val = Math.max(min, Math.min(max, val));
+			var disp = qs('[data-step-val]', root);
+			if (disp) disp.textContent = toFaDigits(val);
+			var hidden = stepperInput(name);
+			if (hidden) hidden.value = String(val);
+			qs('[data-step="plus"]', root).disabled = val >= max;
+			qs('[data-step="minus"]', root).disabled = val <= min;
+			updateSideSummary();
+			if (step === 3) fillReview();
+		}
+
+		function fmtMoney(n) {
+			try {
+				return new Intl.NumberFormat('fa-IR').format(n);
+			} catch (eFmt) {
+				return String(n);
+			}
+		}
+
+		function faDate(d) {
+			try {
+				return new Intl.DateTimeFormat('fa-IR-u-ca-persian', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }).format(d);
+			} catch (eDate) {
+				return d.toISOString().slice(0, 10);
+			}
+		}
+
+		function updateRecurring() {
+			var line = qs('[data-mns-rep-line]', form);
+			var dates = qs('[data-mns-rep-dates]', form);
+			var cost = qs('[data-mns-rep-cost]', form);
+			var pattern = qs('[data-mns-rep-pattern]', form);
+			if (!line || !dates || !cost) return;
+			var count = parseInt((stepperInput('repeat') || {}).value, 10) || 2;
+			var every = pattern && pattern.value === 'daily' ? 1 : pattern && pattern.value === 'every_other' ? 2 : 7;
+			var base = dateValue ? dateValue.value : '';
+			var list = [];
+			if (/^\d{4}-\d{2}-\d{2}$/.test(base)) {
+				var p = base.split('-');
+				for (var i = 0; i < count; i++) list.push(new Date(Date.UTC(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10) + i * every, 12)));
+			}
+			var when = timeValue && timeValue.value ? '، همه ساعت ' + timeLabelById(timeValue.value) : '';
+			line.textContent = toFaDigits(count) + ' بار (با همین سفارش)' + when;
+			dates.innerHTML = '';
+			list.slice(0, 6).forEach(function (d, i) {
+				var chip = document.createElement('span');
+				chip.className = 'mns-recurring__date' + (i === 0 ? ' is-first' : '');
+				chip.textContent = faDate(d);
+				dates.appendChild(chip);
+			});
+			if (list.length > 6) {
+				var more = document.createElement('span');
+				more.className = 'mns-recurring__more';
+				more.textContent = '+' + toFaDigits(list.length - 6) + ' بار دیگر';
+				dates.appendChild(more);
+			}
+			var min = parseInt(form.getAttribute('data-mns-price-min'), 10) || 0;
+			var max = parseInt(form.getAttribute('data-mns-price-max'), 10) || 0;
+			cost.textContent = min && max
+				? 'هزینهٔ تقریبی هر بار ' + fmtMoney(min) + ' تا ' + fmtMoney(max) + ' · جمع ' + toFaDigits(count) + ' بار حدود ' + fmtMoney(min * count) + ' تا ' + fmtMoney(max * count) + ' تومان · پرداخت بعد از هر بار'
+				: '';
+		}
+
+		/* Phone verification: only a phone that differs from the verified account number needs a code (mock). */
+		var otpState = { sent: false, phone: '', timer: null, left: 0 };
+
+		function phoneChanged() {
+			var cur = normalizeIranMobile(phoneInput ? phoneInput.value : '');
+			return !!(cur && verifiedPhone && cur !== verifiedPhone);
+		}
+
+		function otpDigits() {
+			return qsa('[data-mns-otp-digit]', form);
+		}
+
+		function otpValue() {
+			return otpDigits()
+				.map(function (el) {
+					return toLatinDigits(el.value);
+				})
+				.join('');
+		}
+
+		function stopOtpTimer() {
+			if (otpState.timer) window.clearInterval(otpState.timer);
+			otpState.timer = null;
+		}
+
+		function resetOtp() {
+			stopOtpTimer();
+			otpState.sent = false;
+			otpState.phone = '';
+			otpDigits().forEach(function (el) {
+				el.value = '';
+			});
+			setCollapse(qs('[data-mns-otp-code-collapse]', form), false);
+			var send = qs('[data-mns-otp-send]', form);
+			var timer = qs('[data-mns-otp-timer]', form);
+			if (send) {
+				send.disabled = false;
+				send.textContent = 'ارسال کد';
+			}
+			if (timer) timer.textContent = '';
+		}
+
+		function otpTick() {
+			var send = qs('[data-mns-otp-send]', form);
+			var timer = qs('[data-mns-otp-timer]', form);
+			if (otpState.left <= 0) {
+				stopOtpTimer();
+				if (send) {
+					send.disabled = false;
+					send.textContent = 'ارسال دوباره';
 				}
-				if (!veinInput || !veinInput.value) {
-					showNoticeNear(form, 'دسترسی رگ را انتخاب کنید.', true);
-					return false;
-				}
-				if (!allergyInput || !allergyInput.value) {
-					showNoticeNear(form, 'وضعیت حساسیت را انتخاب کنید.', true);
-					return false;
-				}
+				if (timer) timer.textContent = '';
+				return;
+			}
+			var m = Math.floor(otpState.left / 60);
+			var sec = otpState.left % 60;
+			if (timer) timer.textContent = 'ارسال دوباره تا ' + toFaDigits('0' + m + ':' + ('0' + sec).slice(-2));
+			otpState.left -= 1;
+		}
+
+		function updateVerify() {
+			var changed = phoneChanged();
+			var shown = phoneInput ? phoneInput.value : '';
+			qsa('[data-mns-verify-phone], [data-mns-otp-phone]', form).forEach(function (el) {
+				el.textContent = shown;
+			});
+			setCollapse(qs('[data-mns-verify-ok-collapse]', form), !changed);
+			setCollapse(qs('[data-mns-otp-collapse]', form), changed);
+			if (otpState.sent && (!changed || otpState.phone !== normalizeIranMobile(shown))) resetOtp();
+		}
+
+		function verifyReady() {
+			if (!phoneChanged()) return true;
+			if (!otpState.sent) return fail('ابتدا «ارسال کد» را بزنید.', qs('[data-mns-otp-send]', form));
+			if (otpValue().length !== 4) return fail('کد چهار رقمی را وارد کنید.', qs('[data-mns-otp-boxes]', form));
+			return true;
+		}
+
+		function validateReview() {
+			if (!serumTypeInput || !serumTypeInput.value) {
+				setDetailsOpen(true);
+				return fail('نوع سرم را انتخاب کنید.', serumTypeInput);
+			}
+			if (!veinInput || !veinInput.value) {
+				setDetailsOpen(true);
+				return fail('دسترسی رگ را انتخاب کنید.', qs('[data-mns-vein-chips]', form));
+			}
+			if (!allergyInput || !allergyInput.value) {
+				setDetailsOpen(true);
+				return fail('سابقهٔ حساسیت را انتخاب کنید.', qs('[data-mns-allergy-chips]', form));
+			}
+			if (allergyInput.value === 'yes' && (!allergyDetail || !allergyDetail.value.trim())) {
+				setDetailsOpen(true);
+				return fail('بنویسید به چه دارو یا ماده‌ای حساسیت دارید.', allergyDetail);
+			}
+			if (isRxRequired() && !hasRx()) {
+				setDetailsOpen(true);
+				return fail('برای «' + serumTypeInput.value + '» عکس نسخه لازم است.', qs('[data-mns-upload]', form));
 			}
 			return true;
 		}
 
-function fillReview() {
+		function reviewTags() {
+			var box = qs('[data-mns-review-tags]', form);
+			if (!box) return;
+			box.innerHTML = '';
+			function tag(text, cls) {
+				var el = document.createElement('span');
+				el.className = 'mns-review__tag' + (cls ? ' ' + cls : '');
+				el.textContent = text;
+				box.appendChild(el);
+			}
+			var vein = chipLabel('[data-mns-vein-chips]', veinInput ? veinInput.value : '');
+			if (vein) tag('رگ ' + vein);
+			var allergy = allergyInput ? allergyInput.value : '';
+			if (allergy === 'yes') tag('حساسیت: ' + ((allergyDetail && allergyDetail.value.trim()) || 'مشخص نشده'), 'is-warn');
+			else if (allergy === 'no') tag('بدون حساسیت دارویی', 'is-ok');
+			else if (allergy) tag('سابقهٔ حساسیت: نمی‌دانم', 'is-warn');
+			if (hasRx()) tag('نسخه ضمیمه شد', 'is-ok');
+			else if (isRxRequired()) tag('عکس نسخه لازم است', 'is-warn');
+		}
+
+		function fillReview() {
 			var box = qs('[data-mns-review]', form);
 			if (!box) return;
-			var phone = (qs('input[name="phone"]', form) || {}).value || '';
+			var phone = phoneInput ? phoneInput.value : '';
 			var cityLabel = citySelect && citySelect.options[citySelect.selectedIndex] ? citySelect.options[citySelect.selectedIndex].text : '—';
 			var areaLabel = areaSelect && areaSelect.options[areaSelect.selectedIndex] ? areaSelect.options[areaSelect.selectedIndex].text : '—';
 			var addr = (qs('textarea[name="address"]', form) || {}).value || '';
-			var presc = qs('[data-mns-prescription-file]', form);
-			var hasRx = presc && presc.files && presc.files.length;
 			var vals = {
 				patient: patientSummary() + (phone ? ' · ⁦' + phone + '⁩' : ''),
-				service: svcLabel + ' · ' + serviceDetailSummary() + (hasRx ? '' : ' · بدون نسخه'),
+				service: svcLabel + ' · ' + serviceDetailSummary(),
 				time: whenSummary(),
 				address: cityLabel + '، ' + areaLabel + (addr ? '، ' + addr : ''),
 				nurse: genderNurseLabel(genderInput ? genderInput.value : '')
@@ -719,16 +956,25 @@ function fillReview() {
 				var el = qs('[data-mns-review-val="' + k + '"]', box);
 				if (el) el.textContent = vals[k];
 			});
+			reviewTags();
 			qsa('[data-mns-review-edit]', box).forEach(function (btn) {
 				if (btn.getAttribute('data-mns-bound')) return;
 				btn.setAttribute('data-mns-bound', '1');
 				btn.addEventListener('click', function () {
-					goStep(parseInt(btn.getAttribute('data-mns-review-edit'), 10) || 1);
+					var focusMap = {
+						patient: '[data-mns-pick-change]',
+						time: '[data-mns-date-hint]',
+						address: 'textarea[name="address"]',
+						nurse: '[data-mns-nurse-gender-cards]'
+					};
+					goStep(parseInt(btn.getAttribute('data-mns-review-edit'), 10) || 1, focusMap[btn.getAttribute('data-mns-review-focus')] || null);
 				});
 			});
+			updateRecurring();
+			updateVerify();
 		}
 
-		function fillAreas() {
+function fillAreas() {
 			if (!areaSelect || !citySelect) return;
 			var city = cities.filter(function (c) {
 				return String(c.id) === String(citySelect.value);
@@ -861,7 +1107,6 @@ function fillReview() {
 			syncPicker(day.j);
 			fillTimes(preferTime);
 			updateSideSummary();
-			saveDraft();
 		}
 
 		function initJalaliPicker() {
@@ -1028,7 +1273,6 @@ function selectPatientCard(card) {
 			setCollapse(qs('[data-mns-new-collapse]', form), mode === 'new');
 			updateSideSummary();
 			updatePick();
-			saveDraft();
 		}
 
 		qsa('[data-mns-patient-card]', form).forEach(function (card) {
@@ -1040,13 +1284,11 @@ function selectPatientCard(card) {
 		qsa('[data-mns-age-chips] .mns-chip', form).forEach(function (btn) {
 			btn.addEventListener('click', function () {
 				setChipGroup('[data-mns-age-chips]', btn.getAttribute('data-value'), ageGroupInput);
-				saveDraft();
 			});
 		});
 		qsa('[data-mns-patient-gender-chips] .mns-chip', form).forEach(function (btn) {
 			btn.addEventListener('click', function () {
 				setChipGroup('[data-mns-patient-gender-chips]', btn.getAttribute('data-value'), patGenderInput);
-				saveDraft();
 			});
 		});
 
@@ -1066,7 +1308,6 @@ function selectPatientCard(card) {
 		if (timeValue) {
 			timeValue.addEventListener('change', function () {
 				updateSideSummary();
-				saveDraft();
 			});
 		}
 
@@ -1080,84 +1321,178 @@ qsa('[data-mns-nurse-gender-cards] [data-value]', form).forEach(function (card) 
 				if (genderInput) genderInput.value = card.getAttribute('data-value') || '';
 				scheduleAvailability();
 				updateSideSummary();
-				saveDraft();
 			});
 		});
 
-		qsa('[data-mns-serum-chips] .mns-chip', form).forEach(function (btn) {
-			btn.addEventListener('click', function () {
-				setChipGroup('[data-mns-serum-chips]', btn.getAttribute('data-value'), serumTypeInput);
-				updateSideSummary();
-				saveDraft();
+		if (detailsToggle) {
+			detailsToggle.addEventListener('click', function () {
+				setDetailsOpen(!(detailsEl && detailsEl.classList.contains('is-open')));
 			});
-		});
+		}
+
 		qsa('[data-mns-vein-chips] .mns-chip', form).forEach(function (btn) {
 			btn.addEventListener('click', function () {
 				setChipGroup('[data-mns-vein-chips]', btn.getAttribute('data-value'), veinInput);
-				saveDraft();
+				onFormEdit();
 			});
 		});
 		qsa('[data-mns-allergy-chips] .mns-chip', form).forEach(function (btn) {
 			btn.addEventListener('click', function () {
 				setChipGroup('[data-mns-allergy-chips]', btn.getAttribute('data-value'), allergyInput);
-				saveDraft();
+				syncAllergy();
+				if (allergyInput.value === 'yes' && allergyDetail) window.setTimeout(function () {
+					allergyDetail.focus({ preventScroll: true });
+				}, 120);
+				onFormEdit();
 			});
 		});
 
-		var qtyDisplay = qs('[data-mns-qty-display]', form);
-		function setQty(n) {
-			var val = Math.max(1, Math.min(9, n));
-			if (qtyInput) qtyInput.value = String(val);
-			if (qtyDisplay) qtyDisplay.textContent = toFaDigits(val);
-			updateSideSummary();
-			saveDraft();
-		}
-		var qtyMinus = qs('[data-mns-qty-minus]', form);
-		var qtyPlus = qs('[data-mns-qty-plus]', form);
-		if (qtyMinus) qtyMinus.addEventListener('click', function () {
-			setQty((parseInt(qtyInput.value, 10) || 1) - 1);
-		});
-		if (qtyPlus) qtyPlus.addEventListener('click', function () {
-			setQty((parseInt(qtyInput.value, 10) || 1) + 1);
+		qsa('[data-mns-stepper]', form).forEach(function (root) {
+			var name = root.getAttribute('data-mns-stepper');
+			qsa('[data-step]', root).forEach(function (btn) {
+				btn.addEventListener('click', function () {
+					var cur = parseInt((stepperInput(name) || {}).value, 10) || 1;
+					setStepper(name, cur + (btn.getAttribute('data-step') === 'plus' ? 1 : -1));
+				});
+			});
 		});
 
-		var recurringSwitch = qs('[data-mns-recurring-switch]', form);
-		var recurringHidden = qs('[data-mns-is-recurring]', form);
-		if (recurringSwitch) {
-			recurringSwitch.addEventListener('click', function () {
+		/* Prescription photo: show what was attached, allow replace/remove. */
+		var rxUrl = '';
+		function showRx() {
+			var empty = qs('[data-mns-upload-empty]', form);
+			var file = qs('[data-mns-upload-file]', form);
+			var has = hasRx();
+			if (empty) empty.hidden = has;
+			if (file) file.hidden = !has;
+			if (rxUrl) {
+				URL.revokeObjectURL(rxUrl);
+				rxUrl = '';
+			}
+			if (!has) return;
+			var f = rxInput.files[0];
+			var thumb = qs('[data-mns-upload-thumb]', form);
+			try {
+				rxUrl = URL.createObjectURL(f);
+				if (thumb) thumb.src = rxUrl;
+			} catch (eUrl) {
+				/* ignore */
+			}
+			var nameEl = qs('[data-mns-upload-name]', form);
+			var sizeEl = qs('[data-mns-upload-size]', form);
+			if (nameEl) nameEl.textContent = f.name;
+			if (sizeEl) {
+				sizeEl.textContent = f.size >= 1048576
+					? toFaDigits((f.size / 1048576).toFixed(1).replace('.', '٫')) + ' مگابایت'
+					: toFaDigits(Math.max(1, Math.round(f.size / 1024))) + ' کیلوبایت';
+			}
+		}
+		if (rxInput) {
+			rxInput.addEventListener('change', function () {
+				var f = rxInput.files && rxInput.files[0];
+				if (f && (f.type.indexOf('image/') !== 0 || f.size > 8 * 1048576)) {
+					rxInput.value = '';
+					showRx();
+					fail('فقط عکس قبول می‌شود و حجمش باید کمتر از ۸ مگابایت باشد.', qs('[data-mns-upload]', form));
+					return;
+				}
+				clearFlags();
+				showRx();
+				onFormEdit();
+			});
+		}
+		var rxRemove = qs('[data-mns-upload-remove]', form);
+		if (rxRemove) {
+			rxRemove.addEventListener('click', function () {
+				rxInput.value = '';
+				showRx();
+				onFormEdit();
+			});
+		}
+
+		var notes = qs('[data-mns-notes]', form);
+		var notesCount = qs('[data-mns-notes-count]', form);
+		if (notes && notesCount) {
+			notes.addEventListener('input', function () {
+				notesCount.textContent = toFaDigits(notes.value.length) + ' / ' + toFaDigits(notes.maxLength > 0 ? notes.maxLength : 400);
+			});
+		}
+
+		/* Repeat: frequency + count, with the dates and cost shown live. */
+		var repSwitch = qs('[data-mns-recurring-switch]', form);
+		var repHidden = qs('[data-mns-is-recurring]', form);
+		var repCollapse = qs('[data-mns-recurring-collapse]', form);
+		if (repSwitch) {
+			repSwitch.addEventListener('click', function () {
 				window.setTimeout(function () {
-					var fields = qs('[data-mns-recurring-fields]', form);
-					var on = recurringSwitch.classList.contains('is-on');
-					if (recurringHidden) recurringHidden.value = on ? '1' : '0';
-					if (fields) {
-						fields.hidden = !on;
-						fields.classList.toggle('is-hidden', !on);
-					}
+					var on = repSwitch.classList.contains('is-on');
+					if (repHidden) repHidden.value = on ? '1' : '0';
+					setCollapse(repCollapse, on);
+					if (on) updateRecurring();
 				}, 0);
 			});
 		}
+		var repPattern = qs('[data-mns-rep-pattern]', form);
+		if (repPattern) repPattern.addEventListener('change', updateRecurring);
 
-		qsa('[data-mns-otp-digit]', form).forEach(function (inp, idx, arr) {
+		/* Phone verification boxes: Persian/Arabic/Latin digits, paste and SMS autofill spread across the boxes. */
+		var otpSend = qs('[data-mns-otp-send]', form);
+		if (otpSend) {
+			otpSend.addEventListener('click', function () {
+				var cur = normalizeIranMobile(phoneInput ? phoneInput.value : '');
+				if (cur.length < 11) {
+					fail('شمارهٔ تماس معتبر نیست؛ آن را در مرحلهٔ اول اصلاح کنید.', otpSend);
+					return;
+				}
+				clearFlags();
+				otpState.sent = true;
+				otpState.phone = cur;
+				setCollapse(qs('[data-mns-otp-code-collapse]', form), true);
+				otpSend.disabled = true;
+				otpSend.textContent = 'ارسال شد';
+				stopOtpTimer();
+				otpState.left = 60;
+				otpTick();
+				otpState.timer = window.setInterval(otpTick, 1000);
+				var first = otpDigits()[0];
+				if (first) window.setTimeout(function () {
+					first.focus({ preventScroll: true });
+				}, 150);
+			});
+		}
+		otpDigits().forEach(function (inp, idx, arr) {
+			function spread(digits, from) {
+				for (var k = 0; k < digits.length && from + k < arr.length; k++) arr[from + k].value = toFaDigits(digits.charAt(k));
+				arr[Math.min(arr.length - 1, from + digits.length)].focus();
+			}
 			inp.addEventListener('input', function () {
-				var v = inp.value.replace(/\D/g, '').slice(-1);
-				inp.value = v ? toFaDigits(v) : '';
-				if (v && arr[idx + 1]) arr[idx + 1].focus();
+				var digits = toLatinDigits(inp.value).replace(/\D/g, '');
+				inp.value = '';
+				if (!digits) return;
+				clearFlags();
+				if (digits.length === 1) {
+					inp.value = toFaDigits(digits);
+					if (arr[idx + 1]) arr[idx + 1].focus();
+				} else {
+					spread(digits.slice(0, arr.length - idx), idx);
+				}
 			});
 			inp.addEventListener('keydown', function (e) {
 				if (e.key === 'Backspace' && !inp.value && arr[idx - 1]) arr[idx - 1].focus();
 			});
+			inp.addEventListener('paste', function (e) {
+				var text = (e.clipboardData || window.clipboardData).getData('text');
+				var digits = toLatinDigits(text).replace(/\D/g, '');
+				if (!digits) return;
+				e.preventDefault();
+				spread(digits.slice(0, arr.length - idx), idx);
+			});
+			inp.addEventListener('focus', function () {
+				inp.select();
+			});
 		});
 
-		function otpComplete() {
-			var digits = qsa('[data-mns-otp-digit]', form).map(function (el) {
-				return String(el.value || '').replace(/[۰-۹]/g, function (d) {
-					return '۰۱۲۳۴۵۶۷۸۹'.indexOf(d);
-				});
-			});
-			return digits.join('').length === 4;
-		}
-
-		function genTrackCode() {
+function genTrackCode() {
 			var n = Math.floor(10000 + Math.random() * 90000);
 			return 'MD-' + String(n);
 		}
@@ -1215,28 +1550,24 @@ qsa('[data-mns-nurse-gender-cards] [data-value]', form).forEach(function (card) 
 				btn.disabled = false;
 				btn.removeAttribute('aria-disabled');
 			});
-			try {
-				localStorage.removeItem(DRAFT_KEY);
-			} catch (eDraft) {
-				/* ignore */
-			}
 			confirm.scrollIntoView({ behavior: 'smooth', block: 'start' });
 		}
 
 		form.addEventListener('submit', function (e) {
 			e.preventDefault();
-			if (!validateStep(3)) return;
-			if (!otpComplete()) {
-				showNoticeNear(form, 'کد چهار رقمی پیامک را وارد کنید.', true);
-				return;
-			}
-			var submitBtn = qs('[data-mns-order-submit]', form);
-			if (submitBtn) submitBtn.disabled = true;
-			form.classList.add('is-busy');
+			hideNotice();
+			clearFlags();
+			if (!verifyReady()) return;
+			/* Both the desktop submit and the phone bar button: label fades out, then a round spinner fades in. */
+			[qs('[data-mns-order-submit]', form), qs('[data-mns-mob-continue]')].forEach(function (btn) {
+				if (!btn) return;
+				btn.classList.add('is-loading');
+				btn.disabled = true;
+				btn.setAttribute('aria-busy', 'true');
+			});
 			window.setTimeout(function () {
-				form.classList.remove('is-busy');
 				showConfirmation(genTrackCode());
-			}, 700);
+			}, 1100);
 		});
 
 		if (citySelect) {
@@ -1268,6 +1599,13 @@ qsa('[data-mns-nurse-gender-cards] [data-value]', form).forEach(function (card) 
 			});
 		});
 
+		var mobBack = qs('[data-mns-mob-back]');
+		if (mobBack) {
+			mobBack.addEventListener('click', function () {
+				goStep(step - 1);
+			});
+		}
+
 		var mobContinue = qs('[data-mns-mob-continue]');
 		if (mobContinue) {
 			mobContinue.addEventListener('click', function () {
@@ -1279,108 +1617,17 @@ qsa('[data-mns-nurse-gender-cards] [data-value]', form).forEach(function (card) 
 			});
 		}
 
-		function saveDraft() {
-			try {
-				var data = {
-					step: step,
-					mode: modeInput ? modeInput.value : '',
-					patient_id: patientIdInput ? patientIdInput.value : '',
-					phone: (qs('input[name="phone"]', form) || {}).value || '',
-					new_name: (qs('input[name="new_patient_name"]', form) || {}).value || '',
-					age_group: ageGroupInput ? ageGroupInput.value : '',
-					pat_gender: patGenderInput ? patGenderInput.value : '',
-					city: citySelect ? citySelect.value : '',
-					area: areaSelect ? areaSelect.value : '',
-					address: (qs('textarea[name="address"]', form) || {}).value || '',
-					date: dateValue ? dateValue.value : '',
-					date_label: dateLabel,
-					custom_date: customDateLabel,
-					time: timeValue ? timeValue.value : '',
-					nurse_gender: genderInput ? genderInput.value : '',
-					serum: serumTypeInput ? serumTypeInput.value : '',
-					vein: veinInput ? veinInput.value : '',
-					allergy: allergyInput ? allergyInput.value : '',
-					qty: qtyInput ? qtyInput.value : '1'
-				};
-				localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
-			} catch (eSave) {
-				/* ignore */
-			}
-		}
-
-		function loadDraft(data) {
-			if (!data) return;
-			if (data.phone) {
-				var phone = qs('input[name="phone"]', form);
-				if (phone) phone.value = data.phone;
-			}
-			if (data.mode === 'saved' && data.patient_id) {
-				var card = qs('[data-mns-patient-card="saved"][data-value="' + data.patient_id + '"]', form);
-				if (card) selectPatientCard(card);
-			} else if (data.mode === 'new') {
-				var newCard = qs('[data-mns-patient-card="new"]', form);
-				if (newCard) selectPatientCard(newCard);
-				var nm = qs('input[name="new_patient_name"]', form);
-				if (nm && data.new_name) nm.value = data.new_name;
-				if (data.age_group) setChipGroup('[data-mns-age-chips]', data.age_group, ageGroupInput);
-				if (data.pat_gender) setChipGroup('[data-mns-patient-gender-chips]', data.pat_gender, patGenderInput);
-			}
-			if (data.city && citySelect) {
-				citySelect.value = data.city;
-				fillAreas();
-				if (data.area && areaSelect) areaSelect.value = data.area;
-			}
-			if (data.address) {
-				var addr = qs('textarea[name="address"]', form);
-				if (addr) addr.value = data.address;
-			}
-			var restoredDay = data.date ? dayById(data.date) : null;
-			if (restoredDay) setDay(restoredDay, data.time);
-			if (data.nurse_gender && genderInput) {
-				genderInput.value = data.nurse_gender;
-				qsa('[data-mns-nurse-gender-cards] [data-value="' + data.nurse_gender + '"]', form).forEach(function (c) {
-					c.classList.add('is-selected');
-					c.setAttribute('aria-checked', 'true');
-				});
-			}
-			if (data.serum) setChipGroup('[data-mns-serum-chips]', data.serum, serumTypeInput);
-			if (data.vein) setChipGroup('[data-mns-vein-chips]', data.vein, veinInput);
-			if (data.allergy) setChipGroup('[data-mns-allergy-chips]', data.allergy, allergyInput);
-			if (data.qty) setQty(parseInt(data.qty, 10) || 1);
-			goStep(Math.min(maxStep, parseInt(data.step, 10) || 1));
-			runAvailability();
-		}
-
-		var draftBanner = qs('[data-mns-order-draft-banner]');
-		try {
-			var raw = localStorage.getItem(DRAFT_KEY);
-			if (raw && draftBanner) {
-				draftBanner.hidden = false;
-				var parsed = JSON.parse(raw);
-				var restore = qs('[data-mns-order-draft-restore]');
-				var dismiss = qs('[data-mns-order-draft-dismiss]');
-				if (restore) {
-					restore.addEventListener('click', function () {
-						loadDraft(parsed);
-						draftBanner.hidden = true;
-					});
-				}
-				if (dismiss) {
-					dismiss.addEventListener('click', function () {
-						localStorage.removeItem(DRAFT_KEY);
-						draftBanner.hidden = true;
-					});
-				}
-			}
-		} catch (eLoad) {
-			/* ignore */
+		function onFormEdit() {
+			updatePick();
+			syncRxTag();
+			if (step === 3) fillReview();
 		}
 
 		form.addEventListener('input', function (e) {
-			if (e.target && e.target.matches('input, textarea, select')) {
-				updatePick();
-				saveDraft();
-			}
+			if (e.target && e.target.matches('input, textarea, select')) onFormEdit();
+		});
+		form.addEventListener('change', function (e) {
+			if (e.target && e.target.matches('select')) onFormEdit();
 		});
 
 		setCollapse(pickEdit, !!(pickEdit && pickEdit.classList.contains('is-open')));
@@ -1401,14 +1648,12 @@ qsa('[data-mns-nurse-gender-cards] [data-value]', form).forEach(function (card) 
 			if (selfCard && (!modeInput || modeInput.value === 'self')) selectPatientCard(selfCard);
 		}
 
-		/* PNG defaults for serum step */
-		var firstSerum = qs('[data-mns-serum-chips] .mns-chip[data-value]', form);
-		if (firstSerum && serumTypeInput && !serumTypeInput.value) {
-			setChipGroup('[data-mns-serum-chips]', firstSerum.getAttribute('data-value'), serumTypeInput);
-		}
+		/* Defaults (client decision): normal saline, 2 serums, normal vein, no allergy. */
 		if (veinInput && !veinInput.value) setChipGroup('[data-mns-vein-chips]', 'normal', veinInput);
 		if (allergyInput && !allergyInput.value) setChipGroup('[data-mns-allergy-chips]', 'no', allergyInput);
-		if (qtyInput) setQty(parseInt(qtyInput.value, 10) || 2);
+		syncRxTag();
+		setStepper('serum', parseInt(qtyInput && qtyInput.value, 10) || 2);
+		setStepper('repeat', 4);
 	}
 
 	function initMockActions() {

@@ -63,7 +63,7 @@ $order_track_url = add_query_arg( 'mns_order', $track_sample, MNS_Pages::panel_u
 
 $leads = array(
 	1      => __( 'چند مرحله کوتاه تا اعزام پرستار به منزل. بیمار، آدرس و زمان را مشخص کنید؛ پیش از ثبت، دسترسی پرستار برای زمان و منطقه شما بررسی می‌شود.', 'medyar-nursing-services' ),
-	2      => __( 'جزئیات خدمت را کامل کنید تا پرستار با وسایل درست اعزام شود.', 'medyar-nursing-services' ),
+	2      => __( 'جزئیات خدمت را مشخص کنید؛ موارد انتخاب‌شده پیش‌فرض‌اند.', 'medyar-nursing-services' ),
 	3      => __( 'قبل از ثبت، همه اطلاعات را یک بار مرور کنید.', 'medyar-nursing-services' ),
 	'done' => __( 'درخواست شما ثبت شد و پیگیری آن از همین‌جا ممکن است.', 'medyar-nursing-services' ),
 );
@@ -101,8 +101,8 @@ $render_head = static function ( string $lead ) use ( $ico, $svc_name ): void {
 $render_stepper = static function ( int $current ) use ( $ico ): void {
 	$steps = array(
 		1 => array( 'user', __( 'بیمار و زمان', 'medyar-nursing-services' ) ),
-		2 => array( 'file-text', __( 'جزئیات خدمت', 'medyar-nursing-services' ) ),
-		3 => array( 'shield', __( 'بررسی و ثبت', 'medyar-nursing-services' ) ),
+		2 => array( 'droplet', __( 'جزئیات خدمت', 'medyar-nursing-services' ) ),
+		3 => array( 'shield', __( 'بازبینی و ثبت', 'medyar-nursing-services' ) ),
 	);
 
 	?>
@@ -213,6 +213,8 @@ if ( MNS_Dev::is( 'no_nurse' ) ) {
 $serum_types  = isset( $fields_cfg['serum_types'] ) && is_array( $fields_cfg['serum_types'] ) ? $fields_cfg['serum_types'] : array();
 $vein_opts    = isset( $fields_cfg['vein_access'] ) && is_array( $fields_cfg['vein_access'] ) ? $fields_cfg['vein_access'] : array();
 $allergy_opts = isset( $fields_cfg['allergy'] ) && is_array( $fields_cfg['allergy'] ) ? $fields_cfg['allergy'] : array();
+$rx_types     = isset( $fields_cfg['rx_types'] ) && is_array( $fields_cfg['rx_types'] ) ? $fields_cfg['rx_types'] : array();
+$rx_json      = $enc( array_values( $rx_types ), '[]' );
 
 $self_p  = null;
 $saved_p = array();
@@ -254,11 +256,6 @@ $new_on  = 'new' === $default_mode;
 	<?php $render_head( $leads[1] ); ?>
 	<?php $render_stepper( 1 ); ?>
 
-	<div class="mns-owizard__draft mns-notice mns-notice--info" data-mns-order-draft-banner hidden>
-		<p><?php echo esc_html__( 'پیش‌نویس سفارش قبلی پیدا شد.', 'medyar-nursing-services' ); ?></p>
-		<button type="button" class="mns-link-btn" data-mns-order-draft-restore><?php echo esc_html__( 'ادامه سفارش', 'medyar-nursing-services' ); ?></button>
-		<button type="button" class="mns-link-btn" data-mns-order-draft-dismiss><?php echo esc_html__( 'شروع تازه', 'medyar-nursing-services' ); ?></button>
-	</div>
 
 	<div class="mns-owizard__layout">
 		<div class="mns-owizard__main">
@@ -271,6 +268,8 @@ $new_on  = 'new' === $default_mode;
 				data-mns-date-slots="<?php echo esc_attr( $slots_json ); ?>"
 				data-mns-time-slots="<?php echo esc_attr( $times_json ); ?>"
 				data-mns-now="<?php echo esc_attr( $tz_now->format( 'Y-m-d H:i' ) ); ?>"
+				data-mns-verified-phone="<?php echo esc_attr( (string) preg_replace( '/\D/', '', $phone ) ); ?>"
+				data-mns-rx-types="<?php echo esc_attr( $rx_json ); ?>"
 				data-mns-availability="<?php echo esc_attr( $avail_json ); ?>"
 				data-mns-prepatient="<?php echo esc_attr( $prepatient ); ?>"
 				data-mns-price-min="<?php echo esc_attr( (string) $price_min ); ?>"
@@ -286,7 +285,6 @@ $new_on  = 'new' === $default_mode;
 				<input type="hidden" name="new_patient_gender" value="" data-mns-patient-gender>
 				<input type="hidden" name="preferred_date" value="" data-mns-date-value>
 				<input type="hidden" name="nurse_gender" value="" data-mns-nurse-gender>
-				<input type="hidden" name="serum_type" value="" data-mns-serum-type>
 				<input type="hidden" name="vein_access" value="" data-mns-vein-access>
 				<input type="hidden" name="allergy" value="" data-mns-allergy>
 				<input type="hidden" name="serum_qty" value="2" data-mns-serum-qty>
@@ -440,12 +438,12 @@ $new_on  = 'new' === $default_mode;
 					<p class="mns-field-block__label"><?php echo esc_html__( 'جنسیت پرستار', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></p>
 					<div class="mns-nurse-gender" role="radiogroup" data-mns-nurse-gender-cards>
 						<button type="button" class="mns-nurse-gender__card" role="radio" aria-checked="false" data-value="female">
-							<span class="mns-nurse-gender__ico" aria-hidden="true"><?php echo $ico( 'user' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
-							<span class="mns-nurse-gender__text"><strong><?php echo esc_html__( 'پرستار خانم', 'medyar-nursing-services' ); ?></strong><small><?php echo esc_html__( 'اعزام فقط با پرستار خانم', 'medyar-nursing-services' ); ?></small><em class="mns-nurse-gender__note" data-mns-gender-note hidden><?php echo esc_html__( 'فعلاً در این منطقه موجود نیست', 'medyar-nursing-services' ); ?></em></span>
+							<span class="mns-nurse-gender__ico" aria-hidden="true"><?php echo $ico( 'gender-female' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
+							<span class="mns-nurse-gender__text"><strong><?php echo esc_html__( 'پرستار خانم', 'medyar-nursing-services' ); ?></strong><em class="mns-nurse-gender__note" data-mns-gender-note hidden><?php echo esc_html__( 'فعلاً موجود نیست', 'medyar-nursing-services' ); ?></em></span>
 						</button>
 						<button type="button" class="mns-nurse-gender__card" role="radio" aria-checked="false" data-value="male">
-							<span class="mns-nurse-gender__ico" aria-hidden="true"><?php echo $ico( 'user' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
-							<span class="mns-nurse-gender__text"><strong><?php echo esc_html__( 'پرستار آقا', 'medyar-nursing-services' ); ?></strong><small><?php echo esc_html__( 'اعزام فقط با پرستار آقا', 'medyar-nursing-services' ); ?></small><em class="mns-nurse-gender__note" data-mns-gender-note hidden><?php echo esc_html__( 'فعلاً در این منطقه موجود نیست', 'medyar-nursing-services' ); ?></em></span>
+							<span class="mns-nurse-gender__ico" aria-hidden="true"><?php echo $ico( 'gender-male' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
+							<span class="mns-nurse-gender__text"><strong><?php echo esc_html__( 'پرستار آقا', 'medyar-nursing-services' ); ?></strong><em class="mns-nurse-gender__note" data-mns-gender-note hidden><?php echo esc_html__( 'فعلاً موجود نیست', 'medyar-nursing-services' ); ?></em></span>
 						</button>
 					</div>
 					<p class="mns-field-hint mns-field-hint--warn"><span aria-hidden="true"><?php echo $ico( 'alert' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span><?php echo esc_html__( 'این انتخاب قطعی است و فقط پرستاری با همین جنسیت اعزام می‌شود.', 'medyar-nursing-services' ); ?></p>
@@ -468,69 +466,96 @@ $new_on  = 'new' === $default_mode;
 					</div>
 				</section>
 
-				<?php /* ============ Step 2 — service details ============ */ ?>
+				<?php /* ============ Step 2 - service details ============ */ ?>
 				<section class="mns-step is-hidden" data-mns-step="2" hidden aria-hidden="true" aria-labelledby="mns-ow-step-2">
 					<header class="mns-step__head">
 						<span class="mns-step__title-ico" aria-hidden="true"><?php echo $ico( 'droplet' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
 						<div>
-							<h2 id="mns-ow-step-2" class="mns-step__title"><?php echo esc_html__( 'اطلاعاتی که پرستار برای سرم‌تراپی لازم دارد', 'medyar-nursing-services' ); ?></h2>
-							<p class="mns-step__sub"><?php echo esc_html__( 'فقط موارد ضروری پرسیده می‌شود. هر چه را نمی‌دانید می‌توانید خالی بگذارید.', 'medyar-nursing-services' ); ?></p>
+							<h2 id="mns-ow-step-2" class="mns-step__title"><?php echo esc_html__( 'جزئیات خدمت', 'medyar-nursing-services' ); ?></h2>
+							<p class="mns-step__sub"><?php echo esc_html__( 'موارد انتخاب‌شده پیش‌فرض‌اند؛ اگر درست نیست تغییر دهید.', 'medyar-nursing-services' ); ?></p>
 						</div>
 					</header>
 
-					<p class="mns-field-block__label"><?php echo esc_html__( 'نوع سرم', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></p>
-					<div class="mns-chip-row mns-chip-row--check" role="radiogroup" data-mns-serum-chips>
-						<?php foreach ( $serum_types as $st ) : ?>
-							<button type="button" class="mns-chip" role="radio" aria-checked="false" data-value="<?php echo esc_attr( (string) $st ); ?>"><?php echo esc_html( (string) $st ); ?></button>
-						<?php endforeach; ?>
-					</div>
-
-					<div class="mns-ow-row2">
-						<div class="mns-field-group">
-							<p class="mns-field-block__label"><?php echo esc_html__( 'تعداد سرم', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></p>
-							<div class="mns-qty" data-mns-qty>
-								<button type="button" class="mns-qty__btn" data-mns-qty-plus aria-label="<?php echo esc_attr__( 'افزایش', 'medyar-nursing-services' ); ?>"><?php echo $ico( 'plus' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></button>
-								<span class="mns-qty__val" data-mns-qty-display><?php echo esc_html( MNS_Format::digits( '2' ) ); ?></span>
-								<button type="button" class="mns-qty__btn mns-qty__btn--minus" data-mns-qty-minus aria-label="<?php echo esc_attr__( 'کاهش', 'medyar-nursing-services' ); ?>"><?php echo $ico( 'plus' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></button>
+					<div class="mns-svcd__panel">
+						<div class="mns-form-row--2">
+								<label class="mns-field-block">
+									<span class="mns-field-block__label"><?php echo esc_html__( 'نوع سرم', 'medyar-nursing-services' ); ?></span>
+									<span class="mns-field-block__control mns-field-block__control--select">
+										<span class="mns-field-block__lead-ico" aria-hidden="true"><?php echo $ico( 'droplet' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
+										<select class="mns-select-native" name="serum_type" data-mns-select data-mns-serum-type>
+											<?php foreach ( $serum_types as $st ) : ?>
+												<option value="<?php echo esc_attr( (string) $st ); ?>"><?php echo esc_html( (string) $st ); ?></option>
+											<?php endforeach; ?>
+										</select>
+										<span class="mns-field-block__chevron" aria-hidden="true"><?php echo $ico( 'chevron-down' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
+									</span>
+								</label>
+								<div class="mns-field-block">
+									<span class="mns-field-block__label"><?php echo esc_html__( 'تعداد سرم', 'medyar-nursing-services' ); ?></span>
+									<div class="mns-qty" data-mns-stepper="serum" data-min="1" data-max="9">
+										<button type="button" class="mns-qty__btn" data-step="plus" aria-label="<?php echo esc_attr__( 'افزایش', 'medyar-nursing-services' ); ?>"><?php echo $ico( 'plus' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></button>
+										<span class="mns-qty__val" data-step-val><?php echo esc_html( MNS_Format::digits( '2' ) ); ?></span>
+										<button type="button" class="mns-qty__btn mns-qty__btn--minus" data-step="minus" aria-label="<?php echo esc_attr__( 'کاهش', 'medyar-nursing-services' ); ?>"><?php echo $ico( 'plus' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></button>
+									</div>
+								</div>
 							</div>
-						</div>
-						<div class="mns-field-group">
-							<p class="mns-field-block__label"><?php echo esc_html__( 'دسترسی رگ', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></p>
-							<div class="mns-chip-row" role="radiogroup" data-mns-vein-chips>
-								<?php foreach ( $vein_opts as $vo ) : ?>
-									<button type="button" class="mns-chip" role="radio" aria-checked="false" data-value="<?php echo esc_attr( (string) ( $vo['value'] ?? '' ) ); ?>"><?php echo esc_html( (string) ( $vo['label'] ?? '' ) ); ?></button>
-								<?php endforeach; ?>
+
+							<div class="mns-form-row--2">
+								<div class="mns-field-group">
+									<p class="mns-field-block__label"><?php echo esc_html__( 'دسترسی رگ', 'medyar-nursing-services' ); ?></p>
+									<div class="mns-chip-row" role="radiogroup" data-mns-vein-chips>
+										<?php foreach ( $vein_opts as $vo ) : ?>
+											<button type="button" class="mns-chip" role="radio" aria-checked="false" data-value="<?php echo esc_attr( (string) ( $vo['value'] ?? '' ) ); ?>"><?php echo esc_html( (string) ( $vo['label'] ?? '' ) ); ?></button>
+										<?php endforeach; ?>
+									</div>
+								</div>
+								<div class="mns-field-group">
+									<p class="mns-field-block__label"><?php echo esc_html__( 'سابقه حساسیت دارویی', 'medyar-nursing-services' ); ?></p>
+									<div class="mns-chip-row" role="radiogroup" data-mns-allergy-chips>
+										<?php foreach ( $allergy_opts as $ao ) : ?>
+											<button type="button" class="mns-chip" role="radio" aria-checked="false" data-value="<?php echo esc_attr( (string) ( $ao['value'] ?? '' ) ); ?>"><?php echo esc_html( (string) ( $ao['label'] ?? '' ) ); ?></button>
+										<?php endforeach; ?>
+									</div>
+								</div>
 							</div>
-						</div>
-					</div>
 
-					<p class="mns-field-block__label"><?php echo esc_html__( 'سابقه حساسیت دارویی', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></p>
-					<div class="mns-chip-row" role="radiogroup" data-mns-allergy-chips>
-						<?php foreach ( $allergy_opts as $ao ) : ?>
-							<button type="button" class="mns-chip" role="radio" aria-checked="false" data-value="<?php echo esc_attr( (string) ( $ao['value'] ?? '' ) ); ?>"><?php echo esc_html( (string) ( $ao['label'] ?? '' ) ); ?></button>
-						<?php endforeach; ?>
-					</div>
+							<div class="mns-collapse" data-mns-allergy-collapse>
+								<div class="mns-collapse__inner">
+									<label class="mns-field-block">
+										<span class="mns-field-block__label"><?php echo esc_html__( 'به چه دارو یا ماده‌ای حساسیت دارید؟', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></span>
+										<span class="mns-field-block__control">
+											<input type="text" name="allergy_detail" maxlength="120" autocomplete="off" data-mns-allergy-detail placeholder="<?php echo esc_attr__( 'مثلاً پنی‌سیلین', 'medyar-nursing-services' ); ?>">
+										</span>
+									</label>
+								</div>
+							</div>
 
-					<p class="mns-field-block__label"><?php echo esc_html__( 'عکس نسخه پزشک', 'medyar-nursing-services' ); ?><span class="mns-field-block__opt"><?php echo esc_html__( 'اختیاری', 'medyar-nursing-services' ); ?></span></p>
-					<div class="mns-upload-zone" data-mns-upload-zone>
-						<span class="mns-upload-zone__ico" aria-hidden="true"><?php echo $ico( 'file-text' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
-						<div class="mns-upload-zone__text">
-							<p class="mns-upload-zone__title"><?php echo esc_html__( 'عکس نسخه را اضافه کنید', 'medyar-nursing-services' ); ?></p>
-							<p class="mns-upload-zone__hint"><?php echo esc_html__( 'اگر نسخه ندارید مشکلی نیست؛ پرستار هماهنگی لازم را انجام می‌دهد.', 'medyar-nursing-services' ); ?></p>
-						</div>
-						<label class="mns-upload-zone__btn">
-							<?php echo $ico( 'camera' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-							<span><?php echo esc_html__( 'گرفتن عکس یا انتخاب فایل', 'medyar-nursing-services' ); ?></span>
-							<input type="file" name="prescription" accept="image/*" class="screen-reader-text" data-mns-prescription-file>
-						</label>
-					</div>
+							<div class="mns-field-group mns-svcd__rx">
+								<p class="mns-field-block__label"><?php echo esc_html__( 'عکس نسخه پزشک', 'medyar-nursing-services' ); ?><span class="mns-field-block__opt" data-mns-rx-tag><?php echo esc_html__( 'اختیاری', 'medyar-nursing-services' ); ?></span></p>
+								<div class="mns-upload" data-mns-upload>
+									<input type="file" id="mns-rx-file" name="prescription" accept="image/*" class="screen-reader-text" data-mns-prescription-file>
+									<div class="mns-upload__empty" data-mns-upload-empty>
+										<span class="mns-upload__ico" aria-hidden="true"><?php echo $ico( 'camera' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
+										<span class="mns-upload__text"><?php echo esc_html__( 'اگر نسخه ندارید مشکلی نیست؛ پرستار هماهنگی لازم را انجام می‌دهد.', 'medyar-nursing-services' ); ?></span>
+										<label class="mns-upload__btn" for="mns-rx-file"><?php echo esc_html__( 'افزودن', 'medyar-nursing-services' ); ?></label>
+									</div>
+									<div class="mns-upload__file" data-mns-upload-file hidden>
+										<img class="mns-upload__thumb" alt="" data-mns-upload-thumb>
+										<span class="mns-upload__meta"><span class="mns-upload__name" dir="ltr" data-mns-upload-name></span><span class="mns-upload__size" data-mns-upload-size></span></span>
+										<label class="mns-upload__btn" for="mns-rx-file"><?php echo esc_html__( 'تعویض', 'medyar-nursing-services' ); ?></label>
+										<button type="button" class="mns-upload__remove" data-mns-upload-remove><?php echo esc_html__( 'حذف', 'medyar-nursing-services' ); ?></button>
+									</div>
+								</div>
+							</div>
 
-					<label class="mns-field-block">
-						<span class="mns-field-block__label"><?php echo esc_html__( 'توضیحات تکمیلی', 'medyar-nursing-services' ); ?><span class="mns-field-block__opt"><?php echo esc_html__( 'اختیاری', 'medyar-nursing-services' ); ?></span></span>
-						<span class="mns-field-block__control mns-field-block__control--area">
-							<textarea name="notes" rows="4" maxlength="400" placeholder="<?php echo esc_attr__( 'مثلاً: طبقه چهار است و آسانسور ندارد.', 'medyar-nursing-services' ); ?>"></textarea>
-						</span>
-					</label>
+							<label class="mns-field-block">
+								<span class="mns-field-block__label"><?php echo esc_html__( 'توضیحات تکمیلی', 'medyar-nursing-services' ); ?><span class="mns-field-block__opt"><?php echo esc_html__( 'اختیاری', 'medyar-nursing-services' ); ?></span></span>
+								<span class="mns-field-block__control mns-field-block__control--area">
+									<textarea name="notes" rows="3" maxlength="400" data-mns-notes placeholder="<?php echo esc_attr__( 'مثلاً: طبقه چهار است و آسانسور ندارد.', 'medyar-nursing-services' ); ?>"></textarea>
+									<span class="mns-field-block__count" data-mns-notes-count aria-hidden="true">۰ / ۴۰۰</span>
+								</span>
+							</label>
+					</div>
 
 					<div class="mns-step__nav">
 						<button type="button" class="mns-btn-outline mns-btn-outline--back" data-mns-step-prev>
@@ -538,88 +563,122 @@ $new_on  = 'new' === $default_mode;
 							<span><?php echo esc_html__( 'بازگشت', 'medyar-nursing-services' ); ?></span>
 						</button>
 						<button type="button" class="mns-submit-btn" data-mns-step-next>
-							<span><?php echo esc_html__( 'ادامه، بررسی و ثبت', 'medyar-nursing-services' ); ?></span>
+							<span><?php echo esc_html__( 'ادامه، بازبینی', 'medyar-nursing-services' ); ?></span>
 							<span class="mns-btn-ico" aria-hidden="true"><?php echo $ico( 'chevron' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
 						</button>
 					</div>
 				</section>
 
-				<?php /* ============ Step 3 — review + confirm ============ */ ?>
+				<?php /* ============ Step 3 - review, repeat, confirm ============ */ ?>
 				<section class="mns-step is-hidden" data-mns-step="3" hidden aria-hidden="true" aria-labelledby="mns-ow-step-3">
 					<header class="mns-step__head">
 						<span class="mns-step__title-ico" aria-hidden="true"><?php echo $ico( 'shield' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
 						<div>
 							<h2 id="mns-ow-step-3" class="mns-step__title"><?php echo esc_html__( 'یک بار همه‌چیز را ببینید', 'medyar-nursing-services' ); ?></h2>
-							<p class="mns-step__sub"><?php echo esc_html__( 'هر بخش را با دکمه ویرایش می‌توانید عوض کنید.', 'medyar-nursing-services' ); ?></p>
+							<p class="mns-step__sub"><?php echo esc_html__( 'هر بخش را با «ویرایش» می‌توانید عوض کنید.', 'medyar-nursing-services' ); ?></p>
 						</div>
 					</header>
 
-					<div class="mns-review-edit" data-mns-review aria-live="polite">
-						<h3 class="mns-review-edit__title"><?php echo esc_html__( 'خلاصه درخواست', 'medyar-nursing-services' ); ?></h3>
+					<?php
+					$review_row = static function ( string $key, string $label, string $icon, int $goto = 1 ) use ( $ico ): void {
+						?>
+						<div class="mns-review__row">
+							<span class="mns-review__ico" aria-hidden="true"><?php echo $ico( $icon ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
+							<span class="mns-review__body">
+								<span class="mns-review__label"><?php echo esc_html( $label ); ?></span>
+								<span class="mns-review__val"><strong data-mns-review-val="<?php echo esc_attr( $key ); ?>">—</strong><?php if ( 'service' === $key ) : ?><span class="mns-review__tags" data-mns-review-tags></span><?php endif; ?></span>
+							</span>
+							<button type="button" class="mns-review__edit" data-mns-review-edit="<?php echo esc_attr( (string) $goto ); ?>" data-mns-review-focus="<?php echo esc_attr( $key ); ?>" aria-label="<?php echo esc_attr( sprintf( /* translators: %s: row label */ __( 'ویرایش %s', 'medyar-nursing-services' ), $label ) ); ?>">
+								<?php echo $ico( 'edit' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+								<span><?php echo esc_html__( 'ویرایش', 'medyar-nursing-services' ); ?></span>
+							</button>
+						</div>
 						<?php
-						$review_rows = array(
-							array( 'patient', 'user', __( 'بیمار', 'medyar-nursing-services' ), 1 ),
-							array( 'service', 'droplet', __( 'خدمت', 'medyar-nursing-services' ), 2 ),
-							array( 'time', 'calendar', __( 'زمان', 'medyar-nursing-services' ), 1 ),
-							array( 'address', 'map-pin', __( 'آدرس', 'medyar-nursing-services' ), 1 ),
-							array( 'nurse', 'shield', __( 'جنسیت پرستار', 'medyar-nursing-services' ), 1 ),
-						);
-						foreach ( $review_rows as $rr ) :
-							?>
-							<div class="mns-review-edit__row">
-								<span class="mns-review-edit__ico" aria-hidden="true"><?php echo $ico( $rr[1] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
-								<span class="mns-review-edit__main">
-									<span class="mns-review-edit__label"><?php echo esc_html( $rr[2] ); ?></span>
-									<strong data-mns-review-val="<?php echo esc_attr( $rr[0] ); ?>">—</strong>
-								</span>
-								<button type="button" class="mns-review-edit__link" data-mns-review-edit="<?php echo esc_attr( (string) $rr[3] ); ?>">
-									<?php echo $ico( 'edit' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-									<span><?php echo esc_html__( 'ویرایش', 'medyar-nursing-services' ); ?></span>
-								</button>
+					};
+					?>
+					<div class="mns-review" data-mns-review aria-live="polite">
+						<?php $review_row( 'patient', __( 'بیمار', 'medyar-nursing-services' ), 'user' ); ?>
+						<?php $review_row( 'service', __( 'خدمت', 'medyar-nursing-services' ), 'droplet', 2 ); ?>
+						<?php $review_row( 'time', __( 'زمان', 'medyar-nursing-services' ), 'calendar' ); ?>
+						<?php $review_row( 'address', __( 'آدرس', 'medyar-nursing-services' ), 'map-pin' ); ?>
+						<?php $review_row( 'nurse', __( 'جنسیت پرستار', 'medyar-nursing-services' ), 'shield' ); ?>
+					</div>
+
+					<div class="mns-switch-row">
+						<span class="mns-switch-row__ico" aria-hidden="true"><?php echo $ico( 'repeat' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
+						<span class="mns-switch-row__text"><strong><?php echo esc_html__( 'این خدمت تکرار شود', 'medyar-nursing-services' ); ?></strong><small><?php echo esc_html__( 'با روشن کردن، هر چند وقت و چند بار را انتخاب می‌کنید.', 'medyar-nursing-services' ); ?></small></span>
+						<button type="button" class="mns-switch" data-mns-switch data-mns-recurring-switch aria-pressed="false" aria-label="<?php echo esc_attr__( 'تکرار خدمت', 'medyar-nursing-services' ); ?>"></button>
+					</div>
+					<div class="mns-collapse" data-mns-recurring-collapse>
+						<div class="mns-collapse__inner">
+							<div class="mns-recurring">
+								<div class="mns-form-row--2">
+									<label class="mns-field-block">
+										<span class="mns-field-block__label"><?php echo esc_html__( 'هر چند وقت', 'medyar-nursing-services' ); ?></span>
+										<span class="mns-field-block__control mns-field-block__control--select">
+											<span class="mns-field-block__lead-ico" aria-hidden="true"><?php echo $ico( 'repeat' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
+											<select class="mns-select-native" name="recurring_pattern" data-mns-select data-mns-rep-pattern>
+												<option value="weekly"><?php echo esc_html__( 'هر هفته', 'medyar-nursing-services' ); ?></option>
+												<option value="every_other"><?php echo esc_html__( 'یک‌روز در میان', 'medyar-nursing-services' ); ?></option>
+												<option value="daily"><?php echo esc_html__( 'هر روز', 'medyar-nursing-services' ); ?></option>
+											</select>
+											<span class="mns-field-block__chevron" aria-hidden="true"><?php echo $ico( 'chevron-down' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
+										</span>
+									</label>
+									<div class="mns-field-block">
+										<span class="mns-field-block__label"><?php echo esc_html__( 'تعداد تکرار', 'medyar-nursing-services' ); ?></span>
+										<div class="mns-qty" data-mns-stepper="repeat" data-min="2" data-max="30">
+											<button type="button" class="mns-qty__btn" data-step="plus" aria-label="<?php echo esc_attr__( 'افزایش', 'medyar-nursing-services' ); ?>"><?php echo $ico( 'plus' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></button>
+											<span class="mns-qty__val" data-step-val><?php echo esc_html( MNS_Format::digits( '4' ) ); ?></span>
+											<button type="button" class="mns-qty__btn mns-qty__btn--minus" data-step="minus" aria-label="<?php echo esc_attr__( 'کاهش', 'medyar-nursing-services' ); ?>"><?php echo $ico( 'plus' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></button>
+										</div>
+										<input type="hidden" name="recurring_count" value="4" data-mns-rep-count>
+									</div>
+								</div>
+								<div class="mns-recurring__sum" aria-live="polite">
+									<strong class="mns-recurring__line" data-mns-rep-line></strong>
+									<div class="mns-recurring__dates" data-mns-rep-dates></div>
+									<span class="mns-recurring__cost" data-mns-rep-cost></span>
+								</div>
 							</div>
-						<?php endforeach; ?>
+						</div>
+					</div>
+
+					<div class="mns-verify" data-mns-verify>
+						<div class="mns-collapse is-open" data-mns-verify-ok-collapse>
+							<div class="mns-collapse__inner">
+								<p class="mns-verify__ok"><span class="mns-verify__ok-ico" aria-hidden="true"><?php echo $ico( 'check' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span><span><?php echo esc_html__( 'شمارهٔ', 'medyar-nursing-services' ); ?> <strong dir="ltr" data-mns-verify-phone></strong> <?php echo esc_html__( 'تأیید شده است.', 'medyar-nursing-services' ); ?></span></p>
+							</div>
+						</div>
+						<div class="mns-collapse" data-mns-otp-collapse>
+							<div class="mns-collapse__inner">
+								<div class="mns-otp" data-mns-otp>
+									<div>
+										<p class="mns-otp__title"><?php echo esc_html__( 'شمارهٔ جدید را تأیید کنید', 'medyar-nursing-services' ); ?></p>
+										<p class="mns-otp__sent"><?php echo esc_html__( 'کد چهار رقمی را به', 'medyar-nursing-services' ); ?> <strong dir="ltr" data-mns-otp-phone></strong> <?php echo esc_html__( 'می‌فرستیم.', 'medyar-nursing-services' ); ?></p>
+									</div>
+									<div class="mns-otp__send">
+										<button type="button" class="mns-btn-outline" data-mns-otp-send><?php echo esc_html__( 'ارسال کد', 'medyar-nursing-services' ); ?></button>
+										<span class="mns-otp__timer" data-mns-otp-timer aria-live="polite"></span>
+									</div>
+									<div class="mns-collapse" data-mns-otp-code-collapse>
+										<div class="mns-collapse__inner">
+											<div class="mns-otp__boxes" data-mns-otp-boxes dir="ltr">
+												<?php for ( $d = 0; $d < 4; $d++ ) : ?>
+													<input type="text" class="mns-otp__digit" inputmode="numeric" autocomplete="<?php echo 0 === $d ? 'one-time-code' : 'off'; ?>" data-mns-otp-digit aria-label="<?php echo esc_attr( sprintf( /* translators: %d: digit index */ __( 'رقم %d', 'medyar-nursing-services' ), $d + 1 ) ); ?>">
+												<?php endfor; ?>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
 					</div>
 
 					<p class="mns-ow-paynote" role="note">
 						<span aria-hidden="true"><?php echo $ico( 'card' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
-						<span><?php echo wp_kses( __( '<strong>پرداخت بعد از انجام خدمت</strong> و با لینک پیامکی است. مبلغ نهایی بر اساس خدمات انجام‌شده محاسبه می‌شود و قبل از پرداخت می‌توانید آن را ببینید.', 'medyar-nursing-services' ), array( 'strong' => array() ) ); ?></span>
+						<span><?php echo wp_kses( __( '<strong>پرداخت بعد از انجام خدمت</strong> و با لینک پیامکی است؛ مبلغ نهایی را قبل از پرداخت می‌بینید.', 'medyar-nursing-services' ), array( 'strong' => array() ) ); ?></span>
 					</p>
-
-					<div class="mns-switch-row">
-						<span class="mns-switch-row__ico" aria-hidden="true"><?php echo $ico( 'repeat' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
-						<span class="mns-switch-row__text"><strong><?php echo esc_html__( 'این خدمت تکرار شود', 'medyar-nursing-services' ); ?></strong><small><?php echo esc_html__( 'با روشن کردن، دوره و تاریخ پایان را انتخاب می‌کنید.', 'medyar-nursing-services' ); ?></small></span>
-						<button type="button" class="mns-switch" data-mns-switch data-mns-recurring-switch aria-pressed="false" aria-label="<?php echo esc_attr__( 'تکرار خدمت', 'medyar-nursing-services' ); ?>"></button>
-					</div>
-					<div class="mns-form-row--2 is-hidden" data-mns-recurring-fields hidden>
-						<label class="mns-field-block">
-							<span class="mns-field-block__label"><?php echo esc_html__( 'تناوب', 'medyar-nursing-services' ); ?></span>
-							<span class="mns-field-block__control mns-field-block__control--select">
-								<select class="mns-select-native" name="recurring_pattern" data-mns-select>
-									<option value="weekly"><?php echo esc_html__( 'هفتگی', 'medyar-nursing-services' ); ?></option>
-									<option value="every_other"><?php echo esc_html__( 'یک‌روز در میان', 'medyar-nursing-services' ); ?></option>
-									<option value="daily"><?php echo esc_html__( 'روزانه', 'medyar-nursing-services' ); ?></option>
-								</select>
-								<span class="mns-field-block__chevron" aria-hidden="true"><?php echo $ico( 'chevron-down' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
-							</span>
-						</label>
-						<label class="mns-field-block">
-							<span class="mns-field-block__label"><?php echo esc_html__( 'تاریخ پایان', 'medyar-nursing-services' ); ?></span>
-							<span class="mns-field-block__control"><input type="text" name="recurring_until" placeholder="۱۴۰۵/۱۰/۰۱" autocomplete="off"></span>
-						</label>
-					</div>
-
-					<div class="mns-otp">
-						<span class="mns-otp__ico" aria-hidden="true"><?php echo $ico( 'phone' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
-						<div class="mns-otp__text">
-							<p class="mns-otp__title"><?php echo esc_html__( 'شماره‌تان را با کد پیامکی تأیید کنید', 'medyar-nursing-services' ); ?></p>
-							<p class="mns-otp__sent"><?php echo esc_html__( 'کد چهار رقمی به', 'medyar-nursing-services' ); ?> <strong data-mns-otp-phone dir="ltr"></strong> <?php echo esc_html__( 'فرستاده می‌شود. اطلاعات فرم حفظ می‌شود.', 'medyar-nursing-services' ); ?></p>
-						</div>
-						<div class="mns-otp__boxes" data-mns-otp-boxes dir="ltr">
-							<?php for ( $d = 0; $d < 4; $d++ ) : ?>
-								<input type="text" class="mns-otp__digit" inputmode="numeric" maxlength="1" pattern="[0-9۰-۹]" autocomplete="one-time-code" data-mns-otp-digit aria-label="<?php echo esc_attr( sprintf( /* translators: %d: digit index */ __( 'رقم %d', 'medyar-nursing-services' ), $d + 1 ) ); ?>">
-							<?php endfor; ?>
-						</div>
-					</div>
 
 					<div class="mns-step__nav">
 						<button type="button" class="mns-btn-outline mns-btn-outline--back" data-mns-step-prev>
@@ -632,7 +691,7 @@ $new_on  = 'new' === $default_mode;
 						</button>
 					</div>
 				</section>
-			</form>
+				</form>
 
 			<div class="mns-owizard__done-card" data-mns-done-card hidden>
 				<?php $render_confirm( true, $track_sample ); ?>
@@ -681,11 +740,6 @@ $new_on  = 'new' === $default_mode;
 				</ul>
 			</div>
 
-			<p class="mns-osum__paycard">
-				<span aria-hidden="true"><?php echo $ico( 'card' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
-				<span><?php echo wp_kses( __( '<strong>پرداخت بعد از انجام خدمت</strong> و با لینک پیامکی است. مبلغ نهایی بر اساس خدمات انجام‌شده محاسبه می‌شود و قبل از پرداخت می‌توانید آن را ببینید.', 'medyar-nursing-services' ), array( 'strong' => array() ) ); ?></span>
-			</p>
-
 			<div class="mns-osum__how mns-how">
 				<h3 class="mns-how__title"><?php echo esc_html__( 'بعد از ثبت چه می‌شود؟', 'medyar-nursing-services' ); ?></h3>
 				<ol class="mns-how__steps">
@@ -702,9 +756,15 @@ $new_on  = 'new' === $default_mode;
 			<small data-mns-mob-svc><?php echo esc_html( $svc_name ); ?></small>
 			<strong data-mns-mob-price><?php echo esc_html( $price_txt . ' ' . __( 'تومان', 'medyar-nursing-services' ) ); ?></strong>
 		</div>
-		<button type="button" class="mns-submit-btn mns-owizard__mob-bar-btn" data-mns-mob-continue>
-			<span data-mns-mob-label><?php echo esc_html__( 'ادامه', 'medyar-nursing-services' ); ?></span>
-			<span class="mns-btn-ico" aria-hidden="true"><?php echo $ico( 'chevron' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
-		</button>
+		<div class="mns-owizard__mob-bar-row">
+			<button type="button" class="mns-submit-btn mns-owizard__mob-bar-btn" data-mns-mob-continue>
+				<span data-mns-mob-label><?php echo esc_html__( 'ادامه', 'medyar-nursing-services' ); ?></span>
+				<span class="mns-btn-ico" aria-hidden="true"><?php echo $ico( 'chevron' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
+			</button>
+			<button type="button" class="mns-btn-outline mns-owizard__mob-bar-back" data-mns-mob-back hidden>
+				<span class="mns-btn-ico mns-btn-ico--back" aria-hidden="true"><?php echo $ico( 'chevron' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
+				<span><?php echo esc_html__( 'بازگشت', 'medyar-nursing-services' ); ?></span>
+			</button>
+		</div>
 	</div>
 </div>

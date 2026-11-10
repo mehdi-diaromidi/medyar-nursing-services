@@ -60,6 +60,7 @@ return array(
 	),
 	'service_fields' => array(
 		'serum_types' => array( 'نرمال سالین', 'دکستروز', 'رینگر', 'تقویتی و ویتامین', 'طبق نسخه پزشک' ),
+		'rx_types'    => array( 'طبق نسخه پزشک' ), /* serum types that need a prescription photo */
 		'vein_access' => array(
 			array( 'value' => 'normal', 'label' => 'معمولی' ),
 			array( 'value' => 'hard', 'label' => 'دشوار' ),
