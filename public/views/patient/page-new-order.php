@@ -226,7 +226,31 @@ foreach ( $patients as $p ) {
 		$saved_p[] = $p;
 	}
 }
+// Nobody on file yet: skip the "who is it for?" confirmation and open the add-patient form directly.
+$has_known = null !== $self_p || ! empty( $saved_p );
+$pick_name = '';
+$pick_tag  = '';
+if ( 'saved' === $default_mode ) {
+	foreach ( $saved_p as $p ) {
+		if ( (string) ( $p['id'] ?? '' ) === $default_patient ) {
+			$pick_name = (string) ( $p['name'] ?? $p['label'] ?? '' );
+		}
+	}
+	if ( '' === $pick_name ) { // Unknown ?mns_patient value: fall back to the account holder.
+		$default_mode    = 'self';
+		$default_patient = 'self';
+	}
+}
+if ( 'self' === $default_mode && $self_p ) {
+	$pick_name = (string) ( $self_p['name'] ?? $self_p['meta'] ?? '' );
+	$pick_tag  = __( 'خودم', 'medyar-nursing-services' );
+}
+if ( ! $has_known ) {
+	$default_mode    = 'new';
+	$default_patient = '';
+}
 $self_on = 'self' === $default_mode;
+$new_on  = 'new' === $default_mode;
 ?>
 
 <div class="mns-owizard" data-mns-owizard data-mns-current-step="1" data-mns-leads="<?php echo esc_attr( $enc( $leads, '{}' ) ); ?>">
@@ -281,6 +305,23 @@ $self_on = 'self' === $default_mode;
 						</div>
 					</header>
 
+					<div class="mns-pick" data-mns-pick>
+					<div class="mns-pick__summary-wrap" data-mns-pick-summary<?php echo $has_known ? '' : ' hidden'; ?>>
+						<div class="mns-pick__summary">
+							<span class="mns-pick__avatar" aria-hidden="true"><?php echo $ico( 'user' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
+							<span class="mns-pick__text">
+								<strong class="mns-pick__name"><span data-mns-pick-name><?php echo esc_html( $pick_name ); ?></span> <span class="mns-pick__tag" data-mns-pick-tag><?php echo '' !== $pick_tag ? esc_html( '· ' . $pick_tag ) : ''; ?></span></strong>
+								<span class="mns-pick__phone" dir="ltr" data-mns-pick-phone><?php echo esc_html( MNS_Format::mobile( $phone ) ); ?></span>
+							</span>
+							<button type="button" class="mns-btn-outline mns-pick__change" data-mns-pick-change aria-expanded="false" aria-controls="mns-pick-edit">
+								<?php echo $ico( 'edit' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+								<span><?php echo esc_html__( 'تغییر', 'medyar-nursing-services' ); ?></span>
+							</button>
+						</div>
+						<p class="mns-field-hint"><span aria-hidden="true"><?php echo $ico( 'info' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span><?php echo esc_html__( 'پرستار با همین شماره با شما تماس می‌گیرد.', 'medyar-nursing-services' ); ?></p>
+					</div>
+
+					<div class="mns-pick__edit" id="mns-pick-edit" data-mns-pick-edit<?php echo $has_known ? ' hidden' : ''; ?>>
 					<div class="mns-patient-cards" role="radiogroup" aria-label="<?php echo esc_attr__( 'انتخاب بیمار', 'medyar-nursing-services' ); ?>" data-mns-patient-cards>
 						<button type="button" class="mns-patient-cards__item<?php echo $self_on ? ' is-selected' : ''; ?>" role="radio" aria-checked="<?php echo $self_on ? 'true' : 'false'; ?>" data-mns-patient-card="self" data-value="self">
 							<span class="mns-patient-cards__ico" aria-hidden="true"><?php echo $ico( 'user' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
@@ -295,17 +336,17 @@ $self_on = 'self' === $default_mode;
 							<button type="button" class="mns-patient-cards__item<?php echo $on ? ' is-selected' : ''; ?>" role="radio" aria-checked="<?php echo $on ? 'true' : 'false'; ?>" data-mns-patient-card="saved" data-value="<?php echo esc_attr( $pid ); ?>">
 								<span class="mns-patient-cards__ico" aria-hidden="true"><?php echo $ico( 'users' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
 								<strong><?php echo esc_html( (string) ( $p['label'] ?? $p['name'] ?? '' ) ); ?></strong>
-								<span class="mns-patient-cards__meta"><?php echo esc_html( (string) ( $p['meta'] ?? '' ) ); ?></span>
+								<span class="mns-patient-cards__meta"><?php echo esc_html( ! empty( $p['last_order'] ) ? sprintf( /* translators: %s: Jalali date */ __( 'آخرین سفارش: %s', 'medyar-nursing-services' ), $p['last_order'] ) : (string) ( $p['meta'] ?? '' ) ); ?></span>
 							</button>
 						<?php endforeach; ?>
-						<button type="button" class="mns-patient-cards__item" role="radio" aria-checked="false" data-mns-patient-card="new">
+						<button type="button" class="mns-patient-cards__item<?php echo $new_on ? ' is-selected' : ''; ?>" role="radio" aria-checked="<?php echo $new_on ? 'true' : 'false'; ?>" data-mns-patient-card="new">
 							<span class="mns-patient-cards__ico" aria-hidden="true"><?php echo $ico( 'user-plus' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
 							<strong><?php echo esc_html__( 'افزودن بیمار جدید', 'medyar-nursing-services' ); ?></strong>
-							<span class="mns-patient-cards__meta"><?php echo esc_html__( 'همین‌جا و بدون صفحه جدا', 'medyar-nursing-services' ); ?></span>
+							<span class="mns-patient-cards__meta"><?php echo esc_html__( 'بدون صفحه جدا', 'medyar-nursing-services' ); ?></span>
 						</button>
 					</div>
 
-					<div class="mns-patient-cards__new is-hidden" data-mns-new-patient-panel hidden>
+					<div class="mns-patient-cards__new<?php echo $new_on ? '' : ' is-hidden'; ?>" data-mns-new-patient-panel<?php echo $new_on ? '' : ' hidden'; ?>>
 						<label class="mns-field-block">
 							<span class="mns-field-block__label"><?php echo esc_html__( 'نام و نام خانوادگی بیمار', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></span>
 							<span class="mns-field-block__control">
@@ -342,6 +383,8 @@ $self_on = 'self' === $default_mode;
 						</label>
 					</div>
 					<p class="mns-field-hint"><span aria-hidden="true"><?php echo $ico( 'info' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span><?php echo esc_html__( 'پرستار و ادمین با همین شماره با شما تماس می‌گیرند. شماره از حساب شما پر شده و قابل ویرایش است.', 'medyar-nursing-services' ); ?></p>
+					</div>
+					</div>
 
 					<div class="mns-step__nav">
 						<button type="button" class="mns-submit-btn" data-mns-step-next data-mns-step-next-label="1">
@@ -387,14 +430,6 @@ $self_on = 'self' === $default_mode;
 						</label>
 					</div>
 
-					<label class="mns-field-block">
-						<span class="mns-field-block__label"><?php echo esc_html__( 'آدرس دقیق', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></span>
-						<span class="mns-field-block__control mns-field-block__control--area">
-							<textarea name="address" rows="3" required maxlength="400" placeholder="<?php echo esc_attr__( 'خیابان، کوچه، پلاک، واحد', 'medyar-nursing-services' ); ?>"></textarea>
-						</span>
-					</label>
-					<p class="mns-field-hint mns-field-hint--plain"><?php echo esc_html__( 'پلاک، واحد و یک نشانه بنویسید تا پرستار سریع‌تر پیدا کند.', 'medyar-nursing-services' ); ?></p>
-
 					<p class="mns-field-block__label"><?php echo esc_html__( 'تاریخ', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></p>
 					<div class="mns-date-rail" data-mns-date-rail role="radiogroup" aria-label="<?php echo esc_attr__( 'تاریخ', 'medyar-nursing-services' ); ?>">
 						<?php foreach ( $date_slots as $slot ) : ?>
@@ -417,24 +452,34 @@ $self_on = 'self' === $default_mode;
 					<p class="mns-field-block__label"><?php echo esc_html__( 'بازه ساعت', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></p>
 					<div class="mns-slot-chips" data-mns-slot-chips role="radiogroup">
 						<?php foreach ( $time_slots as $t ) : ?>
-							<button type="button" class="mns-slot-chips__item" role="radio" aria-checked="false"<?php echo ! empty( $t['disabled'] ) ? ' disabled aria-disabled="true"' : ''; ?> data-value="<?php echo esc_attr( (string) ( $t['id'] ?? '' ) ); ?>"><span><?php echo esc_html( (string) ( $t['label'] ?? '' ) ); ?></span></button>
+							<button type="button" class="mns-slot-chips__item" role="radio" aria-checked="false"<?php echo ! empty( $t['disabled'] ) ? ' disabled aria-disabled="true" title="' . esc_attr__( 'پرستاری در این بازه موجود نیست', 'medyar-nursing-services' ) . '"' : ''; ?> data-value="<?php echo esc_attr( (string) ( $t['id'] ?? '' ) ); ?>"><span><?php echo esc_html( (string) ( $t['label'] ?? '' ) ); ?></span><?php echo ! empty( $t['disabled'] ) ? '<small class="mns-slot-chips__why">' . esc_html__( 'پرستار نیست', 'medyar-nursing-services' ) . '</small>' : ''; ?></button>
 						<?php endforeach; ?>
 					</div>
+
+					<div class="mns-avail" data-mns-avail hidden></div>
 
 					<p class="mns-field-block__label"><?php echo esc_html__( 'جنسیت پرستار', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></p>
 					<div class="mns-nurse-gender" role="radiogroup" data-mns-nurse-gender-cards>
 						<button type="button" class="mns-nurse-gender__card" role="radio" aria-checked="false" data-value="female">
 							<span class="mns-nurse-gender__ico" aria-hidden="true"><?php echo $ico( 'user' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
-							<span class="mns-nurse-gender__text"><strong><?php echo esc_html__( 'پرستار خانم', 'medyar-nursing-services' ); ?></strong><small><?php echo esc_html__( 'اعزام فقط با پرستار خانم', 'medyar-nursing-services' ); ?></small></span>
+							<span class="mns-nurse-gender__text"><strong><?php echo esc_html__( 'پرستار خانم', 'medyar-nursing-services' ); ?></strong><small><?php echo esc_html__( 'اعزام فقط با پرستار خانم', 'medyar-nursing-services' ); ?></small><em class="mns-nurse-gender__note" data-mns-gender-note hidden><?php echo esc_html__( 'فعلاً در این منطقه موجود نیست', 'medyar-nursing-services' ); ?></em></span>
 						</button>
 						<button type="button" class="mns-nurse-gender__card" role="radio" aria-checked="false" data-value="male">
 							<span class="mns-nurse-gender__ico" aria-hidden="true"><?php echo $ico( 'user' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
-							<span class="mns-nurse-gender__text"><strong><?php echo esc_html__( 'پرستار آقا', 'medyar-nursing-services' ); ?></strong><small><?php echo esc_html__( 'اعزام فقط با پرستار آقا', 'medyar-nursing-services' ); ?></small></span>
+							<span class="mns-nurse-gender__text"><strong><?php echo esc_html__( 'پرستار آقا', 'medyar-nursing-services' ); ?></strong><small><?php echo esc_html__( 'اعزام فقط با پرستار آقا', 'medyar-nursing-services' ); ?></small><em class="mns-nurse-gender__note" data-mns-gender-note hidden><?php echo esc_html__( 'فعلاً در این منطقه موجود نیست', 'medyar-nursing-services' ); ?></em></span>
 						</button>
 					</div>
 					<p class="mns-field-hint mns-field-hint--warn"><span aria-hidden="true"><?php echo $ico( 'alert' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span><?php echo esc_html__( 'این انتخاب قطعی است و فقط پرستاری با همین جنسیت اعزام می‌شود.', 'medyar-nursing-services' ); ?></p>
 
-					<div class="mns-avail" data-mns-avail hidden></div>
+					<div class="mns-avail" data-mns-avail-gender hidden></div>
+
+					<label class="mns-field-block">
+						<span class="mns-field-block__label"><?php echo esc_html__( 'آدرس دقیق', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></span>
+						<span class="mns-field-block__control mns-field-block__control--area">
+							<textarea name="address" rows="3" required maxlength="400" placeholder="<?php echo esc_attr__( 'خیابان، کوچه، پلاک، واحد', 'medyar-nursing-services' ); ?>"></textarea>
+						</span>
+					</label>
+					<p class="mns-field-hint mns-field-hint--plain"><?php echo esc_html__( 'پلاک، واحد و یک نشانه بنویسید تا پرستار سریع‌تر پیدا کند.', 'medyar-nursing-services' ); ?></p>
 
 					<div class="mns-step__nav">
 						<button type="button" class="mns-btn-outline mns-btn-outline--back" data-mns-step-prev>

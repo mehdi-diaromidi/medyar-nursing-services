@@ -6665,77 +6665,155 @@ html.mns-drawer-open body {
 /* ---- Step 1: patient cards ----------------------------------------------- */
 .mns-owizard .mns-patient-cards {
 	display: grid;
-	grid-template-columns: repeat(3, minmax(0, 1fr));
-	gap: 16px;
-	margin: 0 0 22px;
+	grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+	gap: 12px;
+	margin: 0 0 20px;
 }
 .mns-owizard .mns-patient-cards__item {
-	position: relative;
-	display: flex;
-	flex-direction: column;
-	align-items: flex-start;
-	gap: 0;
-	min-height: 160px;
-	padding: 18px 18px 16px;
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr) auto;
+	grid-template-areas: "ico name radio" "ico meta radio";
+	align-items: center;
+	column-gap: 12px;
+	min-height: 72px;
+	padding: 12px 14px;
 	border: 1px solid var(--ow-line);
 	border-radius: var(--mns-radius);
 	background: #fff;
 	text-align: start;
 	cursor: pointer;
-	transition: background 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+	transition: background 150ms ease, border-color 150ms ease;
 }
 .mns-owizard .mns-patient-cards__item:hover {
-	border-color: #b9d3ea;
+	border-color: rgba(2, 114, 177, 0.45);
 }
 .mns-owizard .mns-patient-cards__item::before {
 	content: "";
-	position: absolute;
-	top: 18px;
-	inset-inline-end: 18px;
-	width: 26px;
-	height: 26px;
-	border: 2px solid #cdd6df;
+	grid-area: radio;
+	width: 20px;
+	height: 20px;
+	box-sizing: border-box;
+	border: 1.5px solid #cdd6df;
 	border-radius: 50%;
 	background: #fff;
 }
 .mns-owizard .mns-patient-cards__item.is-selected {
 	border-color: var(--mns-primary);
-	background: #eaf4fd;
+	background: var(--ow-soft-2);
 }
 .mns-owizard .mns-patient-cards__item.is-selected::before {
 	border-color: var(--mns-primary);
-	background: var(--mns-primary) var(--ow-check-w) center / 15px no-repeat;
+	background: var(--mns-primary) var(--ow-check-w) center / 12px no-repeat;
 }
 .mns-owizard .mns-patient-cards__ico {
+	grid-area: ico;
 	display: grid;
 	place-items: center;
-	width: 54px;
-	height: 54px;
-	margin-bottom: 14px;
-	border-radius: 16px;
-	background: #e1eefa;
+	width: 40px;
+	height: 40px;
+	border-radius: 50%;
+	background: var(--mns-primary-soft);
 	color: var(--mns-primary);
 }
 .mns-owizard .mns-patient-cards__ico .mns-icon {
-	width: 24px;
-	height: 24px;
-}
-.mns-owizard .mns-patient-cards__item.is-selected .mns-patient-cards__ico {
-	background: var(--mns-primary);
-	color: #fff;
+	width: 20px;
+	height: 20px;
 }
 .mns-owizard .mns-patient-cards__item strong {
-	font-size: 1.0625rem;
-	font-weight: 800;
+	grid-area: name;
+	align-self: end;
+	font-size: 0.9375rem;
+	font-weight: 700;
 	line-height: 1.5;
 	color: var(--ow-ink);
 }
 .mns-owizard .mns-patient-cards__meta {
-	margin-top: 2px;
+	grid-area: meta;
+	align-self: start;
 	font-size: 0.8125rem;
-	line-height: 1.6;
+	line-height: 1.5;
 	color: var(--ow-sub);
 }
+/* "Add a new patient" is a side path: dashed and quiet until it is chosen. */
+.mns-owizard .mns-patient-cards__item[data-mns-patient-card="new"] {
+	border-style: dashed;
+	border-color: #c9d5de;
+	background: #f8fafc;
+}
+.mns-owizard .mns-patient-cards__item[data-mns-patient-card="new"]::before {
+	display: none;
+}
+.mns-owizard .mns-patient-cards__item[data-mns-patient-card="new"] .mns-patient-cards__ico {
+	border: 1px solid var(--ow-line);
+	background: #fff;
+}
+.mns-owizard .mns-patient-cards__item[data-mns-patient-card="new"] strong {
+	color: var(--mns-primary);
+}
+.mns-owizard .mns-patient-cards__item[data-mns-patient-card="new"].is-selected {
+	border-style: solid;
+	border-color: var(--mns-primary);
+	background: var(--ow-soft-2);
+}
+
+/* ---- Step 1: known patient collapses into one summary line ---------------------------------- */
+.mns-owizard .mns-pick__summary {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 14px 16px;
+	border: 1px solid var(--ow-line);
+	border-radius: var(--mns-radius);
+	background: #fff;
+}
+.mns-owizard .mns-pick__avatar {
+	display: grid;
+	place-items: center;
+	flex: none;
+	width: 44px;
+	height: 44px;
+	border-radius: 50%;
+	background: var(--mns-primary-soft);
+	color: var(--mns-primary);
+}
+.mns-owizard .mns-pick__avatar .mns-icon {
+	width: 22px;
+	height: 22px;
+}
+.mns-owizard .mns-pick__text {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	min-width: 0;
+	line-height: 1.6;
+}
+.mns-owizard .mns-pick__name {
+	font-size: 0.9375rem;
+	font-weight: 700;
+	color: var(--ow-ink);
+	overflow-wrap: anywhere;
+}
+.mns-owizard .mns-pick__tag {
+	font-weight: 400;
+	color: var(--ow-sub);
+}
+.mns-owizard .mns-pick__phone {
+	align-self: flex-start;
+	font-size: 0.8125rem;
+	color: var(--ow-sub);
+}
+.mns-owizard .mns-pick__change {
+	flex: none;
+	gap: 6px;
+}
+.mns-owizard .mns-pick__change .mns-icon {
+	width: 16px;
+	height: 16px;
+}
+.mns-owizard .mns-pick__summary-wrap .mns-field-hint {
+	margin: 12px 0 0;
+}
+
 .mns-owizard .mns-patient-cards__new {
 	position: relative;
 	margin: 6px 0 26px;
@@ -6743,18 +6821,6 @@ html.mns-drawer-open body {
 	border: 1px solid var(--mns-primary);
 	border-radius: var(--mns-radius);
 	background: var(--ow-soft-2);
-}
-.mns-owizard .mns-patient-cards__new::before {
-	content: "";
-	position: absolute;
-	top: -9px;
-	left: calc(16.66% - 8px);
-	width: 16px;
-	height: 16px;
-	border-top: 1px solid var(--mns-primary);
-	border-left: 1px solid var(--mns-primary);
-	background: var(--ow-soft-2);
-	transform: rotate(45deg);
 }
 .mns-owizard .mns-patient-cards__new .mns-field-block {
 	margin-bottom: 20px;
@@ -7006,7 +7072,7 @@ html.mns-drawer-open body {
 	display: flex;
 	align-items: center;
 	gap: 18px;
-	margin: 6px 0 0;
+	margin: -10px 0 24px;
 	padding: 20px 24px;
 	border: 1.5px solid transparent;
 	border-radius: var(--mns-radius);
@@ -7104,6 +7170,51 @@ html.mns-drawer-open body {
 .mns-owizard .mns-avail__call svg {
 	width: 18px;
 	height: 18px;
+}
+
+/* Good news is one quiet line; only problems get the big box. */
+.mns-owizard .mns-avail--green {
+	gap: 10px;
+	padding: 10px 14px;
+}
+.mns-owizard .mns-avail--green .mns-avail__ico {
+	width: 28px;
+	height: 28px;
+	box-shadow: none;
+}
+.mns-owizard .mns-avail--green .mns-avail__ico svg {
+	width: 16px;
+	height: 16px;
+}
+.mns-owizard .mns-avail--green .mns-avail__body strong {
+	font-size: 0.875rem;
+	font-weight: 500;
+}
+.mns-owizard .mns-slot-chips__item:disabled {
+	flex-direction: column;
+	gap: 0;
+	min-height: 58px;
+	padding-block: 6px;
+	color: var(--ow-sub);
+}
+.mns-owizard .mns-slot-chips__why {
+	font-size: 0.75rem;
+	line-height: 1.3;
+	color: var(--ow-sub);
+}
+.mns-owizard .mns-nurse-gender__note {
+	display: inline-block;
+	align-self: flex-start;
+	margin-top: 2px;
+	padding: 1px 10px;
+	border-radius: 999px;
+	background: #fff6dd;
+	font-size: 0.75rem;
+	font-style: normal;
+	color: #7a4b00;
+}
+.mns-owizard .mns-nurse-gender__card.is-unavailable .mns-nurse-gender__ico {
+	opacity: 0.6;
 }
 
 /* ---- Step 3: qty / upload ------------------------------------------------- */
@@ -7866,9 +7977,6 @@ html.mns-drawer-open body {
 	.mns-owizard .mns-owizard__layout {
 		grid-template-columns: minmax(0, 1.6fr) minmax(260px, 1fr);
 	}
-	.mns-owizard .mns-patient-cards__item {
-		padding: 16px 14px;
-	}
 }
 @media (max-width: 991px) {
 	.mns-owizard .mns-owizard__layout {
@@ -7973,60 +8081,15 @@ html.mns-drawer-open body {
 	.mns-owizard[data-mns-current-step="4"] .mns-step__head {
 		display: none;
 	}
-	.mns-owizard .mns-patient-cards {
-		grid-template-columns: minmax(0, 1fr);
-		gap: 12px;
-	}
-	.mns-owizard .mns-patient-cards__item {
-		display: grid;
-		grid-template-columns: auto minmax(0, 1fr);
-		grid-template-areas: "ico name" "ico meta";
-		align-items: center;
-		column-gap: 14px;
-		min-height: 74px;
-		padding: 12px 14px;
-		border-radius: var(--mns-radius);
-	}
-	.mns-owizard .mns-patient-cards__item::before {
-		top: 50%;
-		inset-inline-end: 14px;
-		width: 24px;
-		height: 24px;
-		transform: translateY(-50%);
-	}
-	.mns-owizard .mns-patient-cards__ico {
-		grid-area: ico;
-		width: 46px;
-		height: 46px;
-		margin: 0;
-		border-radius: 14px;
-	}
-	.mns-owizard .mns-patient-cards__item strong {
-		grid-area: name;
-		align-self: end;
-		font-size: 1rem;
-	}
-	.mns-owizard .mns-patient-cards__meta {
-		grid-area: meta;
-		align-self: start;
-		margin: 0;
-	}
 	.mns-owizard .mns-patient-cards__new {
 		padding: 16px 14px 18px;
 		margin-bottom: 20px;
-	}
-	.mns-owizard .mns-patient-cards__new::before {
-		display: none;
 	}
 	.mns-owizard .mns-patient-cards__new-row,
 	.mns-owizard .mns-form-row--2,
 	.mns-owizard .mns-ow-row2 {
 		grid-template-columns: minmax(0, 1fr);
 		gap: 6px;
-	}
-	.mns-owizard .mns-form-row--2 {
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: 10px;
 	}
 	.mns-owizard .mns-ow-phone {
 		max-width: none;
@@ -8351,9 +8414,6 @@ html.mns-drawer-open body {
 .mns-owizard .mns-osum__price {
 	font-size: clamp(1.25rem, 8.2cqw, 1.75rem);
 	white-space: nowrap;
-}
-.mns-owizard .mns-patient-cards__item {
-	min-height: 0;
 }
 
 /* Narrow content column (shell sidebar + smaller laptops): stack the summary under the form. */

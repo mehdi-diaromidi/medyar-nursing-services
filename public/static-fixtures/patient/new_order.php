@@ -32,6 +32,7 @@ return array(
 			'name'      => 'فاطمه کریمی',
 			'label'     => 'فاطمه کریمی',
 			'meta'      => 'بیمار ثبت‌شده قبلی',
+			'last_order' => '۱۲ آبان',
 			'age_group' => 'adult',
 			'gender'    => 'female',
 		),

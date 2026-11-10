@@ -454,6 +454,10 @@
 		var patGenderInput = qs('[data-mns-patient-gender]', form);
 		var step2Next = qs('[data-mns-step-2-next]', form);
 		var availBox = qs('[data-mns-avail]', form);
+		var availGenderBox = qs('[data-mns-avail-gender]', form);
+		var pickEdit = qs('[data-mns-pick-edit]', form);
+		var pickSummary = qs('[data-mns-pick-summary]', form);
+		var pickChange = qs('[data-mns-pick-change]', form);
 		var DRAFT_KEY = 'mns_order_wizard_draft_v2';
 		var wizardReady = false;
 
@@ -623,44 +627,29 @@
 		function validateStep(n) {
 			hideNotice();
 			if (n === 1) {
+				var failStep1 = function (msg) {
+					setPickOpen(true); /* the field the message talks about may be folded away */
+					showNoticeNear(form, msg, true);
+					return false;
+				};
 				var mode = modeInput ? modeInput.value : 'self';
 				if (mode === 'new') {
 					var nm = qs('input[name="new_patient_name"]', form);
-					if (!nm || !nm.value.trim()) {
-						showNoticeNear(form, 'نام بیمار را وارد کنید.', true);
-						return false;
-					}
-					if (!ageGroupInput || !ageGroupInput.value) {
-						showNoticeNear(form, 'گروه سنی را انتخاب کنید.', true);
-						return false;
-					}
-					if (!patGenderInput || !patGenderInput.value) {
-						showNoticeNear(form, 'جنسیت بیمار را انتخاب کنید.', true);
-						return false;
-					}
+					if (!nm || !nm.value.trim()) return failStep1('نام بیمار را وارد کنید.');
+					if (!ageGroupInput || !ageGroupInput.value) return failStep1('گروه سنی را انتخاب کنید.');
+					if (!patGenderInput || !patGenderInput.value) return failStep1('جنسیت بیمار را انتخاب کنید.');
 				}
-				if (mode === 'saved' && (!patientIdInput || !patientIdInput.value)) {
-					showNoticeNear(form, 'بیمار را انتخاب کنید.', true);
-					return false;
-				}
+				if (mode === 'saved' && (!patientIdInput || !patientIdInput.value)) return failStep1('بیمار را انتخاب کنید.');
 				var phone = qs('input[name="phone"]', form);
-				if (!phone || !phone.value || phone.value.replace(/\s/g, '').length < 11) {
-					showNoticeNear(form, 'شماره تماس معتبر وارد کنید.', true);
-					return false;
-				}
+				if (!phone || !phone.value || phone.value.replace(/\s/g, '').length < 11) return failStep1('شماره تماس معتبر وارد کنید.');
 			}
-			if (n === 2) {
+if (n === 2) {
 				if (availState === 'red') {
 					showNoticeNear(form, 'برای این منطقه و جنسیت پرستار نداریم.', true);
 					return false;
 				}
 				if (!citySelect || !citySelect.value || !areaSelect || !areaSelect.value) {
 					showNoticeNear(form, 'شهر و منطقه را انتخاب کنید.', true);
-					return false;
-				}
-				var addr = qs('textarea[name="address"]', form) || qs('input[name="address"]', form);
-				if (!addr || !addr.value.trim()) {
-					showNoticeNear(form, 'آدرس را کامل‌تر بنویسید.', true);
 					return false;
 				}
 				if (!dateValue || !dateValue.value) {
@@ -675,8 +664,13 @@
 					showNoticeNear(form, 'جنسیت پرستار را انتخاب کنید.', true);
 					return false;
 				}
+				var addr = qs('textarea[name="address"]', form) || qs('input[name="address"]', form);
+				if (!addr || !addr.value.trim()) {
+					showNoticeNear(form, 'آدرس را کامل‌تر بنویسید.', true);
+					return false;
+				}
 			}
-			if (n === 3) {
+if (n === 3) {
 				if (!serumTypeInput || !serumTypeInput.value) {
 					showNoticeNear(form, 'نوع سرم را انتخاب کنید.', true);
 					return false;
@@ -746,6 +740,13 @@
 			phone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>'
 		};
 
+		function escHtml(str) {
+			return String(str).replace(/[&<>"']/g, function (ch) {
+				return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+			});
+		}
+
+		/* Time-slot availability: shown right under the slot chips once area + day + slot are known. */
 		function renderAvailability(state, alts) {
 			if (!availBox) return;
 			availBox.hidden = false;
@@ -753,8 +754,7 @@
 			if (state === 'green') {
 				availBox.innerHTML =
 					'<span class="mns-avail__ico" aria-hidden="true">' + AV_ICON.check + '</span>' +
-					'<div class="mns-avail__body"><strong>برای این زمان و منطقه پرستار موجود است</strong>' +
-					'<p>می‌توانید ادامه دهید؛ ثبت نهایی بعد از مرحله بررسی انجام می‌شود.</p></div>';
+					'<div class="mns-avail__body"><strong>برای این زمان و منطقه پرستار موجود است</strong></div>';
 			} else if (state === 'yellow') {
 				var dayWord = dateLabel ? dateLabel.split('،')[0] : '';
 				var chips = (alts || [])
@@ -782,44 +782,110 @@
 						runAvailability();
 					});
 				});
-			} else if (state === 'red') {
-				var supportTel = form.getAttribute('data-mns-support-tel') || 'tel:02188607015';
-				availBox.innerHTML =
-					'<span class="mns-avail__ico" aria-hidden="true">' + AV_ICON.alert + '</span>' +
-					'<div class="mns-avail__body"><strong>فعلاً برای این منطقه و جنسیت پرستار نداریم</strong>' +
-					'<p>جنسیت را فقط خود بیمار می‌تواند تغییر دهد.</p>' +
-					'<a class="mns-avail__call" href="' + supportTel + '">' + AV_ICON.phone + '<span>تماس با پشتیبانی</span></a></div>';
 			} else {
 				availBox.hidden = true;
 			}
-			if (step2Next) step2Next.disabled = state === 'red';
+		}
+
+		/* Gender availability: shown right under the gender cards, so the message appears where the finger is. */
+		function renderGenderBlock(area, gender) {
+			if (!availGenderBox) return;
+			if (!area || !gender) {
+				availGenderBox.hidden = true;
+				return;
+			}
+			var other = gender === 'male' ? 'female' : 'male';
+			var supportTel = form.getAttribute('data-mns-support-tel') || 'tel:02188607015';
+			availGenderBox.hidden = false;
+			availGenderBox.className = 'mns-avail mns-avail--red';
+			availGenderBox.innerHTML =
+				'<span class="mns-avail__ico" aria-hidden="true">' + AV_ICON.alert + '</span>' +
+				'<div class="mns-avail__body"><strong>برای ' + escHtml(area) + ' فعلاً ' + genderNurseLabel(gender) + ' نداریم</strong>' +
+				'<p>اگر بیمار موافق است، ' + genderNurseLabel(other) + ' را انتخاب کنید.</p>' +
+				'<div class="mns-avail__alts">' +
+				'<button type="button" class="mns-avail__alt is-primary" data-mns-gender-switch="' + other + '">انتخاب ' + genderNurseLabel(other) + '</button>' +
+				'<a class="mns-avail__call" href="' + escHtml(supportTel) + '">' + AV_ICON.phone + '<span>تماس با پشتیبانی</span></a>' +
+				'</div></div>';
+			var sw = qs('[data-mns-gender-switch]', availGenderBox);
+			if (sw) {
+				sw.addEventListener('click', function () {
+					var card = qs('[data-mns-nurse-gender-cards] [data-value="' + other + '"]', form);
+					if (card) card.click();
+				});
+			}
+		}
+
+		/* Tell the user which gender has no nurse in the chosen area before they commit to it. */
+		function markGenderAvailability(area) {
+			var redMap = availability.red_area_gender || {};
+			qsa('[data-mns-nurse-gender-cards] [data-value]', form).forEach(function (card) {
+				var off = !!(area && redMap[area] && redMap[area] === card.getAttribute('data-value'));
+				var note = qs('[data-mns-gender-note]', card);
+				card.classList.toggle('is-unavailable', off);
+				if (note) note.hidden = !off;
+			});
 		}
 
 		function runAvailability() {
 			var area = areaSelect && areaSelect.value ? areaSelect.value : '';
 			var gender = genderInput ? genderInput.value : '';
-			var dateOk = dateValue && dateValue.value;
-			if (!area || !gender || !dateOk) {
-				availState = 'idle';
-				if (availBox) availBox.hidden = true;
-				if (step2Next) step2Next.disabled = false;
-				return;
-			}
+			var haveSlot = !!(area && dateValue && dateValue.value && timeValue && timeValue.value);
 			var redMap = availability.red_area_gender || {};
 			var yellow = availability.yellow_areas || [];
-			var state = 'green';
-			if (redMap[area] && redMap[area] === gender) state = 'red';
-			else if (yellow.indexOf(area) !== -1) state = 'yellow';
-			availState = state;
-			renderAvailability(state, availability.alt_slots || []);
+			var red = !!(area && gender && redMap[area] && redMap[area] === gender);
+			var slotState = haveSlot ? (yellow.indexOf(area) !== -1 ? 'yellow' : 'green') : 'idle';
+			markGenderAvailability(area);
+			renderAvailability(slotState, availability.alt_slots || []);
+			renderGenderBlock(red ? area : '', red ? gender : '');
+			availState = red ? 'red' : slotState;
+			if (step2Next) step2Next.disabled = red;
 		}
 
-		function scheduleAvailability() {
+function scheduleAvailability() {
 			if (availTimer) window.clearTimeout(availTimer);
 			availTimer = window.setTimeout(runAvailability, 400);
 		}
 
-		function selectPatientCard(card) {
+		/* "Who is it for?": a known answer collapses into one line; "change" opens the full list. */
+		function setPickOpen(open) {
+			if (!pickEdit || !pickSummary) return;
+			pickEdit.hidden = !open;
+			pickSummary.hidden = open;
+			if (pickChange) pickChange.setAttribute('aria-expanded', open ? 'true' : 'false');
+			if (open) {
+				var target = qs('[data-mns-patient-card].is-selected', pickEdit) || qs('[data-mns-patient-card]', pickEdit);
+				if (target) target.focus({ preventScroll: true });
+			}
+		}
+
+		function updatePick() {
+			var nameEl = qs('[data-mns-pick-name]', form);
+			var tagEl = qs('[data-mns-pick-tag]', form);
+			var phoneEl = qs('[data-mns-pick-phone]', form);
+			var phoneInput = qs('input[name="phone"]', form);
+			if (phoneEl && phoneInput) phoneEl.textContent = phoneInput.value || '';
+			var mode = modeInput ? modeInput.value : 'self';
+			var card = qs('[data-mns-patient-card].is-selected', form);
+			var name = '';
+			var tag = '';
+			if (mode === 'self') {
+				name = card ? ((card.querySelector('.mns-patient-cards__meta') || {}).textContent || '').trim() : '';
+				tag = name ? 'خودم' : '';
+				if (!name) name = 'خودم';
+			} else if (mode === 'saved') {
+				name = card ? ((card.querySelector('strong') || {}).textContent || '').trim() : '';
+			}
+			if (nameEl && name) nameEl.textContent = name;
+			if (tagEl) tagEl.textContent = tag ? '· ' + tag : '';
+		}
+
+		if (pickChange) {
+			pickChange.addEventListener('click', function () {
+				setPickOpen(true);
+			});
+		}
+
+function selectPatientCard(card) {
 			var mode = card.getAttribute('data-mns-patient-card');
 			if (modeInput) modeInput.value = mode === 'saved' ? 'saved' : mode;
 			if (patientIdInput) {
@@ -837,6 +903,7 @@
 				panel.classList.toggle('is-hidden', !showNew);
 			}
 			updateSideSummary();
+			updatePick();
 			saveDraft();
 		}
 
@@ -1232,11 +1299,15 @@
 		}
 
 		form.addEventListener('input', function (e) {
-			if (e.target && e.target.matches('input, textarea, select')) saveDraft();
+			if (e.target && e.target.matches('input, textarea, select')) {
+				updatePick();
+				saveDraft();
+			}
 		});
 
 		goStep(1);
 		updateSideSummary();
+		updatePick();
 		syncMobileBar();
 		wizardReady = true;
 
