@@ -805,25 +805,16 @@ function fillReview() {
 				availGenderBox.hidden = true;
 				return;
 			}
-			var other = gender === 'male' ? 'female' : 'male';
 			var supportTel = form.getAttribute('data-mns-support-tel') || 'tel:02188607015';
 			availGenderBox.hidden = false;
 			availGenderBox.className = 'mns-avail mns-avail--red';
 			availGenderBox.innerHTML =
 				'<span class="mns-avail__ico" aria-hidden="true">' + AV_ICON.alert + '</span>' +
 				'<div class="mns-avail__body"><strong>برای ' + escHtml(area) + ' فعلاً ' + genderNurseLabel(gender) + ' نداریم</strong>' +
-				'<p>اگر بیمار موافق است، ' + genderNurseLabel(other) + ' را انتخاب کنید.</p>' +
+				'<p>جنسیت را فقط خود بیمار می‌تواند تغییر دهد.</p>' +
 				'<div class="mns-avail__alts">' +
-				'<button type="button" class="mns-avail__alt is-primary" data-mns-gender-switch="' + other + '">انتخاب ' + genderNurseLabel(other) + '</button>' +
 				'<a class="mns-avail__call" href="' + escHtml(supportTel) + '">' + AV_ICON.phone + '<span>تماس با پشتیبانی</span></a>' +
 				'</div></div>';
-			var sw = qs('[data-mns-gender-switch]', availGenderBox);
-			if (sw) {
-				sw.addEventListener('click', function () {
-					var card = qs('[data-mns-nurse-gender-cards] [data-value="' + other + '"]', form);
-					if (card) card.click();
-				});
-			}
 		}
 
 		/* Tell the user which gender has no nurse in the chosen area before they commit to it. */
