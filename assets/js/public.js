@@ -407,7 +407,7 @@
 
 		var wizard = qs('[data-mns-owizard]');
 		var step = 1;
-		var maxStep = 4;
+		var maxStep = 3;
 		var availState = 'idle';
 		var availTimer = null;
 		var dateSlots = [];
@@ -452,13 +452,12 @@
 		var qtyInput = qs('[data-mns-serum-qty]', form);
 		var ageGroupInput = qs('[data-mns-age-group]', form);
 		var patGenderInput = qs('[data-mns-patient-gender]', form);
-		var step2Next = qs('[data-mns-step-2-next]', form);
+		var step1Next = qs('[data-mns-step-1-next]', form);
 		var availBox = qs('[data-mns-avail]', form);
 		var availGenderBox = qs('[data-mns-avail-gender]', form);
 		var pickEdit = qs('[data-mns-pick-edit]', form);
-		var pickSummary = qs('[data-mns-pick-summary]', form);
 		var pickChange = qs('[data-mns-pick-change]', form);
-		var DRAFT_KEY = 'mns_order_wizard_draft_v2';
+		var DRAFT_KEY = 'mns_order_wizard_draft_v3';
 		var wizardReady = false;
 
 		function setChipGroup(rootSel, value, hiddenInput) {
@@ -539,14 +538,14 @@
 			if (elPlace) elPlace.textContent = cityOk && areaOk ? cityLabel + '، ' + areaLabel : 'در مرحله بعد';
 			if (elNurse) elNurse.textContent = genderInput && genderInput.value ? genderNurseLabel(genderInput.value) : 'در مرحله بعد';
 			if (elDetail && elDetailRow) {
-				var showDetail = step >= 3 && serumTypeInput && serumTypeInput.value;
+				var showDetail = step >= 2 && serumTypeInput && serumTypeInput.value;
 				if (showDetail) elDetail.textContent = serviceDetailSummary();
 				elDetailRow.hidden = !showDetail;
 				elDetailRow.classList.toggle('is-hidden', !showDetail);
 			}
 			if (factors) {
-				factors.hidden = step < 4;
-				factors.classList.toggle('is-hidden', step < 4);
+				factors.hidden = step < 3;
+				factors.classList.toggle('is-hidden', step < 3);
 			}
 			var otpPhone = qs('[data-mns-otp-phone]', form);
 			var phone = qs('input[name="phone"]', form);
@@ -580,7 +579,7 @@
 			});
 			setWizardStep(step);
 			updateSideSummary();
-			if (step === 4) fillReview();
+			if (step === 3) fillReview();
 			syncMobileBar();
 			saveDraft();
 			if (wizardReady) {
@@ -599,7 +598,7 @@
 			} catch (eLead) {
 				leads = {};
 			}
-			var leadKey = n === 5 ? 'done' : n;
+			var leadKey = n === 4 ? 'done' : n;
 			if (leadEl && leads[leadKey]) leadEl.textContent = leads[leadKey];
 		}
 
@@ -624,53 +623,65 @@
 			if (notice) notice.hidden = true;
 		}
 
+		/* Field-level feedback: mark the field, say what is wrong right under it, scroll to it. */
+		function clearFlags() {
+			qsa('.is-invalid, .is-flagged', form).forEach(function (el) {
+				el.classList.remove('is-invalid', 'is-flagged');
+			});
+			qsa('.mns-field-error', form).forEach(function (el) {
+				el.remove();
+			});
+		}
+
+		function fail(msg, target) {
+			if (!target) {
+				showNoticeNear(form, msg, true);
+				return false;
+			}
+			var host = target.closest('.mns-field-block') || target;
+			host.classList.add(host === target ? 'is-flagged' : 'is-invalid');
+			var err = document.createElement('p');
+			err.className = 'mns-field-error';
+			err.setAttribute('role', 'alert');
+			err.textContent = msg;
+			host.insertAdjacentElement('afterend', err);
+			host.scrollIntoView({ behavior: 'smooth', block: 'center' });
+			if (target.matches('input, textarea')) target.focus({ preventScroll: true });
+			return false;
+		}
+
+		function failPick(msg, target) {
+			setPickOpen(true); /* the field the message talks about may be folded away */
+			return fail(msg, target);
+		}
+
 		function validateStep(n) {
 			hideNotice();
+			clearFlags();
 			if (n === 1) {
-				var failStep1 = function (msg) {
-					setPickOpen(true); /* the field the message talks about may be folded away */
-					showNoticeNear(form, msg, true);
-					return false;
-				};
 				var mode = modeInput ? modeInput.value : 'self';
 				if (mode === 'new') {
 					var nm = qs('input[name="new_patient_name"]', form);
-					if (!nm || !nm.value.trim()) return failStep1('نام بیمار را وارد کنید.');
-					if (!ageGroupInput || !ageGroupInput.value) return failStep1('گروه سنی را انتخاب کنید.');
-					if (!patGenderInput || !patGenderInput.value) return failStep1('جنسیت بیمار را انتخاب کنید.');
+					if (!nm || !nm.value.trim()) return failPick('نام بیمار را وارد کنید.', nm);
+					if (!ageGroupInput || !ageGroupInput.value) return failPick('گروه سنی را انتخاب کنید.', qs('[data-mns-age-chips]', form));
+					if (!patGenderInput || !patGenderInput.value) return failPick('جنسیت بیمار را انتخاب کنید.', qs('[data-mns-patient-gender-chips]', form));
 				}
-				if (mode === 'saved' && (!patientIdInput || !patientIdInput.value)) return failStep1('بیمار را انتخاب کنید.');
+				if (mode === 'saved' && (!patientIdInput || !patientIdInput.value)) return failPick('بیمار را انتخاب کنید.', qs('[data-mns-patient-cards]', form));
 				var phone = qs('input[name="phone"]', form);
-				if (!phone || !phone.value || phone.value.replace(/\s/g, '').length < 11) return failStep1('شماره تماس معتبر وارد کنید.');
-			}
-if (n === 2) {
+				if (!phone || !phone.value || phone.value.replace(/\s/g, '').length < 11) return failPick('شماره تماس معتبر وارد کنید.', phone);
 				if (availState === 'red') {
-					showNoticeNear(form, 'برای این منطقه و جنسیت پرستار نداریم.', true);
+					if (availGenderBox) availGenderBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
 					return false;
 				}
-				if (!citySelect || !citySelect.value || !areaSelect || !areaSelect.value) {
-					showNoticeNear(form, 'شهر و منطقه را انتخاب کنید.', true);
-					return false;
-				}
-				if (!dateValue || !dateValue.value) {
-					showNoticeNear(form, 'تاریخ مراجعه را انتخاب کنید.', true);
-					return false;
-				}
-				if (!timeValue || !timeValue.value) {
-					showNoticeNear(form, 'بازه زمانی را انتخاب کنید.', true);
-					return false;
-				}
-				if (!genderInput || !genderInput.value) {
-					showNoticeNear(form, 'جنسیت پرستار را انتخاب کنید.', true);
-					return false;
-				}
+				if (!citySelect || !citySelect.value) return fail('شهر را انتخاب کنید.', citySelect);
+				if (!areaSelect || !areaSelect.value) return fail('منطقه را انتخاب کنید.', areaSelect);
+				if (!dateValue || !dateValue.value) return fail('تاریخ مراجعه را انتخاب کنید.', qs('[data-mns-date-rail]', form));
+				if (!timeValue || !timeValue.value) return fail('بازه زمانی را انتخاب کنید.', qs('[data-mns-slot-chips]', form));
+				if (!genderInput || !genderInput.value) return fail('جنسیت پرستار را انتخاب کنید.', qs('[data-mns-nurse-gender-cards]', form));
 				var addr = qs('textarea[name="address"]', form) || qs('input[name="address"]', form);
-				if (!addr || !addr.value.trim()) {
-					showNoticeNear(form, 'آدرس را کامل‌تر بنویسید.', true);
-					return false;
-				}
+				if (!addr || !addr.value.trim()) return fail('آدرس را کامل‌تر بنویسید.', addr);
 			}
-if (n === 3) {
+			if (n === 2) {
 				if (!serumTypeInput || !serumTypeInput.value) {
 					showNoticeNear(form, 'نوع سرم را انتخاب کنید.', true);
 					return false;
@@ -687,7 +698,7 @@ if (n === 3) {
 			return true;
 		}
 
-		function fillReview() {
+function fillReview() {
 			var box = qs('[data-mns-review]', form);
 			if (!box) return;
 			var phone = (qs('input[name="phone"]', form) || {}).value || '';
@@ -838,7 +849,7 @@ if (n === 3) {
 			renderAvailability(slotState, availability.alt_slots || []);
 			renderGenderBlock(red ? area : '', red ? gender : '');
 			availState = red ? 'red' : slotState;
-			if (step2Next) step2Next.disabled = red;
+			if (step1Next) step1Next.disabled = red;
 		}
 
 function scheduleAvailability() {
@@ -846,19 +857,31 @@ function scheduleAvailability() {
 			availTimer = window.setTimeout(runAvailability, 400);
 		}
 
-		/* "Who is it for?": a known answer collapses into one line; "change" opens the full list. */
+		/* Smooth expand/collapse: .mns-collapse animates grid rows 0fr <-> 1fr (see CSS); inert keeps hidden content out of tab order. */
+		function setCollapse(el, open) {
+			if (!el) return;
+			el.classList.toggle('is-open', open);
+			if ('inert' in el) el.inert = !open;
+		}
+
+		/* "Who is it for?": a known answer is one summary line; the button opens/closes the full list. */
 		function setPickOpen(open) {
-			if (!pickEdit || !pickSummary) return;
-			pickEdit.hidden = !open;
-			pickSummary.hidden = open;
-			if (pickChange) pickChange.setAttribute('aria-expanded', open ? 'true' : 'false');
-			if (open) {
+			if (!pickEdit) return;
+			var wasOpen = pickEdit.classList.contains('is-open');
+			setCollapse(pickEdit, open);
+			if (pickChange) {
+				pickChange.setAttribute('aria-expanded', open ? 'true' : 'false');
+				var lbl = qs('[data-mns-pick-change-label]', pickChange);
+				if (lbl) lbl.textContent = open ? 'بستن' : 'تغییر';
+			}
+			if (open && !wasOpen) {
 				var target = qs('[data-mns-patient-card].is-selected', pickEdit) || qs('[data-mns-patient-card]', pickEdit);
 				if (target) target.focus({ preventScroll: true });
 			}
+			if (!open && pickChange && pickEdit.contains(document.activeElement)) pickChange.focus({ preventScroll: true });
 		}
 
-		function updatePick() {
+function updatePick() {
 			var nameEl = qs('[data-mns-pick-name]', form);
 			var tagEl = qs('[data-mns-pick-tag]', form);
 			var phoneEl = qs('[data-mns-pick-phone]', form);
@@ -879,9 +902,14 @@ function scheduleAvailability() {
 			if (tagEl) tagEl.textContent = tag ? '· ' + tag : '';
 		}
 
+		form.addEventListener('click', function (e) {
+			if (e.target.closest && e.target.closest('[data-mns-step-next]')) return;
+			clearFlags();
+		});
+
 		if (pickChange) {
 			pickChange.addEventListener('click', function () {
-				setPickOpen(true);
+				setPickOpen(!(pickEdit && pickEdit.classList.contains('is-open')));
 			});
 		}
 
@@ -896,12 +924,7 @@ function selectPatientCard(card) {
 				c.classList.toggle('is-selected', on);
 				c.setAttribute('aria-checked', on ? 'true' : 'false');
 			});
-			var panel = qs('[data-mns-new-patient-panel]', form);
-			if (panel) {
-				var showNew = mode === 'new';
-				panel.hidden = !showNew;
-				panel.classList.toggle('is-hidden', !showNew);
-			}
+			setCollapse(qs('[data-mns-new-collapse]', form), mode === 'new');
 			updateSideSummary();
 			updatePick();
 			saveDraft();
@@ -1083,7 +1106,7 @@ function selectPatientCard(card) {
 			if (!confirm) return;
 			var doneCard = qs('[data-mns-done-card]');
 			if (doneCard) doneCard.hidden = false;
-			setWizardStep(5);
+			setWizardStep(4);
 			form.hidden = true;
 			form.classList.add('is-hidden');
 			var mobBar = qs('[data-mns-owizard-mob-bar]');
@@ -1141,7 +1164,7 @@ function selectPatientCard(card) {
 
 		form.addEventListener('submit', function (e) {
 			e.preventDefault();
-			if (!validateStep(4)) return;
+			if (!validateStep(3)) return;
 			if (!otpComplete()) {
 				showNoticeNear(form, 'کد چهار رقمی پیامک را وارد کنید.', true);
 				return;
@@ -1305,6 +1328,8 @@ function selectPatientCard(card) {
 			}
 		});
 
+		setCollapse(pickEdit, !!(pickEdit && pickEdit.classList.contains('is-open')));
+		setCollapse(qs('[data-mns-new-collapse]', form), !!qs('[data-mns-new-collapse].is-open', form));
 		goStep(1);
 		updateSideSummary();
 		updatePick();

@@ -6450,7 +6450,7 @@ html.mns-drawer-open body {
 	gap: 24px;
 	align-items: start;
 }
-.mns-owizard[data-mns-current-step="5"] .mns-owizard__layout {
+.mns-owizard[data-mns-current-step="4"] .mns-owizard__layout {
 	grid-template-columns: minmax(0, 1fr);
 }
 .mns-owizard .mns-owizard__form {
@@ -6809,6 +6809,10 @@ html.mns-drawer-open body {
 .mns-owizard .mns-pick__change .mns-icon {
 	width: 16px;
 	height: 16px;
+	transition: transform 200ms ease;
+}
+.mns-owizard .mns-pick__change[aria-expanded="true"] .mns-icon {
+	transform: rotate(180deg);
 }
 .mns-owizard .mns-pick__summary-wrap .mns-field-hint {
 	margin: 12px 0 0;
@@ -7217,6 +7221,91 @@ html.mns-drawer-open body {
 	opacity: 0.6;
 }
 
+/* ---- Motion: one expand/collapse + entrance language (ARP motion: open 420ms, close 280ms) ----- */
+.mns-owizard .mns-collapse {
+	display: grid;
+	grid-template-rows: 0fr;
+	visibility: hidden;
+	transition: grid-template-rows 280ms cubic-bezier(0.4, 0, 1, 1), visibility 0s linear 280ms;
+}
+.mns-owizard .mns-collapse.is-open {
+	grid-template-rows: 1fr;
+	visibility: visible;
+	transition: grid-template-rows 420ms cubic-bezier(0.22, 1, 0.36, 1), visibility 0s;
+}
+.mns-owizard .mns-collapse__inner {
+	min-height: 0;
+	margin: -3px;
+	padding: 3px;
+	overflow: hidden;
+	opacity: 0;
+	transform: translateY(-8px);
+	transition: opacity 200ms ease, transform 280ms cubic-bezier(0.4, 0, 1, 1);
+}
+.mns-owizard .mns-collapse.is-open > .mns-collapse__inner {
+	opacity: 1;
+	transform: none;
+	transition: opacity 320ms ease 80ms, transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes mns-rise {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+.mns-owizard .mns-step.is-active {
+	animation: mns-rise 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.mns-owizard .mns-avail:not([hidden]) {
+	animation: mns-rise 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.mns-owizard .mns-pick__edit .mns-patient-cards {
+	margin-top: 14px;
+}
+
+/* ---- Step 1 groups: patient / place and time ------------------------------------------------------- */
+.mns-owizard .mns-step__group {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin: 0 0 14px;
+	font-size: 0.875rem;
+	font-weight: 700;
+	line-height: 1.5;
+	color: var(--ow-sub);
+}
+.mns-owizard .mns-step__group::after {
+	content: "";
+	flex: 1 1 auto;
+	border-top: 1px solid var(--ow-line);
+}
+.mns-owizard .mns-step__group ~ .mns-step__group {
+	margin-top: 30px;
+}
+
+/* ---- Field-level validation: say what is wrong right under the field --------------------------- */
+.mns-owizard .mns-field-block.is-invalid {
+	margin-bottom: 0;
+}
+.mns-owizard .mns-field-block.is-invalid .mns-field-block__label {
+	color: var(--mns-danger);
+}
+.mns-owizard .is-flagged {
+	outline: 2px solid var(--mns-danger);
+	outline-offset: 4px;
+	border-radius: var(--mns-radius);
+}
+.mns-owizard .mns-field-error {
+	margin: 6px 0 18px;
+	font-size: 0.8125rem;
+	line-height: 1.6;
+	color: var(--mns-danger);
+}
+
 /* ---- Step 3: qty / upload ------------------------------------------------- */
 .mns-owizard .mns-qty {
 	display: inline-flex;
@@ -7501,7 +7590,7 @@ html.mns-drawer-open body {
 	outline: none;
 	box-shadow: 0 0 0 3px rgba(2, 114, 177, 0.16);
 }
-.mns-owizard .mns-step[data-mns-step="4"] .mns-step__nav {
+.mns-owizard .mns-step[data-mns-step="3"] .mns-step__nav {
 	margin-top: 26px;
 }
 
@@ -7717,18 +7806,18 @@ html.mns-drawer-open body {
 	color: var(--ow-sub);
 }
 /* step 4: aside collapses to price + factors, pay note moves to its own light card */
-.mns-owizard[data-mns-current-step="4"] .mns-osum__head,
-.mns-owizard[data-mns-current-step="4"] .mns-osum__list,
-.mns-owizard[data-mns-current-step="4"] .mns-osum__card--primary .mns-osum__pay-note,
-.mns-owizard[data-mns-current-step="4"] .mns-how__step--pay {
+.mns-owizard[data-mns-current-step="3"] .mns-osum__head,
+.mns-owizard[data-mns-current-step="3"] .mns-osum__list,
+.mns-owizard[data-mns-current-step="3"] .mns-osum__card--primary .mns-osum__pay-note,
+.mns-owizard[data-mns-current-step="3"] .mns-how__step--pay {
 	display: none;
 }
-.mns-owizard[data-mns-current-step="4"] .mns-osum__pricebox {
+.mns-owizard[data-mns-current-step="3"] .mns-osum__pricebox {
 	margin-bottom: 14px;
 	padding: 0;
 	background: transparent;
 }
-.mns-owizard[data-mns-current-step="4"] .mns-osum__card--primary {
+.mns-owizard[data-mns-current-step="3"] .mns-osum__card--primary {
 	padding: 26px 26px 22px;
 }
 .mns-owizard .mns-osum__paycard {
@@ -7750,7 +7839,7 @@ html.mns-drawer-open body {
 	margin-top: 6px;
 	color: var(--mns-primary);
 }
-.mns-owizard[data-mns-current-step="4"] .mns-osum__paycard {
+.mns-owizard[data-mns-current-step="3"] .mns-osum__paycard {
 	display: flex;
 }
 
@@ -8058,7 +8147,7 @@ html.mns-drawer-open body {
 		padding: 18px 16px 20px;
 		border-radius: var(--mns-radius);
 	}
-	.mns-owizard[data-mns-current-step="4"] .mns-owizard__form {
+	.mns-owizard[data-mns-current-step="3"] .mns-owizard__form {
 		padding: 0;
 		border: 0;
 		background: transparent;
@@ -8078,7 +8167,7 @@ html.mns-drawer-open body {
 	.mns-owizard .mns-step__sub {
 		display: none;
 	}
-	.mns-owizard[data-mns-current-step="4"] .mns-step__head {
+	.mns-owizard[data-mns-current-step="3"] .mns-step__head {
 		display: none;
 	}
 	.mns-owizard .mns-patient-cards__new {
@@ -8354,7 +8443,7 @@ html.mns-drawer-open body {
 		background: #fff;
 		box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.08);
 	}
-	.mns-owizard[data-mns-current-step="5"] .mns-owizard__mob-bar {
+	.mns-owizard[data-mns-current-step="4"] .mns-owizard__mob-bar {
 		display: none;
 	}
 	.mns-owizard .mns-owizard__mob-bar-meta {
@@ -8385,6 +8474,7 @@ html.mns-drawer-open body {
 @media (prefers-reduced-motion: reduce) {
 	.mns-owizard * {
 		transition: none !important;
+		animation: none !important;
 	}
 }
 
@@ -8489,7 +8579,7 @@ html.mns-drawer-open body {
 }
 
 @media (max-width: 767px) {
-	.mns-owizard[data-mns-current-step="4"] .mns-owizard__mob-bar-btn .mns-btn-ico {
+	.mns-owizard[data-mns-current-step="3"] .mns-owizard__mob-bar-btn .mns-btn-ico {
 		display: none;
 	}
 }
