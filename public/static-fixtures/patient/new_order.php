@@ -51,12 +51,12 @@ return array(
 	),
 	'time_slots'    => array(
 		/* Six 4-hour slots (client decision, 10 Nov 2026); hours are admin settings in the real backend. `disabled` = no nurse in that slot. */
-		array( 'id' => '0-4', 'label' => '۰ تا ۴', 'disabled' => true ),
-		array( 'id' => '4-8', 'label' => '۴ تا ۸' ),
-		array( 'id' => '8-12', 'label' => '۸ تا ۱۲' ),
-		array( 'id' => '12-16', 'label' => '۱۲ تا ۱۶' ),
-		array( 'id' => '16-20', 'label' => '۱۶ تا ۲۰' ),
-		array( 'id' => '20-24', 'label' => '۲۰ تا ۲۴' ),
+		array( 'id' => '0-4', 'label' => '۰ تا ۴', 'disabled' => true, 'name' => 'بامداد' ),
+		array( 'id' => '4-8', 'label' => '۴ تا ۸', 'name' => 'صبح زود' ),
+		array( 'id' => '8-12', 'label' => '۸ تا ۱۲', 'name' => 'صبح' ),
+		array( 'id' => '12-16', 'label' => '۱۲ تا ۱۶', 'name' => 'ظهر' ),
+		array( 'id' => '16-20', 'label' => '۱۶ تا ۲۰', 'name' => 'عصر' ),
+		array( 'id' => '20-24', 'label' => '۲۰ تا ۲۴', 'name' => 'شب' ),
 	),
 	'service_fields' => array(
 		'serum_types' => array( 'نرمال سالین', 'دکستروز', 'رینگر', 'تقویتی و ویتامین', 'طبق نسخه پزشک' ),

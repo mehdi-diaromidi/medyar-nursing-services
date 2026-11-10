@@ -28,16 +28,14 @@ $tz_now     = new DateTimeImmutable( 'now', wp_timezone() );
 $months     = MNS_Format::month_names();
 $weekdays   = MNS_Format::weekday_names();
 $date_slots = array();
-for ( $i = 0; $i < 7; $i++ ) {
+for ( $i = 0; $i <= 30; $i++ ) {
 	$day  = $tz_now->modify( '+' . $i . ' days' );
 	$j    = MNS_Format::g2j( (int) $day->format( 'Y' ), (int) $day->format( 'n' ), (int) $day->format( 'j' ) );
 	$wd   = $weekdays[ ( (int) $day->format( 'w' ) + 1 ) % 7 ];
 	$rel  = 0 === $i ? __( 'امروز', 'medyar-nursing-services' ) : ( 1 === $i ? __( 'فردا', 'medyar-nursing-services' ) : $wd );
 	$date_slots[] = array(
 		'id'    => $day->format( 'Y-m-d' ),
-		'rel'   => $rel,
-		'num'   => MNS_Format::digits( (string) $j[2] ),
-		'month' => $months[ $j[1] ],
+		'j'     => sprintf( '%04d/%02d/%02d', $j[0], $j[1], $j[2] ),
 		'label' => ( $i < 2 ? $rel : $wd ) . '، ' . MNS_Format::digits( (string) $j[2] ) . ' ' . $months[ $j[1] ],
 	);
 }
@@ -272,6 +270,7 @@ $new_on  = 'new' === $default_mode;
 				data-mns-cities="<?php echo esc_attr( $cities_json ); ?>"
 				data-mns-date-slots="<?php echo esc_attr( $slots_json ); ?>"
 				data-mns-time-slots="<?php echo esc_attr( $times_json ); ?>"
+				data-mns-now="<?php echo esc_attr( $tz_now->format( 'Y-m-d H:i' ) ); ?>"
 				data-mns-availability="<?php echo esc_attr( $avail_json ); ?>"
 				data-mns-prepatient="<?php echo esc_attr( $prepatient ); ?>"
 				data-mns-price-min="<?php echo esc_attr( (string) $price_min ); ?>"
@@ -286,7 +285,6 @@ $new_on  = 'new' === $default_mode;
 				<input type="hidden" name="new_age_group" value="" data-mns-age-group>
 				<input type="hidden" name="new_patient_gender" value="" data-mns-patient-gender>
 				<input type="hidden" name="preferred_date" value="" data-mns-date-value>
-				<input type="hidden" name="preferred_time" value="" data-mns-time-value>
 				<input type="hidden" name="nurse_gender" value="" data-mns-nurse-gender>
 				<input type="hidden" name="serum_type" value="" data-mns-serum-type>
 				<input type="hidden" name="vein_access" value="" data-mns-vein-access>
@@ -418,33 +416,26 @@ $new_on  = 'new' === $default_mode;
 						</label>
 					</div>
 
-					<p class="mns-field-block__label"><?php echo esc_html__( 'تاریخ', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></p>
-					<div class="mns-date-rail" data-mns-date-rail role="radiogroup" aria-label="<?php echo esc_attr__( 'تاریخ', 'medyar-nursing-services' ); ?>">
-						<?php foreach ( $date_slots as $slot ) : ?>
-							<button type="button" class="mns-date-rail__chip" role="radio" aria-checked="false" data-value="<?php echo esc_attr( (string) $slot['id'] ); ?>" data-label="<?php echo esc_attr( (string) $slot['label'] ); ?>">
-								<small><?php echo esc_html( (string) $slot['rel'] ); ?></small>
-								<strong><?php echo esc_html( (string) $slot['num'] ); ?></strong>
-								<span><?php echo esc_html( (string) $slot['month'] ); ?></span>
-							</button>
-						<?php endforeach; ?>
-						<button type="button" class="mns-date-rail__chip mns-date-rail__chip--alt" data-mns-date-other>
-							<span class="mns-date-rail__alt-ico" aria-hidden="true"><?php echo $ico( 'calendar' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
-							<span><?php echo esc_html__( 'تاریخ دیگر', 'medyar-nursing-services' ); ?></span>
-						</button>
+					<div class="mns-form-row--2">
+						<label class="mns-field-block">
+							<span class="mns-field-block__label"><?php echo esc_html__( 'تاریخ', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></span>
+							<span class="mns-field-block__control">
+								<span class="mns-field-block__lead-ico" aria-hidden="true"><?php echo $ico( 'calendar' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
+								<input type="text" data-mns-date-input readonly autocomplete="off" dir="ltr" inputmode="numeric" placeholder="<?php echo esc_attr__( '۱۴۰۵/۰۸/۲۰', 'medyar-nursing-services' ); ?>">
+							</span>
+							<span class="mns-field-block__help" data-mns-date-hint></span>
+						</label>
+						<label class="mns-field-block">
+							<span class="mns-field-block__label"><?php echo esc_html__( 'ساعت', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></span>
+							<span class="mns-field-block__control mns-field-block__control--select">
+								<span class="mns-field-block__lead-ico" aria-hidden="true"><?php echo $ico( 'clock' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
+								<select class="mns-select-native" name="preferred_time" data-mns-select data-mns-time-value required>
+									<option value=""><?php echo esc_html__( 'انتخاب کنید', 'medyar-nursing-services' ); ?></option>
+								</select>
+								<span class="mns-field-block__chevron" aria-hidden="true"><?php echo $ico( 'chevron-down' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
+							</span>
+						</label>
 					</div>
-					<label class="mns-field-block is-hidden" data-mns-custom-date-wrap hidden>
-						<span class="mns-field-block__label"><?php echo esc_html__( 'تاریخ شمسی', 'medyar-nursing-services' ); ?></span>
-						<span class="mns-field-block__control"><input type="text" data-mns-custom-date placeholder="۱۴۰۵/۰۸/۲۰" autocomplete="off"></span>
-					</label>
-
-					<p class="mns-field-block__label"><?php echo esc_html__( 'بازه ساعت', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></p>
-					<div class="mns-slot-chips" data-mns-slot-chips role="radiogroup">
-						<?php foreach ( $time_slots as $t ) : ?>
-							<button type="button" class="mns-slot-chips__item" role="radio" aria-checked="false"<?php echo ! empty( $t['disabled'] ) ? ' disabled aria-disabled="true" title="' . esc_attr__( 'پرستاری در این بازه موجود نیست', 'medyar-nursing-services' ) . '"' : ''; ?> data-value="<?php echo esc_attr( (string) ( $t['id'] ?? '' ) ); ?>"><span><?php echo esc_html( (string) ( $t['label'] ?? '' ) ); ?></span><?php echo ! empty( $t['disabled'] ) ? '<small class="mns-slot-chips__why">' . esc_html__( 'پرستار نیست', 'medyar-nursing-services' ) . '</small>' : ''; ?></button>
-						<?php endforeach; ?>
-					</div>
-
-					<div class="mns-avail" data-mns-avail hidden></div>
 
 					<p class="mns-field-block__label"><?php echo esc_html__( 'جنسیت پرستار', 'medyar-nursing-services' ); ?><span class="mns-req" aria-hidden="true">*</span></p>
 					<div class="mns-nurse-gender" role="radiogroup" data-mns-nurse-gender-cards>

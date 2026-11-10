@@ -453,7 +453,8 @@
 		var ageGroupInput = qs('[data-mns-age-group]', form);
 		var patGenderInput = qs('[data-mns-patient-gender]', form);
 		var step1Next = qs('[data-mns-step-1-next]', form);
-		var availBox = qs('[data-mns-avail]', form);
+		var dateInput = qs('[data-mns-date-input]', form);
+		var dateHint = qs('[data-mns-date-hint]', form);
 		var availGenderBox = qs('[data-mns-avail-gender]', form);
 		var pickEdit = qs('[data-mns-pick-edit]', form);
 		var pickChange = qs('[data-mns-pick-change]', form);
@@ -675,8 +676,8 @@
 				}
 				if (!citySelect || !citySelect.value) return fail('شهر را انتخاب کنید.', citySelect);
 				if (!areaSelect || !areaSelect.value) return fail('منطقه را انتخاب کنید.', areaSelect);
-				if (!dateValue || !dateValue.value) return fail('تاریخ مراجعه را انتخاب کنید.', qs('[data-mns-date-rail]', form));
-				if (!timeValue || !timeValue.value) return fail('بازه زمانی را انتخاب کنید.', qs('[data-mns-slot-chips]', form));
+				if (!dateValue || !dateValue.value) return fail('تاریخ مراجعه را انتخاب کنید.', dateInput);
+				if (!timeValue || !timeValue.value) return fail(timeValue && timeValue.options.length <= 1 ? 'برای این روز زمانی موجود نیست؛ روز دیگری انتخاب کنید.' : 'بازه زمانی را انتخاب کنید.', timeValue);
 				if (!genderInput || !genderInput.value) return fail('جنسیت پرستار را انتخاب کنید.', qs('[data-mns-nurse-gender-cards]', form));
 				var addr = qs('textarea[name="address"]', form) || qs('input[name="address"]', form);
 				if (!addr || !addr.value.trim()) return fail('آدرس را کامل‌تر بنویسید.', addr);
@@ -757,45 +758,158 @@ function fillReview() {
 			});
 		}
 
-		/* Time-slot availability: shown right under the slot chips once area + day + slot are known. */
-		function renderAvailability(state, alts) {
-			if (!availBox) return;
-			availBox.hidden = false;
-			availBox.className = 'mns-avail mns-avail--' + state;
-			if (state === 'green') {
-				availBox.innerHTML =
-					'<span class="mns-avail__ico" aria-hidden="true">' + AV_ICON.check + '</span>' +
-					'<div class="mns-avail__body"><strong>برای این زمان و منطقه پرستار موجود است</strong></div>';
-			} else if (state === 'yellow') {
-				var dayWord = dateLabel ? dateLabel.split('،')[0] : '';
-				var chips = (alts || [])
-					.map(function (id, i) {
-						return (
-							'<button type="button" class="mns-avail__alt' + (i === 0 ? ' is-primary' : '') + '" data-mns-avail-alt="' + id + '">' +
-							(dayWord ? dayWord + ' ' : '') + timeLabelById(id) +
-							'</button>'
-						);
-					})
-					.join('');
-				availBox.innerHTML =
-					'<span class="mns-avail__ico" aria-hidden="true">' + AV_ICON.clock + '</span>' +
-					'<div class="mns-avail__body"><strong>در این بازه پرستاری نداریم</strong>' +
-					'<p>نزدیک‌ترین زمان‌های موجود:</p><div class="mns-avail__alts">' + chips + '</div></div>';
-				qsa('[data-mns-avail-alt]', availBox).forEach(function (btn) {
-					btn.addEventListener('click', function () {
-						var id = btn.getAttribute('data-mns-avail-alt');
-						if (timeValue) timeValue.value = id;
-						qsa('[data-mns-slot-chips] [data-value]', form).forEach(function (chip) {
-							var on = chip.getAttribute('data-value') === id;
-							chip.classList.toggle('is-selected', on);
-							chip.setAttribute('aria-checked', on ? 'true' : 'false');
-						});
-						runAvailability();
-					});
+		/* ---- Date + time -------------------------------------------------------------------------------
+		 * A Jalali date field (persianDatepicker, theme "mns") and a time dropdown that lists only windows
+		 * that can actually be booked: not already started, and with a nurse in the chosen area. */
+		var nowBase = (function () {
+			var m = /^(\d{4}-\d{2}-\d{2}) (\d{2}):(\d{2})$/.exec(form.getAttribute('data-mns-now') || '');
+			return m ? { iso: m[1], minutes: parseInt(m[2], 10) * 60 + parseInt(m[3], 10), at: Date.now() } : null;
+		})();
+
+		/* Minutes since midnight in the business time zone: server time at page load + time elapsed since. */
+		function nowMinutes() {
+			return nowBase ? nowBase.minutes + Math.floor((Date.now() - nowBase.at) / 60000) : -1;
+		}
+
+		function toLatinDigits(str) {
+			return String(str)
+				.replace(/[۰-۹]/g, function (d) {
+					return '۰۱۲۳۴۵۶۷۸۹'.indexOf(d);
+				})
+				.replace(/[٠-٩]/g, function (d) {
+					return '٠١٢٣٤٥٦٧٨٩'.indexOf(d);
 				});
-			} else {
-				availBox.hidden = true;
+		}
+
+		function dayById(id) {
+			return dateSlots.filter(function (d) {
+				return d.id === id;
+			})[0];
+		}
+
+		function dayByJ(value) {
+			var key = toLatinDigits(value)
+				.trim()
+				.replace(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/, function (all, y, m, d) {
+					return y + '/' + ('0' + m).slice(-2) + '/' + ('0' + d).slice(-2);
+				});
+			return dateSlots.filter(function (d) {
+				return d.j === key;
+			})[0];
+		}
+
+		function slotStart(slot) {
+			return (parseInt(String(slot.id).split('-')[0], 10) || 0) * 60;
+		}
+
+		function validSlots(day, area) {
+			var allowed = (availability.yellow_areas || []).indexOf(area) !== -1 ? availability.alt_slots || [] : null;
+			return timeSlots.filter(function (t) {
+				if (t.disabled) return false;
+				if (allowed && allowed.indexOf(t.id) === -1) return false;
+				if (nowBase && day && day.id === nowBase.iso && slotStart(t) <= nowMinutes()) return false;
+				return true;
+			});
+		}
+
+		function fillTimes(preferId) {
+			if (!timeValue) return;
+			var day = dayById(dateValue ? dateValue.value : '');
+			var area = areaSelect && areaSelect.value ? areaSelect.value : '';
+			var list = day ? validSlots(day, area) : [];
+			var keep = preferId || timeValue.value;
+			timeValue.innerHTML = '';
+			var placeholder = document.createElement('option');
+			placeholder.value = '';
+			placeholder.textContent = list.length ? 'انتخاب کنید' : 'برای این روز زمانی موجود نیست';
+			timeValue.appendChild(placeholder);
+			list.forEach(function (t) {
+				var opt = document.createElement('option');
+				opt.value = t.id;
+				opt.textContent = t.label + (t.name ? ' · ' + t.name : '');
+				timeValue.appendChild(opt);
+			});
+			var pick = list.filter(function (t) {
+				return t.id === keep;
+			})[0] || list[0];
+			timeValue.value = pick ? pick.id : '';
+			timeValue.dispatchEvent(new Event('change', { bubbles: true }));
+		}
+
+		function pickerOf() {
+			var $ = window.jQuery;
+			return $ && $.fn && $.fn.persianDatepicker && dateInput ? $(dateInput).data('persianDatepicker') : null;
+		}
+
+		/* Point the open/closed calendar at `j` (Jalali Y/m/d) so its highlight matches the field. */
+		function syncPicker(j) {
+			var picker = pickerOf();
+			if (!picker) return;
+			picker.options.selectedDate = j;
+			picker.persianDate = picker.now().parse(j);
+			picker.persianDate.formatDate = picker.options.formatDate;
+			picker.render();
+		}
+
+		function setDay(day, preferTime) {
+			if (!day || !dateValue) return;
+			dateValue.value = day.id;
+			dateLabel = day.label;
+			customDateLabel = '';
+			if (dateInput) dateInput.value = day.j;
+			if (dateHint) dateHint.textContent = day.label;
+			syncPicker(day.j);
+			fillTimes(preferTime);
+			updateSideSummary();
+			saveDraft();
+		}
+
+		function initJalaliPicker() {
+			var $ = window.jQuery;
+			if (!dateInput || !dateSlots.length) return;
+			if (!$ || !$.fn || !$.fn.persianDatepicker) {
+				dateInput.readOnly = false; /* no picker available: typed, validated date */
+				return;
 			}
+			var arrow = function (d) {
+				return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="' + d + '"/></svg>';
+			};
+			$(dateInput).persianDatepicker({
+				theme: 'mns',
+				formatDate: 'YYYY/0M/0D',
+				startDate: dateSlots[0].j,
+				endDate: dateSlots[dateSlots.length - 1].j,
+				cellWidth: 38,
+				cellHeight: 34,
+				fontSize: 13,
+				closeOnBlur: false,
+				calendarPosition: { x: 0, y: 6 },
+				prevArrow: arrow('m9 6 6 6-6 6'),
+				nextArrow: arrow('m15 6-6 6 6 6'),
+				onShow: function (calendar) {
+					/* Right-align with the field (RTL) and keep the calendar inside the viewport. */
+					var rect = dateInput.getBoundingClientRect();
+					var width = calendar.outerWidth();
+					var maxLeft = document.documentElement.clientWidth - width - 8;
+					var left = Math.max(8, Math.min(rect.right - width, maxLeft));
+					this.calendarPosition.x = left - rect.left;
+				},
+				onSelect: function () {
+					this.selectedDate = dateInput.value;
+					dateInput.dispatchEvent(new Event('change', { bubbles: true }));
+				}
+			});
+			syncPicker(dateInput.value);
+		}
+
+		function initDateTime() {
+			if (!dateSlots.length) return;
+			/* Default: the first day that still has a bookable window (today, or tomorrow late in the evening). */
+			var first = dateSlots.filter(function (d) {
+				return validSlots(d, '').length > 0;
+			})[0] || dateSlots[0];
+			setDay(first);
+			initJalaliPicker();
 		}
 
 		/* Gender availability: shown right under the gender cards, so the message appears where the finger is. */
@@ -831,15 +945,11 @@ function fillReview() {
 		function runAvailability() {
 			var area = areaSelect && areaSelect.value ? areaSelect.value : '';
 			var gender = genderInput ? genderInput.value : '';
-			var haveSlot = !!(area && dateValue && dateValue.value && timeValue && timeValue.value);
 			var redMap = availability.red_area_gender || {};
-			var yellow = availability.yellow_areas || [];
 			var red = !!(area && gender && redMap[area] && redMap[area] === gender);
-			var slotState = haveSlot ? (yellow.indexOf(area) !== -1 ? 'yellow' : 'green') : 'idle';
 			markGenderAvailability(area);
-			renderAvailability(slotState, availability.alt_slots || []);
 			renderGenderBlock(red ? area : '', red ? gender : '');
-			availState = red ? 'red' : slotState;
+			availState = red ? 'red' : 'idle';
 			if (step1Next) step1Next.disabled = red;
 		}
 
@@ -940,67 +1050,27 @@ function selectPatientCard(card) {
 			});
 		});
 
-		qsa('[data-mns-date-rail] .mns-date-rail__chip[data-value]', form).forEach(function (chip) {
-			chip.addEventListener('click', function () {
-				qsa('.mns-date-rail__chip', form).forEach(function (c) {
-					var on = c === chip;
-					if (c.hasAttribute('data-value')) {
-						c.classList.toggle('is-selected', on);
-						c.setAttribute('aria-checked', on ? 'true' : 'false');
-					}
-				});
-				if (dateValue) dateValue.value = chip.getAttribute('data-value') || '';
-				dateLabel = chip.getAttribute('data-label') || '';
-				customDateLabel = '';
-				var wrap = qs('[data-mns-custom-date-wrap]', form);
-				if (wrap) wrap.hidden = true;
-				scheduleAvailability();
-				updateSideSummary();
-				saveDraft();
-			});
-		});
-
-		var otherDateBtn = qs('[data-mns-date-other]', form);
-		if (otherDateBtn) {
-			otherDateBtn.addEventListener('click', function () {
-				var wrap = qs('[data-mns-custom-date-wrap]', form);
-				if (wrap) {
-					wrap.hidden = false;
-					wrap.classList.remove('is-hidden');
+		if (dateInput) {
+			dateInput.addEventListener('change', function () {
+				var day = dayByJ(dateInput.value);
+				if (!day) {
+					var current = dayById(dateValue ? dateValue.value : '');
+					if (current) dateInput.value = current.j; /* back to the last valid date */
+					fail('تاریخ را از تقویم انتخاب کنید (از امروز تا ۳۰ روز آینده).', dateInput);
+					return;
 				}
-				qsa('.mns-date-rail__chip[data-value]', form).forEach(function (c) {
-					c.classList.remove('is-selected');
-					c.setAttribute('aria-checked', 'false');
-				});
+				clearFlags();
+				setDay(day);
 			});
 		}
-		var customDate = qs('[data-mns-custom-date]', form);
-		if (customDate) {
-			customDate.addEventListener('change', function () {
-				if (dateValue) dateValue.value = 'custom:' + customDate.value;
-				customDateLabel = customDate.value;
-				dateLabel = '';
-				scheduleAvailability();
+		if (timeValue) {
+			timeValue.addEventListener('change', function () {
 				updateSideSummary();
 				saveDraft();
 			});
 		}
 
-		qsa('[data-mns-slot-chips] [data-value]', form).forEach(function (chip) {
-			chip.addEventListener('click', function () {
-				qsa('[data-mns-slot-chips] [data-value]', form).forEach(function (c) {
-					var on = c === chip;
-					c.classList.toggle('is-selected', on);
-					c.setAttribute('aria-checked', on ? 'true' : 'false');
-				});
-				if (timeValue) timeValue.value = chip.getAttribute('data-value') || '';
-				scheduleAvailability();
-				updateSideSummary();
-				saveDraft();
-			});
-		});
-
-		qsa('[data-mns-nurse-gender-cards] [data-value]', form).forEach(function (card) {
+qsa('[data-mns-nurse-gender-cards] [data-value]', form).forEach(function (card) {
 			card.addEventListener('click', function () {
 				qsa('[data-mns-nurse-gender-cards] [data-value]', form).forEach(function (c) {
 					var on = c === card;
@@ -1171,7 +1241,11 @@ function selectPatientCard(card) {
 
 		if (citySelect) {
 			citySelect.addEventListener('change', fillAreas);
-			areaSelect && areaSelect.addEventListener('change', scheduleAvailability);
+			areaSelect &&
+				areaSelect.addEventListener('change', function () {
+					fillTimes();
+					scheduleAvailability();
+				});
 		}
 
 		qsa('[data-mns-step-next]', form).forEach(function (btn) {
@@ -1260,18 +1334,8 @@ function selectPatientCard(card) {
 				var addr = qs('textarea[name="address"]', form);
 				if (addr) addr.value = data.address;
 			}
-			if (data.date && dateValue) {
-				dateValue.value = data.date;
-				dateLabel = data.date_label || '';
-				customDateLabel = data.custom_date || '';
-			}
-			if (data.time && timeValue) {
-				timeValue.value = data.time;
-				qsa('[data-mns-slot-chips] [data-value="' + data.time + '"]', form).forEach(function (c) {
-					c.classList.add('is-selected');
-					c.setAttribute('aria-checked', 'true');
-				});
-			}
+			var restoredDay = data.date ? dayById(data.date) : null;
+			if (restoredDay) setDay(restoredDay, data.time);
 			if (data.nurse_gender && genderInput) {
 				genderInput.value = data.nurse_gender;
 				qsa('[data-mns-nurse-gender-cards] [data-value="' + data.nurse_gender + '"]', form).forEach(function (c) {
@@ -1321,6 +1385,7 @@ function selectPatientCard(card) {
 
 		setCollapse(pickEdit, !!(pickEdit && pickEdit.classList.contains('is-open')));
 		setCollapse(qs('[data-mns-new-collapse]', form), !!qs('[data-mns-new-collapse].is-open', form));
+		initDateTime();
 		goStep(1);
 		updateSideSummary();
 		updatePick();

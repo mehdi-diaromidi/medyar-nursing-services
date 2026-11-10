@@ -48,9 +48,39 @@ class MNS_Assets {
 			)
 		);
 
+		if ( 'patient' === MNS_Pages::current_panel() && 'new-order' === MNS_Pages::current_page( 'patient' ) ) {
+			self::enqueue_jalali_datepicker();
+		}
+
 		if ( 'patient' === MNS_Pages::current_panel() && in_array( MNS_Pages::current_page( 'patient' ), array( 'orders', 'invoices', 'invoice-view' ), true ) ) {
 			self::enqueue_arp_list_kit();
 		}
+	}
+
+	/**
+	 * Jalali datepicker (Persian WooCommerce's persianDatepicker, themed "mns" in public.css) for the
+	 * order wizard's date field. Without Persian WooCommerce the field accepts a typed, validated date.
+	 */
+	private static function enqueue_jalali_datepicker(): void {
+		if ( ! function_exists( 'PW' ) || ! defined( 'PW_VERSION' ) ) {
+			return;
+		}
+		wp_enqueue_script( 'pw-datepicker-js', PW()->plugin_url( 'assets/js/persian-datepicker.min.js' ), array( 'jquery' ), PW_VERSION, true );
+		// The wizard script must load after the picker (and jQuery).
+		global $wp_scripts;
+		if ( isset( $wp_scripts->registered[ self::HANDLE_PUBLIC ] ) ) {
+			$wp_scripts->registered[ self::HANDLE_PUBLIC ]->deps = array_merge( $wp_scripts->registered[ self::HANDLE_PUBLIC ]->deps, array( 'jquery', 'pw-datepicker-js' ) );
+		}
+		// The theme's babakhani picker redefines the global `persianDate` the PW picker needs.
+		add_action(
+			'wp_enqueue_scripts',
+			static function () {
+				wp_dequeue_script( 'drplus-pdp' );
+				wp_dequeue_script( 'drplus-pd' );
+				wp_dequeue_style( 'drplus-pdp' );
+			},
+			1000
+		);
 	}
 
 	/**

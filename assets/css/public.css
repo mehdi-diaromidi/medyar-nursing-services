@@ -6884,121 +6884,6 @@ html.mns-drawer-open body {
 }
 
 /* ---- Step 2: date / time / nurse ----------------------------------------- */
-.mns-owizard .mns-date-rail {
-	display: grid;
-	grid-template-columns: repeat(8, minmax(0, 1fr));
-	gap: 10px;
-	margin: 0 0 26px;
-}
-.mns-owizard .mns-date-rail__chip {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-	gap: 4px;
-	min-height: 96px;
-	padding: 8px 2px;
-	border: 1px solid var(--ow-line);
-	border-radius: var(--mns-radius);
-	background: #fff;
-	color: var(--ow-sub);
-	cursor: pointer;
-	transition: background 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
-}
-.mns-owizard .mns-date-rail__chip:hover {
-	border-color: #b9d3ea;
-}
-.mns-owizard .mns-date-rail__chip small {
-	font-size: 0.75rem;
-	line-height: 1.4;
-}
-.mns-owizard .mns-date-rail__chip strong {
-	font-size: 1.5rem;
-	font-weight: 800;
-	line-height: 1.1;
-	color: var(--ow-ink);
-}
-.mns-owizard .mns-date-rail__chip span {
-	font-size: 0.8125rem;
-	line-height: 1.4;
-}
-.mns-owizard .mns-date-rail__chip.is-selected {
-	border-color: var(--mns-primary);
-	background: var(--mns-primary);
-	color: #fff;
-}
-.mns-owizard .mns-date-rail__chip.is-selected strong,
-.mns-owizard .mns-date-rail__chip.is-selected span,
-.mns-owizard .mns-date-rail__chip.is-selected small {
-	color: #fff;
-}
-.mns-owizard .mns-date-rail__chip--alt {
-	gap: 8px;
-	border: 1px dashed #9cc6e8;
-	background: #eef6fd;
-	font-size: 0.875rem;
-	font-weight: 800;
-	color: var(--mns-primary);
-}
-.mns-owizard .mns-date-rail__chip--alt span {
-	font-size: 0.875rem;
-}
-.mns-owizard .mns-date-rail__alt-ico {
-	display: grid;
-	place-items: center;
-}
-.mns-owizard .mns-date-rail__alt-ico .mns-icon {
-	width: 26px;
-	height: 26px;
-}
-.mns-owizard .mns-slot-chips {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 12px;
-	margin: 0 0 26px;
-}
-.mns-owizard .mns-slot-chips__item {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	gap: 8px;
-	min-width: 98px;
-	min-height: 52px;
-	padding: 0 20px;
-	border: 1px solid var(--ow-line);
-	border-radius: 14px;
-	background: #fff;
-	font-size: 1rem;
-	color: #3b4858;
-	cursor: pointer;
-	transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
-}
-.mns-owizard .mns-slot-chips__item:hover:not(:disabled) {
-	border-color: #b9d3ea;
-}
-.mns-owizard .mns-slot-chips__item.is-selected {
-	border-color: var(--mns-primary);
-	background: var(--ow-soft);
-	font-weight: 800;
-	color: var(--mns-primary);
-}
-.mns-owizard .mns-slot-chips__item.is-selected::after {
-	content: "";
-	width: 18px;
-	height: 18px;
-	background: currentColor;
-	-webkit-mask: var(--ow-clock) center / contain no-repeat;
-	mask: var(--ow-clock) center / contain no-repeat;
-}
-.mns-owizard .mns-slot-chips__item:disabled {
-	border-color: #eceff3;
-	background: #f3f5f8;
-	color: #aab3bd;
-	cursor: not-allowed;
-}
-.mns-owizard .mns-slot-chips__item:disabled span {
-	text-decoration: line-through;
-}
 .mns-owizard .mns-nurse-gender {
 	display: grid;
 	grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -7108,15 +6993,6 @@ html.mns-drawer-open body {
 	font-size: 0.875rem;
 	line-height: 1.7;
 }
-.mns-owizard .mns-avail--green {
-	border-color: #c5e5d2;
-	background: #e9f6ee;
-	color: #0f6a3c;
-}
-.mns-owizard .mns-avail--green .mns-avail__ico {
-	background: #17a05a;
-	box-shadow: 0 0 0 8px rgba(23, 160, 90, 0.16);
-}
 .mns-owizard .mns-avail--yellow {
 	border-color: #f1dc9c;
 	background: #fff6dd;
@@ -7177,35 +7053,6 @@ html.mns-drawer-open body {
 }
 
 /* Good news is one quiet line; only problems get the big box. */
-.mns-owizard .mns-avail--green {
-	gap: 10px;
-	padding: 10px 14px;
-}
-.mns-owizard .mns-avail--green .mns-avail__ico {
-	width: 28px;
-	height: 28px;
-	box-shadow: none;
-}
-.mns-owizard .mns-avail--green .mns-avail__ico svg {
-	width: 16px;
-	height: 16px;
-}
-.mns-owizard .mns-avail--green .mns-avail__body strong {
-	font-size: 0.875rem;
-	font-weight: 500;
-}
-.mns-owizard .mns-slot-chips__item:disabled {
-	flex-direction: column;
-	gap: 0;
-	min-height: 58px;
-	padding-block: 6px;
-	color: var(--ow-sub);
-}
-.mns-owizard .mns-slot-chips__why {
-	font-size: 0.75rem;
-	line-height: 1.3;
-	color: var(--ow-sub);
-}
 .mns-owizard .mns-nurse-gender__note {
 	display: inline-block;
 	align-self: flex-start;
@@ -8191,34 +8038,6 @@ html.mns-drawer-open body {
 		min-height: 44px;
 		padding: 0 16px;
 	}
-	.mns-owizard .mns-date-rail {
-		display: flex;
-		gap: 10px;
-		margin-inline: -16px;
-		padding: 2px 16px 8px;
-		overflow-x: auto;
-		scroll-snap-type: x proximity;
-		-webkit-overflow-scrolling: touch;
-	}
-	.mns-owizard .mns-date-rail__chip {
-		flex: 0 0 68px;
-		min-height: 88px;
-		scroll-snap-align: start;
-	}
-	.mns-owizard .mns-slot-chips {
-		display: grid;
-		grid-template-columns: repeat(4, minmax(0, 1fr));
-		gap: 8px;
-	}
-	.mns-owizard .mns-slot-chips__item {
-		min-width: 0;
-		min-height: 46px;
-		padding: 0 6px;
-		font-size: 0.875rem;
-	}
-	.mns-owizard .mns-slot-chips__item.is-selected::after {
-		display: none;
-	}
 	.mns-owizard .mns-nurse-gender {
 		gap: 12px;
 	}
@@ -8492,9 +8311,6 @@ html.mns-drawer-open body {
 	min-width: 0;
 }
 @media (max-width: 767px) {
-	.mns-owizard .mns-date-rail__chip {
-		width: auto;
-	}
 }
 
 /* Aside price scales with its column (fits one line at 287–346px). */
@@ -8654,37 +8470,233 @@ html.mns-drawer-open body {
 }
 
 /* Four time bands: one equal-width row on desktop, 2x2 on phones. */
-.mns-owizard .mns-slot-chips {
-	display: grid;
-	grid-template-columns: repeat(6, minmax(0, 1fr));
-	gap: 12px;
-}
-.mns-owizard .mns-slot-chips__item {
-	min-width: 0;
-	padding: 0 10px;
-}
 @media (max-width: 767px) {
-	.mns-owizard .mns-slot-chips {
-		grid-template-columns: repeat(3, minmax(0, 1fr));
-	}
-	.mns-owizard .mns-slot-chips__item {
-		font-size: 0.875rem;
-	}
 }
 
 /* Six 4-hour chips must stay on one line in narrow columns. */
-.mns-owizard .mns-slot-chips__item span {
-	white-space: nowrap;
-}
 @container ow (max-width: 880px) {
-	.mns-owizard .mns-slot-chips {
-		gap: 8px;
-	}
-	.mns-owizard .mns-slot-chips__item {
-		padding: 0 4px;
-		font-size: 0.875rem;
-	}
-	.mns-owizard .mns-slot-chips__item.is-selected::after {
-		display: none;
-	}
+}
+
+/* ---- Order wizard: date field helper text + calendar theme ------------------------------------ */
+.mns-owizard .mns-field-block__help {
+	display: block;
+	margin-top: 6px;
+	font-size: 0.8125rem;
+	line-height: 1.5;
+	color: var(--ow-sub);
+}
+.mns-owizard .mns-field-block__help:empty {
+	display: none;
+}
+.mns-owizard .mns-field-block__control input[readonly] {
+	cursor: pointer;
+}
+
+/* Persian WooCommerce datepicker (persianDatepicker, theme "mns" = ARP's theme with MNS tokens). Inline cell sizes come from JS options. */
+.pdp-mns {
+	position: absolute;
+	z-index: 100002;
+	direction: rtl;
+	box-sizing: border-box;
+	padding: 10px;
+	background: #fff;
+	border: 1px solid #e3e9ef;
+	border-radius: 14px;
+	box-shadow: 0 12px 32px rgba(17, 75, 95, 0.16);
+	color: var(--mns-text);
+	font-family: inherit;
+	user-select: none;
+}
+
+.pdp-mns .pdp-header {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	height: 36px !important;
+	margin-bottom: 6px;
+	line-height: 1 !important;
+	font-size: 0.9375rem !important;
+}
+
+.pdp-mns .prevArrow,
+.pdp-mns .nextArrow {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	flex: 0 0 32px;
+	border-radius: 10px;
+	color: var(--mns-heading);
+	cursor: pointer;
+}
+
+.pdp-mns .prevArrow {
+	order: 1;
+}
+
+.pdp-mns .monthYear {
+	order: 2;
+	flex: 1 1 auto;
+	text-align: center;
+	font-weight: 700;
+	color: var(--mns-heading);
+}
+
+.pdp-mns .nextArrow {
+	order: 3;
+}
+
+.pdp-mns .prevArrow:hover,
+.pdp-mns .nextArrow:hover,
+.pdp-mns .monthYear span:not(:empty):hover {
+	background: #eef3f7;
+	color: var(--mns-primary);
+}
+
+.pdp-mns .prevArrow.disabled,
+.pdp-mns .nextArrow.disabled {
+	opacity: 0.3;
+	pointer-events: none;
+}
+
+.pdp-mns .prevArrow svg,
+.pdp-mns .nextArrow svg {
+	width: 18px;
+	height: 18px;
+}
+
+.pdp-mns .monthYear span {
+	display: inline-block;
+	padding: 6px 8px;
+	border-radius: 8px;
+	cursor: pointer;
+}
+
+.pdp-mns .dows,
+.pdp-mns .days > div {
+	display: flex;
+}
+
+.pdp-mns .cell {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+}
+
+.pdp-mns .dow {
+	color: var(--mns-muted);
+	font-weight: 600;
+	font-size: 0.75rem !important;
+}
+
+.pdp-mns .day {
+	border-radius: 10px;
+	cursor: pointer;
+	font-weight: 500;
+	transition: background-color 0.12s ease;
+}
+
+.pdp-mns .day:hover {
+	background: #eef3f7;
+}
+
+.pdp-mns .day.friday {
+	color: #e11d48;
+}
+
+.pdp-mns .day.today {
+	box-shadow: inset 0 0 0 1px var(--mns-primary);
+	color: var(--mns-primary);
+	font-weight: 700;
+}
+
+.pdp-mns .day.selday,
+.pdp-mns .day.selday:hover {
+	background: var(--mns-primary);
+	color: #fff;
+	box-shadow: none;
+}
+
+.pdp-mns .day.disday {
+	color: #c5c5c5;
+	cursor: not-allowed;
+}
+
+.pdp-mns .pdp-footer {
+	height: auto !important;
+	margin-top: 8px;
+	text-align: center;
+}
+
+.pdp-mns .goToday {
+	display: inline-block;
+	padding: 6px 14px;
+	border-radius: 999px;
+	background: rgba(2, 114, 177, 0.08);
+	color: var(--mns-primary);
+	font-size: 0.8125rem;
+	font-weight: 600;
+	line-height: 1.6;
+	text-decoration: none;
+}
+
+.pdp-mns .goToday:hover {
+	background: rgba(2, 114, 177, 0.16);
+}
+
+/* Month / year quick-select overlays. */
+.pdp-mns .monthSelect,
+.pdp-mns .yearSelect {
+	position: absolute;
+	top: 52px !important;
+	right: 10px !important;
+	left: 10px !important;
+	z-index: 2;
+	box-sizing: border-box;
+	width: auto !important;
+	max-height: 250px;
+	margin: 0 !important;
+	padding: 6px !important;
+	overflow-y: auto;
+	list-style: none;
+	background: #fff;
+	border: 1px solid #e3e9ef;
+	border-radius: 12px;
+	box-shadow: 0 8px 24px rgba(17, 75, 95, 0.12);
+	direction: rtl;
+	text-align: center;
+}
+
+.pdp-mns .monthSelect li,
+.pdp-mns .yearSelect li {
+	display: inline-block;
+	box-sizing: border-box;
+	width: calc(33.333% - 4px) !important;
+	height: auto !important;
+	margin: 2px !important;
+	padding: 8px 4px !important;
+	border-radius: 8px;
+	line-height: 1.4 !important;
+	font-size: 0.8125rem;
+	color: var(--mns-text) !important;
+	background: none;
+	cursor: pointer;
+}
+
+.pdp-mns .monthSelect li:hover,
+.pdp-mns .yearSelect li:hover {
+	background: #eef3f7;
+}
+
+.pdp-mns .monthSelect li.selected,
+.pdp-mns .yearSelect li.selected {
+	background: var(--mns-primary);
+	color: #fff !important;
+}
+
+.pdp-mns .monthSelect li.disableMonth {
+	color: #c5c5c5 !important;
+	cursor: not-allowed;
 }
