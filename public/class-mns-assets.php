@@ -17,19 +17,28 @@ class MNS_Assets {
 		// Admin enqueue is triggered from MNS_Admin on mns_* screens.
 	}
 
+	/**
+	 * Cache-busting version: the host serves assets with a one-year max-age, so the URL must change
+	 * whenever a file does (plugin version + file mtime).
+	 */
+	private static function asset_ver( string $relative ): string {
+		$path = MNS_PLUGIN_DIR . $relative;
+		return is_readable( $path ) ? MNS_VERSION . '.' . (string) filemtime( $path ) : MNS_VERSION;
+	}
+
 	public static function enqueue_public(): void {
 		wp_enqueue_style(
 			self::HANDLE_PUBLIC,
 			MNS_PLUGIN_URL . 'assets/css/public.css',
 			array(),
-			MNS_VERSION
+			self::asset_ver( 'assets/css/public.css' )
 		);
 
 		wp_enqueue_script(
 			self::HANDLE_PUBLIC,
 			MNS_PLUGIN_URL . 'assets/js/public.js',
 			array(),
-			MNS_VERSION,
+			self::asset_ver( 'assets/js/public.js' ),
 			true
 		);
 
@@ -129,14 +138,14 @@ class MNS_Assets {
 			self::HANDLE_ADMIN,
 			MNS_PLUGIN_URL . 'assets/css/admin.css',
 			array(),
-			MNS_VERSION
+			self::asset_ver( 'assets/css/admin.css' )
 		);
 
 		wp_enqueue_script(
 			self::HANDLE_ADMIN,
 			MNS_PLUGIN_URL . 'assets/js/admin.js',
 			array(),
-			MNS_VERSION,
+			self::asset_ver( 'assets/js/admin.js' ),
 			true
 		);
 	}
