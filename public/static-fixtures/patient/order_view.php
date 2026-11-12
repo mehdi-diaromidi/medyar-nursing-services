@@ -39,6 +39,8 @@ $base = array(
 		'نوع سرم: نرمال سالین',
 		'حساسیت: ندارد',
 	),
+	'price_min'   => 850000,
+	'price_max'   => 1100000,
 	'report'      => '',
 	'invoice'     => null,
 	'can_cancel'  => true,

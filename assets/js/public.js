@@ -1751,6 +1751,20 @@ function genTrackCode() {
 	}
 
 	/* Delegated so rows swapped in by the orders list refresh keep working. */
+	/* Generic fold: a button with aria-controls opens/closes its panel (CSS animates grid rows; inert keeps it out of tab order). */
+	function initCollapseToggles() {
+		qsa('[data-mns-collapse-toggle]').forEach(function (btn) {
+			var panel = document.getElementById(btn.getAttribute('aria-controls') || '');
+			if (!panel) return;
+			btn.addEventListener('click', function () {
+				var open = btn.getAttribute('aria-expanded') !== 'true';
+				btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+				panel.classList.toggle('is-open', open);
+				if ('inert' in panel) panel.inert = !open;
+			});
+		});
+	}
+
 	function initCopyButtons() {
 		document.addEventListener('click', function (e) {
 			var btn = e.target.closest && e.target.closest('[data-mns-copy]');
@@ -1786,9 +1800,11 @@ function genTrackCode() {
 		initAlerts();
 		initDialogs();
 		initCopyButtons();
+		initCollapseToggles();
 		initLiveSearch();
 		initOrdersList();
 		initInvoiceView();
+		initNurseDash();
 	}
 
 	function initInvoiceView() {
@@ -2182,6 +2198,189 @@ function genTrackCode() {
 				cancelRow = null;
 			});
 		}
+	}
+
+	/* Nurse dashboard (P-26): accept switch, inline confirms, service timer, notices, weekly plan. */
+	function initNurseDash() {
+		var root = qs('[data-mns-ndash]');
+		if (!root) return;
+
+		function setCollapse(el, open) {
+			if (!el) return;
+			el.classList.toggle('is-open', open);
+			if ('inert' in el) el.inert = !open;
+		}
+		/* Text changes fade out and back in instead of jumping. */
+		function swapText(el, text, holder) {
+			if (!el || el.textContent.trim() === text) return;
+			var box = holder || el;
+			box.classList.add('is-swapping');
+			window.setTimeout(function () {
+				el.textContent = text;
+				box.classList.remove('is-swapping');
+			}, 150);
+		}
+
+		/* Accept switch: changes at once, goes back if saving fails (A-10). */
+		var accept = qs('[data-mns-accept]', root);
+		if (accept) {
+			var stateEl = qs('[data-mns-accept-state]', accept);
+			var hint = qs('[data-mns-accept-hint]', root);
+			var hintText = qs('[data-mns-accept-hint-text]', root);
+			var noneText = qs('[data-mns-none-text]', root);
+			var paint = function (on, failed) {
+				accept.classList.toggle('is-on', on);
+				accept.setAttribute('aria-checked', on ? 'true' : 'false');
+				swapText(stateEl, accept.getAttribute(on ? 'data-on-text' : 'data-off-text') || '');
+				if (hintText) {
+					hintText.classList.toggle('is-error', !!failed);
+					hintText.textContent = failed ? accept.getAttribute('data-fail-text') || '' : hintText.getAttribute('data-default') || '';
+				}
+				setCollapse(hint, !on || !!failed);
+				if (noneText) swapText(noneText, noneText.getAttribute(on ? 'data-on' : 'data-off') || '');
+			};
+			accept.addEventListener('click', function () {
+				if (accept.classList.contains('is-busy')) return;
+				var before = accept.classList.contains('is-on');
+				paint(!before, false);
+				accept.classList.add('is-busy');
+				/* TODO(backend): POST the new value + nonce; resolve with the stored value. */
+				window.setTimeout(function () {
+					accept.classList.remove('is-busy');
+					if (navigator.onLine === false) paint(before, true);
+				}, 500);
+			});
+		}
+
+		/* Inline confirm for start / end of service: opens inside the card, never a modal. */
+		qsa('[data-mns-confirm-open]', root).forEach(function (btn) {
+			var panel = document.getElementById(btn.getAttribute('data-mns-confirm-open'));
+			if (!panel) return;
+			var ok = qs('[data-mns-confirm-ok]', panel);
+			var err = qs('[data-mns-confirm-error]', panel);
+			var close = function () {
+				setCollapse(panel, false);
+				btn.setAttribute('aria-expanded', 'false');
+			};
+			btn.addEventListener('click', function () {
+				var open = !panel.classList.contains('is-open');
+				if (err) err.textContent = '';
+				setCollapse(panel, open);
+				btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+				if (open && ok) ok.focus({ preventScroll: true });
+			});
+			var cancel = qs('[data-mns-confirm-cancel]', panel);
+			if (cancel) {
+				cancel.addEventListener('click', function () {
+					close();
+					btn.focus({ preventScroll: true });
+				});
+			}
+			if (ok) {
+				ok.addEventListener('click', function () {
+					if (ok.classList.contains('is-loading')) return;
+					if (err) err.textContent = '';
+					if (navigator.onLine === false) {
+						if (err) err.textContent = 'ثبت نشد، دوباره تلاش کنید.';
+						return;
+					}
+					ok.classList.add('is-loading');
+					ok.disabled = true;
+					/* TODO(backend): atomic UPDATE … WHERE status IN (…); on failure re-read the status from the server, then show the error line. */
+					window.setTimeout(function () {
+						var go = ok.getAttribute('data-mns-go');
+						if (go) window.location.href = go;
+					}, 900);
+				});
+			}
+		});
+
+		/* Service timer from server time; reminder after the cap (8h by default). */
+		var timer = qs('[data-mns-elapsed]', root);
+		if (timer) {
+			var out = qs('[data-mns-elapsed-value]', timer);
+			var start = parseInt(timer.getAttribute('data-start'), 10) || 0;
+			var skew = Date.now() / 1000 - (parseInt(timer.getAttribute('data-now'), 10) || Date.now() / 1000);
+			var cap = (parseInt(timer.getAttribute('data-cap'), 10) || 480) * 60;
+			var capNote = qs('[data-mns-elapsed-cap]', root);
+			var tick = function () {
+				var sec = Math.max(0, Math.floor(Date.now() / 1000 - skew - start));
+				var h = Math.floor(sec / 3600);
+				var m = Math.floor((sec % 3600) / 60);
+				if (out) out.textContent = toFaDigits((h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m);
+				if (capNote && sec >= cap && !capNote.classList.contains('is-open')) setCollapse(capNote, true);
+			};
+			tick();
+			window.setInterval(tick, 15000);
+			document.addEventListener('visibilitychange', function () {
+				if (!document.hidden) tick();
+			});
+		}
+
+		/* Notices: "seen" folds the row away; the block folds when the last one goes. */
+		var news = qs('[data-mns-news]', root);
+		if (news) {
+			news.addEventListener('click', function (e) {
+				var btn = e.target.closest && e.target.closest('[data-mns-news-dismiss]');
+				if (!btn) return;
+				var item = btn.closest('[data-mns-news-item]');
+				if (!item || !item.classList.contains('is-open')) return;
+				/* TODO(backend): mark notice `data-mns-news-dismiss` as seen. */
+				var last = qsa('[data-mns-news-item].is-open', news).length <= 1;
+				setCollapse(last ? news : item, false);
+				window.setTimeout(function () {
+					if (last) news.hidden = true;
+					else if (item.parentNode) item.parentNode.removeChild(item);
+				}, 300);
+			});
+		}
+
+		/* Weekly plan: tap a day to read its windows. */
+		var week = qs('[data-mns-week]', root);
+		if (week) {
+			var days = qsa('[data-mns-week-day]', week);
+			var line = qs('[data-mns-week-line]', week);
+			var label = qs('[data-mns-week-label]', week);
+			var slots = qs('[data-mns-week-slots]', week);
+			days.forEach(function (day) {
+				day.addEventListener('click', function () {
+					if (day.classList.contains('is-selected')) return;
+					days.forEach(function (d) {
+						var on = d === day;
+						d.classList.toggle('is-selected', on);
+						d.setAttribute('aria-pressed', on ? 'true' : 'false');
+					});
+					if (!line) return;
+					line.classList.add('is-swapping');
+					window.setTimeout(function () {
+						if (label) label.textContent = day.getAttribute('data-label') || '';
+						if (slots) slots.textContent = day.getAttribute('data-slots') || '';
+						line.classList.remove('is-swapping');
+					}, 150);
+				});
+			});
+		}
+
+		/* Connection lost: say so and lock the actions that must reach the server. */
+		var net = qs('[data-mns-net]', root);
+		var netButtons = qsa('[data-mns-needs-net]', root).filter(function (b) {
+			return !b.disabled;
+		});
+		var syncNet = function () {
+			var offline = navigator.onLine === false;
+			setCollapse(net, offline);
+			netButtons.forEach(function (b) {
+				b.disabled = offline;
+			});
+			if (offline) {
+				qsa('[data-mns-confirm].is-open', root).forEach(function (p) {
+					setCollapse(p, false);
+				});
+			}
+		};
+		window.addEventListener('online', syncNet);
+		window.addEventListener('offline', syncNet);
+		syncNet();
 	}
 
 	function initLiveSearch() {
