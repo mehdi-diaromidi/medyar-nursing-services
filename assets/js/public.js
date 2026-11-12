@@ -2295,28 +2295,6 @@ function genTrackCode() {
 			}
 		});
 
-		/* Service timer from server time; reminder after the cap (8h by default). */
-		var timer = qs('[data-mns-elapsed]', root);
-		if (timer) {
-			var out = qs('[data-mns-elapsed-value]', timer);
-			var start = parseInt(timer.getAttribute('data-start'), 10) || 0;
-			var skew = Date.now() / 1000 - (parseInt(timer.getAttribute('data-now'), 10) || Date.now() / 1000);
-			var cap = (parseInt(timer.getAttribute('data-cap'), 10) || 480) * 60;
-			var capNote = qs('[data-mns-elapsed-cap]', root);
-			var tick = function () {
-				var sec = Math.max(0, Math.floor(Date.now() / 1000 - skew - start));
-				var h = Math.floor(sec / 3600);
-				var m = Math.floor((sec % 3600) / 60);
-				if (out) out.textContent = toFaDigits((h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m);
-				if (capNote && sec >= cap && !capNote.classList.contains('is-open')) setCollapse(capNote, true);
-			};
-			tick();
-			window.setInterval(tick, 15000);
-			document.addEventListener('visibilitychange', function () {
-				if (!document.hidden) tick();
-			});
-		}
-
 		/* Notices: "seen" folds the row away; the block folds when the last one goes. */
 		var news = qs('[data-mns-news]', root);
 		if (news) {
@@ -2335,28 +2313,24 @@ function genTrackCode() {
 			});
 		}
 
-		/* Weekly plan: tap a day to read its windows. */
+		/* Weekly plan: pick a day in the strip, its hour view fades in (all panels share one cell, so no jump). */
 		var week = qs('[data-mns-week]', root);
 		if (week) {
-			var days = qsa('[data-mns-week-day]', week);
-			var line = qs('[data-mns-week-line]', week);
-			var label = qs('[data-mns-week-label]', week);
-			var slots = qs('[data-mns-week-slots]', week);
-			days.forEach(function (day) {
-				day.addEventListener('click', function () {
-					if (day.classList.contains('is-selected')) return;
-					days.forEach(function (d) {
-						var on = d === day;
-						d.classList.toggle('is-selected', on);
-						d.setAttribute('aria-pressed', on ? 'true' : 'false');
+			var dayBtns = qsa('[data-mns-week-day]', week);
+			var dayPanels = qsa('[data-mns-week-panel]', week);
+			dayBtns.forEach(function (btn) {
+				btn.addEventListener('click', function () {
+					var key = btn.getAttribute('data-mns-week-day');
+					dayBtns.forEach(function (b) {
+						var on = b === btn;
+						b.classList.toggle('is-selected', on);
+						b.setAttribute('aria-pressed', on ? 'true' : 'false');
 					});
-					if (!line) return;
-					line.classList.add('is-swapping');
-					window.setTimeout(function () {
-						if (label) label.textContent = day.getAttribute('data-label') || '';
-						if (slots) slots.textContent = day.getAttribute('data-slots') || '';
-						line.classList.remove('is-swapping');
-					}, 150);
+					dayPanels.forEach(function (p) {
+						var on = p.getAttribute('data-mns-week-panel') === key;
+						p.classList.toggle('is-selected', on);
+						if ('inert' in p) p.inert = !on;
+					});
 				});
 			});
 		}

@@ -95,7 +95,16 @@ class MNS_Public {
 			return array_merge( $states, array( 'submitted' => __( 'ارسال‌شده', 'medyar-nursing-services' ) ) );
 		}
 		if ( 'nurse' === $panel && 'dashboard' === $page ) {
-			return array_merge( $states, array( 'offline' => __( 'آفلاین / عدم پذیرش', 'medyar-nursing-services' ) ) );
+			return array_merge(
+				$states,
+				array(
+					'ended'     => __( 'خدمت تمام شد، گزارش مانده', 'medyar-nursing-services' ),
+					'next'      => __( 'خدمت بعدی (بدون خدمت در حال انجام)', 'medyar-nursing-services' ),
+					'offline'   => __( 'پذیرش خاموش', 'medyar-nursing-services' ),
+					'new_nurse' => __( 'پرستار تازه‌تأییدشده', 'medyar-nursing-services' ),
+					'suspended' => __( 'حساب تعلیق‌شده', 'medyar-nursing-services' ),
+				)
+			);
 		}
 		if ( 'nurse' === $panel && 'order-view' === $page ) {
 			$out = array(
