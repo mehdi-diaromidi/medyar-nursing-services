@@ -5120,16 +5120,18 @@ function genTrackCode() {
 					});
 					chip.appendChild(x);
 					chips.appendChild(chip);
+					var dcard = s.city === '*' ? null : buildDistrictCard(s);
+					if (dcard) chips.appendChild(dcard);
 				});
 				g.appendChild(chips);
 				groupsEl.appendChild(g);
 			});
 		}
-		function renderDistricts() {
-			distEl.innerHTML = '';
-			sel.forEach(function (s) {
-				var names = distMap[keyOf(s.prov, s.city)];
-				if (!names) return;
+		/* the districts of a chosen city: a card that sits right under that city's chip */
+		function buildDistrictCard(s) {
+			var names = distMap[keyOf(s.prov, s.city)];
+			if (!names) return null;
+			{
 				var card = mk('div', 'mns-nvl__dcard');
 				card.setAttribute('data-mns-rg-dcard', keyOf(s.prov, s.city));
 				var head = mk('div', 'mns-nvl__dhead');
@@ -5177,8 +5179,11 @@ function genTrackCode() {
 					card.classList.add('is-warn');
 					card.appendChild(mk('p', 'mns-nvl__dwarn', 'حداقل یک منطقه انتخاب کنید.'));
 				}
-				distEl.appendChild(card);
-			});
+				return card;
+			}
+		}
+		function renderDistricts() {
+			distEl.innerHTML = '';
 		}
 		function removedOrders() {
 			var msgs = [];

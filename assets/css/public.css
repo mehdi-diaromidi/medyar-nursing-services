@@ -21335,3 +21335,32 @@ a.mns-nvl__link {
 		min-width: 0;
 	}
 }
+
+/* regions: chips are centred (equal padding on both sides of the text), groups have equal space above and below,
+   and a city's district card sits right under that city's chip */
+.mns-nvl .mns-nvl__chip {
+	padding: 4px;
+	padding-inline-start: 12px;
+	align-items: center;
+	min-height: 36px;
+}
+.mns-nvl .mns-nvl__chip > span {
+	display: inline-flex;
+	align-items: center;
+	line-height: 1.4;
+}
+.mns-nvl .mns-nvl__grp {
+	gap: 8px;
+	padding: 12px 0;
+}
+.mns-nvl .mns-nvl__grpname {
+	line-height: 1.4;
+}
+.mns-nvl .mns-nvl__chips > .mns-nvl__dcard {
+	flex: 0 0 100%;
+	width: 100%;
+	box-sizing: border-box;
+}
+.mns-nvl .mns-nvl__chips {
+	align-items: center;
+}
