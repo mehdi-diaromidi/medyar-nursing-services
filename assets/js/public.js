@@ -2012,6 +2012,190 @@ function genTrackCode() {
 		});
 	}
 
+	/* Nurse "My profile" (P-05): the affiliate panel's profile page. Photo preview/remove, the "about me" counter,
+	   and an explicit save (nothing is saved while editing; leaving with changes asks first). */
+	function initNurseProfile() {
+		var root = qs('[data-mns-profile]');
+		if (!root) return;
+		var form = qs('[data-mns-pf-form]', root);
+		var notice = qs('[data-mns-pf-notice]', root);
+		var avatarBox = qs('[data-mns-pf-avatar]', root);
+		var img = avatarBox ? qs('img', avatarBox) : null;
+		var fileInput = qs('#mns-pf-avatar-input', root);
+		var removeBtn = qs('[data-mns-pf-avatar-remove]', root);
+		var about = qs('#mns-pf-about', root);
+		var count = qs('#mns-pf-about-count', root);
+		var dirty = false;
+		var busy = false;
+		var blobUrl = '';
+
+		function showNotice(kind, text) {
+			if (!notice) return;
+			notice.textContent = text;
+			notice.classList.toggle('is-error', kind === 'error');
+			notice.hidden = !text;
+			if (text) {
+				notice.focus();
+				if (notice.scrollIntoView) notice.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+			}
+		}
+		function markDirty() {
+			dirty = true;
+			if (notice && !notice.classList.contains('is-error')) notice.hidden = true;
+		}
+
+		var birthday = qs('input[data-mns-jdate]', root);
+		if (birthday) {
+			var $ = window.jQuery;
+			if (!$ || !$.fn || !$.fn.persianDatepicker) {
+				birthday.readOnly = false;
+			} else {
+				var arrow = function (d) {
+					return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="' + d + '"/></svg>';
+				};
+				var years = [];
+				for (var y = new Date().getFullYear() - 621; y >= 1300; y--) years.push(y);
+				var opts = {
+					theme: 'mns',
+					formatDate: 'YYYY/0M/0D',
+					cellWidth: 38,
+					cellHeight: 34,
+					fontSize: 13,
+					closeOnBlur: false,
+					calendarPosition: { x: 0, y: 6 },
+					selectableYears: years,
+					prevArrow: arrow('m9 6 6 6-6 6'),
+					nextArrow: arrow('m15 6-6 6 6 6'),
+					onShow: function (calendar) {
+						var rect = birthday.getBoundingClientRect();
+						var width = calendar.outerWidth();
+						var maxLeft = document.documentElement.clientWidth - width - 8;
+						var left = Math.max(8, Math.min(rect.right - width, maxLeft));
+						this.calendarPosition.x = left - rect.left;
+					},
+					onSelect: function () {
+						this.selectedDate = birthday.value;
+						birthday.dispatchEvent(new Event('change', { bubbles: true }));
+					}
+				};
+				if (/^\d{4}\/\d{2}\/\d{2}$/.test(birthday.value)) opts.selectedDate = birthday.value;
+				$(birthday).persianDatepicker(opts);
+			}
+		}
+
+		if (about && count) {
+			var update = function () {
+				if (about.value.length > 200) about.value = about.value.slice(0, 200);
+				count.textContent = toFaDigits(about.value.length);
+			};
+			about.addEventListener('input', update);
+			update();
+		}
+
+		if (fileInput && img) {
+			fileInput.addEventListener('change', function () {
+				var file = fileInput.files && fileInput.files[0];
+				if (!file) return;
+				if (['image/jpeg', 'image/png', 'image/webp', 'image/gif'].indexOf(file.type) === -1) {
+					showNotice('error', 'فقط فایل تصویری (JPG، PNG، WEBP، GIF) مجاز است.');
+					fileInput.value = '';
+					return;
+				}
+				if (file.size > 5 * 1024 * 1024) {
+					showNotice('error', 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.');
+					fileInput.value = '';
+					return;
+				}
+				if (blobUrl) URL.revokeObjectURL(blobUrl);
+				blobUrl = URL.createObjectURL(file);
+				img.src = blobUrl;
+				if (removeBtn) removeBtn.hidden = false;
+				markDirty();
+			});
+		}
+		if (removeBtn && img) {
+			removeBtn.addEventListener('click', function () {
+				if (!window.confirm('تصویر پروفایل حذف شود؟')) return;
+				if (blobUrl) URL.revokeObjectURL(blobUrl);
+				blobUrl = '';
+				if (fileInput) fileInput.value = '';
+				img.src = avatarBox.getAttribute('data-default') || img.src;
+				removeBtn.hidden = true;
+				markDirty();
+			});
+		}
+
+		if (form) {
+			qsa('[data-mns-pf-field]', form).forEach(function (el) {
+				el.addEventListener('input', markDirty);
+				el.addEventListener('change', markDirty);
+			});
+			form.addEventListener('submit', function (e) {
+				e.preventDefault();
+				if (busy) return;
+				var bad = null;
+				qsa('[data-mns-pf-field][required]', form).forEach(function (el) {
+					var block = el.closest('.mns-field-block');
+					var ok = !!String(el.value).trim();
+					if (ok && el.type === 'email') ok = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(el.value.trim());
+					if (block) block.classList.toggle('is-invalid', !ok);
+					if (!ok && !bad) bad = el;
+				});
+				var nid = qs('[data-mns-pf-nid]', form);
+				if (nid) {
+					var digits = nid.value.replace(/[\u06F0-\u06F9]/g, function (d) {
+						return String(d.charCodeAt(0) - 0x06F0);
+					});
+					var nidOk = /^\d{10}$/.test(digits.trim());
+					var nidBlock = nid.closest('.mns-field-block');
+					if (nidBlock) nidBlock.classList.toggle('is-invalid', !nidOk);
+					if (!nidOk && !bad) bad = nid;
+				}
+				if (bad) {
+					showNotice('error', 'لطفاً فیلدهای الزامی را درست پر کنید.');
+					return;
+				}
+				if (navigator.onLine === false) {
+					showNotice('error', 'ثبت نشد، اتصال برقرار نیست.');
+					return;
+				}
+				var btn = qs('.mns-submit-btn', form);
+				busy = true;
+				if (btn) {
+					btn.classList.add('is-loading');
+					btn.disabled = true;
+				}
+				/* TODO(backend): save the profile (display name, email, experience, workplace, about, photo). */
+				window.setTimeout(function () {
+					busy = false;
+					if (btn) {
+						btn.classList.remove('is-loading');
+						btn.disabled = false;
+					}
+					dirty = false;
+					var email = qs('[data-mns-pf-email]', form);
+					var bind = qs('[data-mns-pf-bind="email"]', root);
+					if (email && bind) bind.textContent = email.value.trim();
+					var first = qs('[name="first_name"]', form);
+					var last = qs('[name="last_name"]', form);
+					var nameBind = qs('[data-mns-pf-bind="name"]', root);
+					if (first && last && nameBind) nameBind.textContent = (first.value.trim() + ' ' + last.value.trim()).trim();
+					var qual = qs('select[name="qualification"]', form);
+					var qualBind = qs('[data-mns-pf-bind="qualification"]', root);
+					if (qual && qualBind && qual.selectedIndex > -1) qualBind.textContent = qual.options[qual.selectedIndex].textContent.trim();
+					showNotice('ok', 'اطلاعات شما ذخیره شد.');
+				}, 700);
+			});
+		}
+
+		window.addEventListener('beforeunload', function (e) {
+			if (dirty) {
+				e.preventDefault();
+				e.returnValue = '';
+			}
+		});
+	}
+
 	function boot() {
 		initDrawer();
 		initIranMobile();
@@ -2038,6 +2222,7 @@ function genTrackCode() {
 		initNurseReport();
 		initNurseDrug();
 		initNurseSchedule();
+		initNurseProfile();
 	}
 
 	function initInvoiceView() {

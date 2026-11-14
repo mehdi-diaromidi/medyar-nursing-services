@@ -142,6 +142,10 @@ class MNS_UI {
 		if ( $slug === $page ) {
 			return true;
 		}
+		/* The desktop sidebar has its own "My ratings" item; the mobile bottom nav files it under "profile". */
+		if ( 'nurse' === $panel && 'ratings' === $page && 'profile' === $slug ) {
+			return false;
+		}
 		$active = self::nav_active( $panel, $page );
 		if ( $slug === $active ) {
 			return true;

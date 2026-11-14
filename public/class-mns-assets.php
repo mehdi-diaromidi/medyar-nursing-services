@@ -61,6 +61,10 @@ class MNS_Assets {
 			self::enqueue_jalali_datepicker();
 		}
 
+		if ( 'nurse' === MNS_Pages::current_panel() && 'profile' === MNS_Pages::current_page( 'nurse' ) ) {
+			self::enqueue_jalali_datepicker();
+		}
+
 		if ( 'patient' === MNS_Pages::current_panel() && in_array( MNS_Pages::current_page( 'patient' ), array( 'orders', 'invoices', 'invoice-view' ), true ) ) {
 			self::enqueue_arp_list_kit();
 		}
