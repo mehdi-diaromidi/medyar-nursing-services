@@ -182,7 +182,7 @@ $meta = array_filter(
 					<div class="mns-oview__pending">
 						<span class="mns-oview__pending-ico" aria-hidden="true"><?php echo mns_icon( 'user' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
 						<span class="mns-oview__pending-text">
-							<strong><?php echo esc_html__( 'پرستار هنوز تعیین نشده است', 'medyar-nursing-services' ); ?></strong>
+							<strong><?php echo esc_html__( 'در حال تعیین پرستار', 'medyar-nursing-services' ); ?></strong>
 							<small><?php echo esc_html__( 'نام پرستار برایتان پیامک می‌شود.', 'medyar-nursing-services' ); ?></small>
 						</span>
 					</div>
@@ -350,7 +350,7 @@ $meta = array_filter(
 <?php
 if ( $can_cancel ) {
 	ob_start();
-	echo '<p>' . esc_html__( 'بعد از لغو، درخواست از صف تخصیص خارج می‌شود و اگر پرستاری تعیین شده باشد به او اطلاع داده می‌شود.', 'medyar-nursing-services' ) . '</p>';
+	echo '<p>' . esc_html__( 'بعد از لغو، درخواست متوقف می‌شود و اگر پرستاری تعیین شده باشد به او اطلاع داده می‌شود.', 'medyar-nursing-services' ) . '</p>';
 	echo '<label class="mns-oview-field"><span class="screen-reader-text">' . esc_html__( 'دلیل لغو (اختیاری)', 'medyar-nursing-services' ) . '</span><textarea name="reason" rows="3" maxlength="500" placeholder="' . esc_attr__( 'دلیل لغو (اختیاری)', 'medyar-nursing-services' ) . '"></textarea></label>';
 	$body = ob_get_clean();
 	ob_start();

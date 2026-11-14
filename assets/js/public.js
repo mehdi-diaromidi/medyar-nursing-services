@@ -24,11 +24,29 @@
 		if (!sidebar || !expand) return;
 
 		/*
-		 * Like ARP: only reparent the expand tab + backdrop to body.
-		 * Keep the sidebar inside `.mns-dash` so desktop `width: 100%` stays
-		 * in the 306px grid column (reparenting it broke desktop layout).
-		 * Mobile stacking: `.mns-dash { isolation: auto }` under 768px.
+		 * Expand + backdrop always live on body.
+		 * On mobile, also move the sidebar to body so it is not trapped under the
+		 * Elementor sticky header stacking context (header was covering the drawer).
+		 * Desktop keeps the sidebar inside `.mns-dash` for the 306px grid column.
 		 */
+		var sidebarHome = sidebar.parentElement;
+		var sidebarHomeNext = sidebar.nextSibling;
+
+		function placeSidebarForViewport(isMobile) {
+			if (isMobile) {
+				if (sidebar.parentElement !== document.body) {
+					document.body.appendChild(sidebar);
+				}
+				return;
+			}
+			if (!sidebarHome || sidebar.parentElement === sidebarHome) return;
+			if (sidebarHomeNext && sidebarHomeNext.parentNode === sidebarHome) {
+				sidebarHome.insertBefore(sidebar, sidebarHomeNext);
+			} else {
+				sidebarHome.appendChild(sidebar);
+			}
+		}
+
 		if (expand.parentElement !== document.body) {
 			document.body.appendChild(expand);
 		}
@@ -97,7 +115,9 @@
 		});
 		if (window.matchMedia) {
 			var mobile = window.matchMedia('(max-width: 767px)');
+			placeSidebarForViewport(mobile.matches);
 			var onChange = function (e) {
+				placeSidebarForViewport(e.matches);
 				if (!e.matches) closeSidebar();
 			};
 			if (mobile.addEventListener) {
@@ -169,11 +189,40 @@
 				var text = selected ? selected.textContent.trim() : '';
 				trigger.textContent = text || 'انتخاب کنید';
 				trigger.classList.toggle('is-placeholder', !native.value);
+				trigger.disabled = native.disabled;
+				control.classList.toggle('is-disabled', native.disabled);
 				control.classList.toggle('is-filled', !!native.value);
+				/* Disabled custom selects must stay closed; a leftover is-open + visible native option text looks broken. */
+				if (native.disabled && menu.classList.contains('is-open')) {
+					menu.classList.remove('is-open');
+					control.classList.remove('is-open');
+					trigger.setAttribute('aria-expanded', 'false');
+				}
 			}
 
 			function buildOptions() {
 				menu.innerHTML = '';
+				/* a long list (cities) gets a search box on top */
+				if (native.options.length > 14) {
+					var sli = document.createElement('li');
+					sli.className = 'mns-select__search';
+					var sbox = document.createElement('input');
+					sbox.type = 'search';
+					sbox.className = 'mns-select__searchbox';
+					sbox.placeholder = 'جستجو';
+					sbox.autocomplete = 'off';
+					sbox.addEventListener('input', function () {
+						var norm = function (x) {
+							return x.replace(/\u064a/g, '\u06cc').replace(/\u0643/g, '\u06a9').replace(/[\u200c\s]+/g, '');
+						};
+						var q = norm(sbox.value);
+						qsa('.mns-select__option', menu).forEach(function (li) {
+							li.hidden = !!q && !!li.dataset.value && norm(li.textContent).indexOf(q) === -1;
+						});
+					});
+					sli.appendChild(sbox);
+					menu.appendChild(sli);
+				}
 				Array.prototype.forEach.call(native.options, function (opt, index) {
 					var li = document.createElement('li');
 					li.className = 'mns-select__option';
@@ -204,19 +253,24 @@
 			control.appendChild(menu);
 
 			function open() {
+				if (native.disabled || trigger.disabled) return;
 				closeAllSelects(menu);
 				buildOptions();
 				menu.classList.add('is-open');
 				control.classList.add('is-open');
 				trigger.setAttribute('aria-expanded', 'true');
+				var sb = menu.querySelector('.mns-select__searchbox');
+				if (sb) sb.focus({ preventScroll: true });
 			}
 
 			trigger.addEventListener('click', function (e) {
 				e.preventDefault();
+				if (native.disabled || trigger.disabled) return;
 				if (menu.classList.contains('is-open')) closeAllSelects();
 				else open();
 			});
 			control.addEventListener('click', function (e) {
+				if (native.disabled || trigger.disabled) return;
 				if (e.target === trigger || trigger.contains(e.target)) return;
 				if (e.target === native || menu.contains(e.target)) return;
 				if (!menu.classList.contains('is-open')) open();
@@ -360,6 +414,98 @@
 		render();
 	}
 
+	/* Survey form: all three ratings are required; say which one is missing instead of sending zeros. */
+	function initSurveyForm() {
+		qsa('form[data-mns-survey-form]').forEach(function (form) {
+			var label = qs('[data-mns-submit-label]', form);
+			var banner = qs('[data-mns-neg]', form);
+			function open(el, on) {
+				if (!el) return;
+				el.classList.toggle('is-open', on);
+				if ('inert' in el) el.inert = !on;
+			}
+			function isNegative(axisName) {
+				var v = qs('[data-mns-star-value="' + axisName + '"]', form);
+				var n = v ? parseInt(v.value, 10) || 0 : 0;
+				return n > 0 && n <= 2;
+			}
+			/* A score of 1 or 2 opens "what went wrong" under that axis and turns the whole answer into a complaint. */
+			function refresh() {
+				var any = false;
+				qsa('[data-mns-why]', form).forEach(function (panel) {
+					var neg = isNegative(panel.getAttribute('data-mns-why'));
+					any = any || neg;
+					open(panel, neg);
+					if (!neg) {
+						qsa('input', panel).forEach(function (inp) {
+							if (inp.type === 'checkbox') inp.checked = false;
+							else inp.value = '';
+						});
+						var box = qs('.mns-sv__why-box', panel);
+						if (box) box.classList.remove('is-missing');
+					}
+				});
+				open(banner, any);
+				form.classList.toggle('is-negative', any);
+				if (label) label.textContent = label.getAttribute(any ? 'data-negative' : 'data-default') || label.textContent;
+			}
+			form.addEventListener('mns-rated', refresh);
+
+			form.addEventListener(
+				'submit',
+				function (e) {
+					var missing = qsa('.mns-sv__axis', form).filter(function (axis) {
+						var v = qs('[data-mns-star-value]', axis);
+						return !v || v.value === '0';
+					});
+					qsa('.mns-sv__axis', form).forEach(function (axis) {
+						axis.classList.toggle('is-missing', missing.indexOf(axis) !== -1);
+					});
+					if (missing.length) {
+						e.preventDefault();
+						e.stopImmediatePropagation();
+						showNoticeNear(form, 'به هر سه بخش امتیاز بدهید.', true);
+						missing[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+						return;
+					}
+					var lacking = qsa('[data-mns-why]', form).filter(function (panel) {
+						if (!panel.classList.contains('is-open')) return false;
+						var picked = qsa('input[type="checkbox"]', panel).some(function (c) {
+							return c.checked;
+						});
+						var text = (qs('input[type="text"], input:not([type])', panel) || {}).value || '';
+						var ok = picked || text.trim() !== '';
+						var box = qs('.mns-sv__why-box', panel);
+						if (box) box.classList.toggle('is-missing', !ok);
+						return !ok;
+					});
+					if (lacking.length) {
+						e.preventDefault();
+						e.stopImmediatePropagation();
+						showNoticeNear(form, 'برای امتیاز پایین، علت را مشخص کنید.', true);
+						lacking[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+						return;
+					}
+					if (form.classList.contains('is-negative')) {
+						form.setAttribute('data-mns-success', form.getAttribute('data-mns-success-negative') || '');
+						var url = form.getAttribute('data-mns-complaint-url');
+						if (url) {
+							window.setTimeout(function () {
+								window.location.href = url;
+							}, 1800);
+						}
+					}
+				},
+				true
+			);
+			form.addEventListener('change', function (e) {
+				if (e.target && e.target.closest && e.target.closest('.mns-sv__why-box')) {
+					e.target.closest('.mns-sv__why-box').classList.remove('is-missing');
+				}
+			});
+		});
+	}
+
 	function initStars() {
 		qsa('[data-mns-stars]').forEach(function (group) {
 			qsa('button', group).forEach(function (btn, index) {
@@ -368,11 +514,22 @@
 						b.classList.toggle('is-on', i <= index);
 					});
 					group.setAttribute('data-value', String(index + 1));
+					qsa('button', group).forEach(function (b, i) {
+						b.setAttribute('aria-checked', i === index ? 'true' : 'false');
+					});
+					var axis = group.closest('.mns-sv__axis');
+					if (axis) {
+						axis.classList.remove('is-missing');
+						var word = qs('[data-mns-star-word]', axis);
+						if (word) word.textContent = btn.getAttribute('data-word') || '';
+					}
 					var name = group.getAttribute('data-name');
 					if (name) {
 						var hidden = qs('[data-mns-star-value="' + name + '"]');
 						if (hidden) hidden.value = String(index + 1);
 					}
+					/* after the hidden value is stored, so listeners read the new score */
+					group.dispatchEvent(new CustomEvent('mns-rated', { bubbles: true }));
 				});
 			});
 		});
@@ -416,15 +573,16 @@
 		var availTimer = null;
 		var dateSlots = [];
 		var timeSlots = [];
-		var cities = [];
+		var locations = null;
+		var districtMap = {};
 		var availability = {};
 		var dateLabel = '';
 		var customDateLabel = '';
 
 		try {
-			cities = JSON.parse(form.getAttribute('data-mns-cities') || '[]') || [];
+			districtMap = JSON.parse(form.getAttribute('data-mns-districts') || '{}') || {};
 		} catch (e1) {
-			cities = [];
+			districtMap = {};
 		}
 		try {
 			dateSlots = JSON.parse(form.getAttribute('data-mns-date-slots') || '[]') || [];
@@ -448,6 +606,8 @@
 		var genderInput = qs('[data-mns-nurse-gender]', form);
 		var citySelect = qs('[data-mns-city]', form);
 		var areaSelect = qs('[data-mns-area]', form);
+		var provSelect = qs('[data-mns-prov]', form);
+		var areaWrap = qs('[data-mns-area-wrap]', form);
 		var dateValue = qs('[data-mns-date-value]', form);
 		var timeValue = qs('[data-mns-time-value]', form);
 		var serumTypeInput = qs('[data-mns-serum-type]', form);
@@ -548,12 +708,13 @@
 			var factors = qs('[data-mns-sum-price-factors]');
 			if (elPatient) elPatient.textContent = patientSummary();
 			if (elTime) elTime.textContent = dateValue && dateValue.value && timeValue && timeValue.value ? whenSummary() : 'در مرحله بعد';
-			var cityOk = citySelect && citySelect.value;
-			var areaOk = areaSelect && areaSelect.value;
-			var cityLabel = cityOk && citySelect.options[citySelect.selectedIndex] ? citySelect.options[citySelect.selectedIndex].text : '';
-			var areaLabel = areaOk && areaSelect.options[areaSelect.selectedIndex] ? areaSelect.options[areaSelect.selectedIndex].text : '';
-			if (elPlace) elPlace.textContent = cityOk && areaOk ? cityLabel + '، ' + areaLabel : 'در مرحله بعد';
+			if (elPlace) elPlace.textContent = placeComplete() ? placeLabel() : 'در مرحله بعد';
 			if (elNurse) elNurse.textContent = genderInput && genderInput.value ? genderNurseLabel(genderInput.value) : 'در مرحله بعد';
+			/* Journey nodes: a stop lights up once its answer is known. */
+			[elPatient, elTime, elPlace, elNurse].forEach(function (el) {
+				var li = el && el.closest('li');
+				if (li) li.classList.toggle('is-filled', el.textContent.trim() !== 'در مرحله بعد' && el.textContent.trim() !== '');
+			});
 			if (elDetail && elDetailRow) {
 				var showDetail = step >= 2 && serumTypeInput && serumTypeInput.value;
 				if (showDetail) elDetail.textContent = serviceDetailSummary();
@@ -699,8 +860,9 @@
 					if (availGenderBox) availGenderBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
 					return false;
 				}
+				if (!provSelect || !provSelect.value) return fail('استان را انتخاب کنید.', provSelect);
 				if (!citySelect || !citySelect.value) return fail('شهر را انتخاب کنید.', citySelect);
-				if (!areaSelect || !areaSelect.value) return fail('منطقه را انتخاب کنید.', areaSelect);
+				if (areaNeeded() && !areaSelect.value) return fail('منطقه را انتخاب کنید.', areaSelect);
 				if (!dateValue || !dateValue.value) return fail('تاریخ مراجعه را انتخاب کنید.', dateInput);
 				if (!timeValue || !timeValue.value) return fail(timeValue && timeValue.options.length <= 1 ? 'برای این روز زمانی موجود نیست؛ روز دیگری انتخاب کنید.' : 'بازه زمانی را انتخاب کنید.', timeValue);
 				if (!genderInput || !genderInput.value) return fail('جنسیت پرستار را انتخاب کنید.', qs('[data-mns-nurse-gender-cards]', form));
@@ -948,8 +1110,9 @@
 			var vals = {
 				patient: patientSummary() + (phone ? ' · ⁦' + phone + '⁩' : ''),
 				service: svcLabel + ' · ' + serviceDetailSummary(),
+				headline: whenSummary() + ' · ' + serviceDetailSummary(),
 				time: whenSummary(),
-				address: cityLabel + '، ' + areaLabel + (addr ? '، ' + addr : ''),
+				address: placeLabel() + (addr ? '، ' + addr : ''),
 				nurse: genderNurseLabel(genderInput ? genderInput.value : '')
 			};
 			Object.keys(vals).forEach(function (k) {
@@ -974,19 +1137,80 @@
 			updateVerify();
 		}
 
-function fillAreas() {
+/* place: province > city > (district only for cities that are divided into districts) */
+		function placeCity() {
+			return citySelect && citySelect.value && citySelect.options[citySelect.selectedIndex] ? citySelect.options[citySelect.selectedIndex].text : '';
+		}
+		function areaNeeded() {
+			return !!(areaWrap && !areaWrap.hidden);
+		}
+		/* the key the availability rules know: the district, or the city itself when it has none */
+		function areaKey() {
+			return areaNeeded() ? areaSelect.value || '' : placeCity();
+		}
+		function placeComplete() {
+			return !!(provSelect && provSelect.value && citySelect && citySelect.value && (!areaNeeded() || areaSelect.value));
+		}
+		function placeLabel() {
+			var parts = [placeCity()];
+			if (areaNeeded() && areaSelect.value && areaSelect.options[areaSelect.selectedIndex]) parts.push(areaSelect.options[areaSelect.selectedIndex].text);
+			return parts.join('، ');
+		}
+		function loadLocations(cb) {
+			if (locations) {
+				if (cb) cb();
+				return;
+			}
+			var url = form.getAttribute('data-mns-locations');
+			if (!url) return;
+			fetch(url)
+				.then(function (r) {
+					if (!r.ok) throw new Error('http');
+					return r.json();
+				})
+				.then(function (d) {
+					locations = d;
+					if (cb) cb();
+				})
+				.catch(function () {
+					if (citySelect) citySelect.innerHTML = '<option value="">فهرست شهرها بارگذاری نشد؛ صفحه را دوباره باز کنید</option>';
+				});
+		}
+		function fillCities() {
+			if (!citySelect || !provSelect) return;
+			var code = provSelect.value;
+			citySelect.innerHTML = '<option value="">' + (code ? 'در حال بارگذاری…' : 'ابتدا استان را انتخاب کنید') + '</option>';
+			citySelect.disabled = !code;
+			citySelect.dispatchEvent(new Event('change'));
+			if (!code) return;
+			loadLocations(function () {
+				if (provSelect.value !== code) return;
+				var prov = locations.provinces.filter(function (p) {
+					return p.code === code;
+				})[0];
+				citySelect.innerHTML = '<option value="">انتخاب کنید</option>';
+				((prov && prov.cities) || []).forEach(function (name, i) {
+					var opt = document.createElement('option');
+					opt.value = prov.ids && prov.ids[i] ? prov.ids[i] : name;
+					opt.textContent = name;
+					citySelect.appendChild(opt);
+				});
+				citySelect.disabled = false;
+				citySelect.dispatchEvent(new Event('change'));
+			});
+		}
+		function fillAreas() {
 			if (!areaSelect || !citySelect) return;
-			var city = cities.filter(function (c) {
-				return String(c.id) === String(citySelect.value);
-			})[0];
-			var areas = city && city.areas ? city.areas : [];
-			areaSelect.innerHTML = '<option value="">' + 'انتخاب کنید' + '</option>';
-			areas.forEach(function (a) {
+			var names = districtMap[(provSelect ? provSelect.value : '') + '|' + placeCity()] || null;
+			areaSelect.innerHTML = '<option value="">انتخاب کنید</option>';
+			(names || []).forEach(function (a) {
 				var opt = document.createElement('option');
 				opt.value = a;
 				opt.textContent = a;
 				areaSelect.appendChild(opt);
 			});
+			if (areaWrap) areaWrap.hidden = !names;
+			areaSelect.required = !!names;
 			areaSelect.dispatchEvent(new Event('change'));
 			scheduleAvailability();
 		}
@@ -1061,7 +1285,7 @@ function fillAreas() {
 		function fillTimes(preferId) {
 			if (!timeValue) return;
 			var day = dayById(dateValue ? dateValue.value : '');
-			var area = areaSelect && areaSelect.value ? areaSelect.value : '';
+			var area = areaKey();
 			var list = day ? validSlots(day, area) : [];
 			var keep = preferId || timeValue.value;
 			timeValue.innerHTML = '';
@@ -1188,7 +1412,7 @@ function fillAreas() {
 		}
 
 		function runAvailability() {
-			var area = areaSelect && areaSelect.value ? areaSelect.value : '';
+			var area = areaKey();
 			var gender = genderInput ? genderInput.value : '';
 			var redMap = availability.red_area_gender || {};
 			var red = !!(area && gender && redMap[area] && redMap[area] === gender);
@@ -1537,9 +1761,7 @@ function genTrackCode() {
 					'</strong></div><div><span>زمان</span><strong>' +
 					whenSummary() +
 					'</strong></div><div><span>منطقه</span><strong>' +
-					cityLabel +
-					'، ' +
-					areaLabel +
+					placeLabel() +
 					'</strong></div><div><span>پرستار</span><strong>' +
 					(genderInput && genderInput.value === 'female' ? 'خانم' : 'آقا') +
 					'</strong></div>';
@@ -1570,6 +1792,8 @@ function genTrackCode() {
 			}, 1100);
 		});
 
+		if (provSelect) provSelect.addEventListener('change', fillCities);
+		loadLocations();
 		if (citySelect) {
 			citySelect.addEventListener('change', fillAreas);
 			areaSelect &&
@@ -1750,21 +1974,24 @@ function genTrackCode() {
 		});
 	}
 
-	/* Delegated so rows swapped in by the orders list refresh keep working. */
 	/* Generic fold: a button with aria-controls opens/closes its panel (CSS animates grid rows; inert keeps it out of tab order). */
 	function initCollapseToggles() {
 		qsa('[data-mns-collapse-toggle]').forEach(function (btn) {
 			var panel = document.getElementById(btn.getAttribute('aria-controls') || '');
 			if (!panel) return;
 			btn.addEventListener('click', function () {
-				var open = btn.getAttribute('aria-expanded') !== 'true';
-				btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+				var open = !panel.classList.contains('is-open');
+				/* every toggle that controls this panel (e.g. "add" and "cancel") shows the same state */
+				qsa('[data-mns-collapse-toggle]').forEach(function (other) {
+					if (other.getAttribute('aria-controls') === panel.id) other.setAttribute('aria-expanded', open ? 'true' : 'false');
+				});
 				panel.classList.toggle('is-open', open);
 				if ('inert' in panel) panel.inert = !open;
 			});
 		});
 	}
 
+	/* Delegated so rows swapped in by the orders list refresh keep working. */
 	function initCopyButtons() {
 		document.addEventListener('click', function (e) {
 			var btn = e.target.closest && e.target.closest('[data-mns-copy]');
@@ -1801,10 +2028,16 @@ function genTrackCode() {
 		initDialogs();
 		initCopyButtons();
 		initCollapseToggles();
+		initSurveyForm();
 		initLiveSearch();
 		initOrdersList();
 		initInvoiceView();
 		initNurseDash();
+		initNurseOrders();
+		initNurseChecklist();
+		initNurseReport();
+		initNurseDrug();
+		initNurseSchedule();
 	}
 
 	function initInvoiceView() {
@@ -2335,6 +2568,28 @@ function genTrackCode() {
 			});
 		}
 
+		/* Folds (invoice rows, timeline) and dismissable notes of the order workspace. */
+		qsa('[data-mns-fold]', root).forEach(function (btn) {
+			var panel = document.getElementById(btn.getAttribute('aria-controls'));
+			if (!panel) return;
+			btn.addEventListener('click', function () {
+				var open = !panel.classList.contains('is-open');
+				setCollapse(panel, open);
+				btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+			});
+		});
+		qsa('[data-mns-note-dismiss]', root).forEach(function (btn) {
+			btn.addEventListener('click', function () {
+				var wrap = btn.closest('[data-mns-note]');
+				if (!wrap) return;
+				/* TODO(backend): mark the time change as seen. */
+				setCollapse(wrap, false);
+				window.setTimeout(function () {
+					if (wrap.parentNode) wrap.parentNode.removeChild(wrap);
+				}, 450);
+			});
+		});
+
 		/* Connection lost: say so and lock the actions that must reach the server. */
 		var net = qs('[data-mns-net]', root);
 		var netButtons = qsa('[data-mns-needs-net]', root).filter(function (b) {
@@ -2355,6 +2610,2549 @@ function genTrackCode() {
 		window.addEventListener('online', syncNet);
 		window.addEventListener('offline', syncNet);
 		syncNet();
+	}
+
+	/* Nurse orders (P-27): tabs, search, "more filters", history paging and the row menu, over server-rendered rows. */
+	function initNurseOrders() {
+		var root = qs('[data-mns-nord]');
+		if (!root) return;
+		var rows = qsa('[data-mns-nord-row]', root);
+		if (!rows.length) return;
+		var PAGE = 10;
+		var state = { tab: root.getAttribute('data-tab') || 'upcoming', q: '', month: '', status: '', recurring: '', page: 1 };
+
+		var tabs = qsa('[data-mns-nord-tab]', root);
+		var list = qs('[data-mns-nord-list]', root);
+		var history = qs('[data-mns-nord-history]', root);
+		var panes = qsa('[data-mns-nord-pane]', root);
+		var search = qs('[data-mns-nord-search]', root);
+		var form = qs('[data-mns-nord-form]', root);
+		var toggle = qs('[data-mns-nord-filter-toggle]', root);
+		var emptyBox = qs('[data-mns-nord-empty]', root);
+		var histEmpty = qs('[data-mns-nord-history-empty]', root);
+		var sum = qs('[data-mns-nord-sum]', root);
+		var pager = qs('[data-mns-nord-pager]', root);
+		var resetBox = qs('[data-mns-nord-reset-box]', root);
+		var selMonth = qs('[data-mns-nord-month]', root);
+		var selStatus = qs('[data-mns-nord-status]', root);
+		var selRec = qs('[data-mns-nord-recurring]', root);
+
+		function money(n) {
+			return toFaDigits(String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '٬'));
+		}
+		function attr(el, name) {
+			return el.getAttribute(name) || '';
+		}
+		function matches(r) {
+			if (attr(r, 'data-tab') !== state.tab) return false;
+			if (state.q && attr(r, 'data-text').indexOf(state.q) === -1) return false;
+			if (state.recurring && attr(r, 'data-recurring') !== '1') return false;
+			if (state.tab === 'done') {
+				if (state.month && attr(r, 'data-month') !== state.month) return false;
+				if (state.status && attr(r, 'data-status') !== state.status) return false;
+			}
+			return true;
+		}
+		function anyFilter() {
+			return !!(state.q || state.month || state.status || state.recurring);
+		}
+
+		function renderPager(total, pages) {
+			if (!pager) return;
+			pager.innerHTML = '';
+			pager.hidden = total < 1;
+			if (total < 1) return;
+			var info = document.createElement('p');
+			info.className = 'arp-refs-pager__info';
+			var from = (state.page - 1) * PAGE;
+			info.textContent = pages <= 1
+				? toFaDigits(total) + ' مورد'
+				: 'نمایش ' + toFaDigits(from + 1) + ' تا ' + toFaDigits(Math.min(from + PAGE, total)) + ' از ' + toFaDigits(total) + ' مورد';
+			pager.appendChild(info);
+			if (pages <= 1) return;
+			var nav = document.createElement('nav');
+			nav.className = 'arp-refs-pager__nav';
+			nav.setAttribute('aria-label', 'صفحه‌بندی');
+			function arrow(dir, enabled) {
+				var el = document.createElement(enabled ? 'a' : 'span');
+				el.className = 'arp-refs-pager__btn arp-refs-pager__btn--arrow' + (enabled ? '' : ' is-disabled');
+				el.innerHTML = dir === 'prev'
+					? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>'
+					: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>';
+				if (enabled) {
+					el.href = '#';
+					el.setAttribute('aria-label', dir === 'prev' ? 'صفحهٔ قبل' : 'صفحهٔ بعد');
+					el.addEventListener('click', function (e) {
+						e.preventDefault();
+						state.page += dir === 'prev' ? -1 : 1;
+						apply(true);
+					});
+				} else {
+					el.setAttribute('aria-hidden', 'true');
+				}
+				return el;
+			}
+			nav.appendChild(arrow('prev', state.page > 1));
+			var wrap = document.createElement('span');
+			wrap.className = 'arp-refs-pager__pages arp-refs-pager__pages--full';
+			for (var p = 1; p <= pages; p++) {
+				(function (n) {
+					var el = document.createElement(n === state.page ? 'span' : 'a');
+					el.className = 'arp-refs-pager__btn' + (n === state.page ? ' is-current' : '');
+					el.textContent = toFaDigits(n);
+					if (n === state.page) {
+						el.setAttribute('aria-current', 'page');
+					} else {
+						el.href = '#';
+						el.addEventListener('click', function (e) {
+							e.preventDefault();
+							state.page = n;
+							apply(true);
+						});
+					}
+					wrap.appendChild(el);
+				})(p);
+			}
+			nav.appendChild(wrap);
+			nav.appendChild(arrow('next', state.page < pages));
+			pager.appendChild(nav);
+		}
+
+		function apply(keepPage) {
+			if (!keepPage) state.page = 1;
+			root.setAttribute('data-tab', state.tab);
+			var isDone = state.tab === 'done';
+			if (list) list.hidden = isDone;
+			if (history) history.hidden = !isDone;
+			panes.forEach(function (p) {
+				p.hidden = attr(p, 'data-mns-nord-pane') !== state.tab;
+			});
+			if (resetBox) resetBox.hidden = !anyFilter();
+
+			if (isDone) {
+				var tableRows = rows.filter(function (r) {
+					return r.tagName === 'TR';
+				});
+				var match = tableRows.filter(matches);
+				var pages = Math.max(1, Math.ceil(match.length / PAGE));
+				if (state.page > pages) state.page = pages;
+				var from = (state.page - 1) * PAGE;
+				var visible = {};
+				match.forEach(function (r, i) {
+					if (i >= from && i < from + PAGE) visible[attr(r, 'data-id')] = true;
+				});
+				rows.forEach(function (r) {
+					if (attr(r, 'data-tab') === 'done') r.hidden = !visible[attr(r, 'data-id')];
+				});
+				var total = 0;
+				match.forEach(function (r) {
+					total += parseInt(attr(r, 'data-share'), 10) || 0;
+				});
+				if (sum) sum.textContent = total > 0 ? 'جمع سهم: ' + money(total) + ' تومان' : '';
+				if (histEmpty) histEmpty.hidden = match.length > 0;
+				renderPager(match.length, pages);
+				if (emptyBox) emptyBox.hidden = true;
+				return;
+			}
+
+			var found = 0;
+			rows.forEach(function (r) {
+				if (attr(r, 'data-tab') !== state.tab) return;
+				var ok = matches(r);
+				r.hidden = !ok;
+				if (ok) found++;
+			});
+			qsa('[data-mns-nord-pane="' + state.tab + '"] [data-mns-nord-group]', root).forEach(function (g) {
+				g.hidden = !qs('[data-mns-nord-row]:not([hidden])', g);
+			});
+			var hasRows = rows.some(function (r) {
+				return attr(r, 'data-tab') === state.tab;
+			});
+			if (emptyBox) emptyBox.hidden = !(hasRows && found === 0);
+			var head = qs('[data-mns-nord-pane="' + state.tab + '"] .mns-olist__head', root);
+			if (head) head.hidden = found === 0;
+		}
+
+		tabs.forEach(function (a) {
+			a.addEventListener('click', function (e) {
+				e.preventDefault();
+				var key = attr(a, 'data-mns-nord-tab');
+				if (key === state.tab) return;
+				state.tab = key;
+				tabs.forEach(function (t) {
+					var on = t === a;
+					t.classList.toggle('is-active', on);
+					if (on) t.setAttribute('aria-current', 'page');
+					else t.removeAttribute('aria-current');
+				});
+				closeMenu();
+				apply(false);
+			});
+		});
+		if (search) {
+			search.addEventListener('input', function () {
+				state.q = (search.value || '').trim().toLowerCase();
+				apply(false);
+			});
+		}
+		if (toggle && form) {
+			toggle.addEventListener('click', function () {
+				var open = form.hidden;
+				form.hidden = !open;
+				toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+			});
+			form.addEventListener('submit', function (e) {
+				e.preventDefault();
+			});
+		}
+		function bindSelect(sel, key) {
+			if (!sel) return;
+			sel.addEventListener('change', function () {
+				state[key] = sel.value || '';
+				apply(false);
+			});
+		}
+		bindSelect(selMonth, 'month');
+		bindSelect(selStatus, 'status');
+		bindSelect(selRec, 'recurring');
+
+		qsa('[data-mns-nord-reset]', root).forEach(function (a) {
+			a.addEventListener('click', function (e) {
+				e.preventDefault();
+				state.q = '';
+				state.month = '';
+				state.status = '';
+				state.recurring = '';
+				if (search) search.value = '';
+				[selMonth, selStatus, selRec].forEach(function (sel) {
+					if (!sel) return;
+					sel.value = '';
+					sel.dispatchEvent(new Event('change', { bubbles: false }));
+				});
+				state.q = '';
+				state.month = '';
+				state.status = '';
+				state.recurring = '';
+				apply(false);
+			});
+		});
+
+		/* The row menu: a popover under the button; inside the scrolling table it is positioned in the viewport. */
+		var openMenu = null;
+		function closeMenu() {
+			if (!openMenu) return;
+			openMenu.menu.hidden = true;
+			openMenu.btn.setAttribute('aria-expanded', 'false');
+			if (openMenu.row) openMenu.row.classList.remove('is-menu-open');
+			openMenu = null;
+		}
+		root.addEventListener('click', function (e) {
+			var more = e.target.closest && e.target.closest('[data-mns-order-more]');
+			if (more) {
+				e.preventDefault();
+				var wrap = more.closest('.mns-order__actions');
+				var menu = wrap ? qs('[data-mns-order-menu]', wrap) : null;
+				if (!menu) return;
+				var same = openMenu && openMenu.menu === menu;
+				closeMenu();
+				if (same) return;
+				menu.hidden = false;
+				more.setAttribute('aria-expanded', 'true');
+				var row = more.closest('[data-mns-nord-row]');
+				if (row) row.classList.add('is-menu-open');
+				if (more.closest('.arp-table-wrap')) {
+					var r = more.getBoundingClientRect();
+					menu.classList.add('is-fixed');
+					menu.style.top = Math.round(r.bottom + 8) + 'px';
+					menu.style.left = Math.round(Math.min(Math.max(8, r.left), window.innerWidth - 196)) + 'px';
+				}
+				openMenu = { menu: menu, btn: more, row: row };
+				return;
+			}
+			if (openMenu && !e.target.closest('[data-mns-order-menu]')) closeMenu();
+			var rowEl = e.target.closest && e.target.closest('[data-mns-nord-row]');
+			if (!rowEl || e.target.closest('a, button, [data-mns-order-menu]')) return;
+			var href = rowEl.getAttribute('data-href');
+			if (href) window.location.href = href;
+		});
+		document.addEventListener('click', function (e) {
+			if (openMenu && !(e.target.closest && e.target.closest('[data-mns-order-menu], [data-mns-order-more]'))) closeMenu();
+		});
+		document.addEventListener('keydown', function (e) {
+			if (e.key === 'Escape') closeMenu();
+		});
+		window.addEventListener('scroll', closeMenu, { passive: true });
+
+		apply(false);
+	}
+
+	/* Nurse checklist (P-29/30): a guided list of steps (one open at a time), order-known defaults, one-tap "all normal",
+	   autosave, review and final submit. */
+	function initNurseChecklist() {
+		var root = qs('[data-mns-ncl]');
+		if (!root) return;
+		var cfg = {};
+		try {
+			cfg = JSON.parse(root.getAttribute('data-config') || '{}') || {};
+		} catch (e) {
+			cfg = {};
+		}
+		var phase = root.getAttribute('data-phase') || 'draft';
+		var locked = phase === 'submitted';
+		var storeKey = root.getAttribute('data-key') || 'mns-ncl';
+		var ranges = cfg.numbers || {};
+		var catalog = cfg.catalog || [];
+		var stepEls = qsa('[data-mns-step]', root);
+		var segs = qsa('[data-mns-seg]', root);
+		var progress = qs('[data-mns-ncl-progress]', root);
+		var waitEl = qs('[data-mns-ncl-wait]', root);
+		var finishEl = qs('[data-mns-ncl-finish]', root);
+		var st = { ack: {} };
+
+		function setCollapse(el, open) {
+			if (!el) return;
+			el.classList.toggle('is-open', open);
+			if ('inert' in el) el.inert = !open;
+		}
+		function latin(s) {
+			return String(s == null ? '' : s)
+				.replace(/[۰-۹]/g, function (d) {
+					return '۰۱۲۳۴۵۶۷۸۹'.indexOf(d);
+				})
+				.replace(/[٠-٩]/g, function (d) {
+					return '٠١٢٣٤٥٦٧٨٩'.indexOf(d);
+				})
+				.replace(/[٫،]/g, '.');
+		}
+		function fieldsOf(stepEl) {
+			return qsa('[data-mns-ncl-field]', stepEl);
+		}
+		function allFields() {
+			return qsa('[data-mns-ncl-field]', root);
+		}
+		function fieldByKey(key) {
+			return qs('[data-mns-ncl-field="' + key + '"]', root);
+		}
+		function keyOf(stepEl) {
+			return stepEl.getAttribute('data-mns-step');
+		}
+		function readValue(el) {
+			var type = el.getAttribute('data-type');
+			if (type === 'number') return latin(qs('input', el).value).trim();
+			if (type === 'check') return qs('input', el).checked ? 'yes' : '';
+			var on = qs('input:checked', el);
+			return on ? on.value : '';
+		}
+		function numberState(key, raw) {
+			if (raw === '') return '';
+			var n = parseFloat(raw);
+			var r = ranges[key] || {};
+			if (isNaN(n)) return 'bad';
+			if ((r.min != null && n < r.min) || (r.max != null && n > r.max)) return 'bad';
+			if ((r.warn_min != null && n < r.warn_min) || (r.warn_max != null && n > r.warn_max)) return 'warn';
+			return 'ok';
+		}
+		function answered(el) {
+			var key = el.getAttribute('data-mns-ncl-field');
+			var v = readValue(el);
+			if (el.getAttribute('data-type') === 'number') {
+				var s = numberState(key, v);
+				return s === 'ok' || (s === 'warn' && !!st.ack[key]);
+			}
+			return v !== '';
+		}
+		function isGated(stepEl) {
+			return phase === 'draft' && stepEl.hasAttribute('data-gated');
+		}
+		/* required fields of a step that are not answered yet (an unconfirmed unusual number counts as open) */
+		function missingOf(stepEl) {
+			return fieldsOf(stepEl).filter(function (el) {
+				if (!el.hasAttribute('data-required')) {
+					/* an optional number that holds an impossible value must still be fixed */
+					if (el.getAttribute('data-type') !== 'number') return false;
+					var s = numberState(el.getAttribute('data-mns-ncl-field'), readValue(el));
+					return s === 'bad' || (s === 'warn' && !st.ack[el.getAttribute('data-mns-ncl-field')]);
+				}
+				return !answered(el);
+			});
+		}
+		function labelOf(el) {
+			return el.getAttribute('data-label') || '';
+		}
+
+		/* ---- number feedback ---- */
+		function validateNumber(el) {
+			var key = el.getAttribute('data-mns-ncl-field');
+			var msg = qs('[data-mns-ncl-msg]', el);
+			var raw = readValue(el);
+			var s = numberState(key, raw);
+			el.classList.toggle('is-warn', s === 'warn' && !st.ack[key]);
+			el.classList.toggle('is-acked', s === 'warn' && !!st.ack[key]);
+			el.classList.toggle('is-bad', s === 'bad');
+			if (!msg) return;
+			msg.innerHTML = '';
+			if (s === 'bad') {
+				msg.textContent = 'این عدد ممکن نیست؛ دوباره بررسی کنید.';
+			} else if (s === 'warn' && !st.ack[key]) {
+				msg.appendChild(document.createTextNode('این عدد را دوباره بررسی کنید. درست است؟ '));
+				if (!locked) {
+					var b = document.createElement('button');
+					b.type = 'button';
+					b.className = 'mns-ncl__ack';
+					b.textContent = 'بله، درست است';
+					b.addEventListener('click', function () {
+						st.ack[key] = true;
+						validateNumber(el);
+						afterEdit(el);
+					});
+					msg.appendChild(b);
+				}
+			} else if (s === 'warn') {
+				msg.textContent = 'مقدار تأیید شد.';
+			}
+		}
+
+		/* ---- one-line summary per step ---- */
+		function rowsList() {
+			return qsa('[data-mns-ncl-row]', root);
+		}
+		function qtyOf(li) {
+			return parseInt(latin(qs('[data-qty]', li).textContent), 10) || 1;
+		}
+		function hasFlag(stepEl) {
+			return fieldsOf(stepEl).some(function (el) {
+				var type = el.getAttribute('data-type');
+				var v = readValue(el);
+				if (type === 'number') return numberState(el.getAttribute('data-mns-ncl-field'), v) === 'warn';
+				var normal = el.getAttribute('data-normal');
+				return !!normal && v !== '' && v !== normal;
+			});
+		}
+		/* ---- derived state: sections complete themselves, nothing is sequential ---- */
+		function isRequiredStep(stepEl) {
+			return keyOf(stepEl) !== 'extras';
+		}
+		function stepState(stepEl) {
+			if (isGated(stepEl)) return 'locked';
+			if (keyOf(stepEl) === 'extras') return rowsList().length ? 'done' : 'todo';
+			var reqs = fieldsOf(stepEl).filter(function (el) {
+				return el.hasAttribute('data-required');
+			});
+			return reqs.every(answered) && missingOf(stepEl).length === 0 ? 'done' : 'todo';
+		}
+		function firstOpenRequired() {
+			for (var i = 0; i < stepEls.length; i++) {
+				if (isRequiredStep(stepEls[i]) && stepState(stepEls[i]) === 'todo') return stepEls[i];
+			}
+			return null;
+		}
+
+		function render() {
+			var left = 0;
+			var segIdx = 0;
+			var pending = 0;
+			stepEls.forEach(function (el) {
+				var s = stepState(el);
+				el.classList.toggle('is-done', s === 'done');
+				el.classList.toggle('is-locked', s === 'locked');
+				el.classList.toggle('is-open', s !== 'locked');
+				el.classList.toggle('has-flag', s === 'done' && hasFlag(el));
+				setCollapse(qs('.mns-collapse', el), s !== 'locked');
+				var sum = qs('[data-mns-step-sum]', el);
+				if (sum) sum.textContent = s === 'locked' ? el.getAttribute('data-locked-hint') || '' : el.getAttribute('data-hint') || '';
+				if (isRequiredStep(el)) {
+					if (s !== 'done') left++;
+					if (s === 'todo') pending++;
+					if (segs[segIdx]) segs[segIdx].classList.toggle('is-done', s === 'done');
+					segIdx++;
+				}
+			});
+			var allDone = left === 0;
+			/* nothing left to fill now: only the locked "end of service" remains */
+			var waiting = !allDone && pending === 0;
+			if (progress) {
+				progress.classList.toggle('is-complete', allDone);
+				if (allDone) progress.textContent = 'همهٔ بخش‌ها کامل است';
+				else if (waiting) progress.textContent = toFaDigits(left) + ' بخش مانده · منتظر پایان خدمت';
+				else progress.textContent = toFaDigits(left) + ' بخش مانده';
+			}
+			setCollapse(waitEl, waiting && !locked);
+			if (finishEl) finishEl.classList.toggle('is-ready', allDone);
+		}
+
+		/* no draft saving: the form is submitted once; leaving with changes asks first */
+		var dirty = false;
+		function scheduleSave() {
+			if (locked) return;
+			dirty = true;
+		}
+		window.addEventListener('beforeunload', function (e) {
+			if (dirty && !locked) {
+				e.preventDefault();
+				e.returnValue = '';
+			}
+		});
+		/* every change just re-renders */
+		function afterEdit(el) {
+			var stepEl = el.closest ? el.closest('[data-mns-step]') : null;
+			if (stepEl) {
+				var r = qs('[data-mns-step-reason]', stepEl);
+				if (r) r.textContent = '';
+			}
+			render();
+			scheduleSave();
+		}
+
+		/* ---- fields ---- */
+		allFields().forEach(function (el) {
+			var type = el.getAttribute('data-type');
+			var key = el.getAttribute('data-mns-ncl-field');
+			if (type === 'number') {
+				var input = qs('input', el);
+				input.addEventListener('input', function () {
+					var fa = toFaDigits(latin(input.value).replace(/[^0-9.]/g, ''));
+					if (fa !== input.value) input.value = fa;
+					st.ack[key] = false;
+					validateNumber(el);
+					afterEdit(el);
+				});
+			} else {
+				qsa('input', el).forEach(function (r) {
+					r.addEventListener('change', function () {
+						afterEdit(el);
+					});
+				});
+			}
+		});
+		/* ---- rows: consumables and extra services share one list ---- */
+		var trashIcon = (qs('[data-mns-ncl-trash]', root) || {}).innerHTML || '×';
+		var chosen = qs('[data-mns-ncl-chosen]', root);
+		var catalogEl = qs('[data-mns-ncl-catalog]', root);
+		var emptyEl = qs('[data-mns-ncl-empty]', root);
+		var findEl = qs('[data-mns-ncl-find]', root);
+		function itemById(id) {
+			return (
+				catalog.filter(function (c) {
+					return c.id === id;
+				})[0] || null
+			);
+		}
+		function refreshEmpty() {
+			if (emptyEl) emptyEl.hidden = rowsList().length > 0;
+		}
+		function addRow(item, qtyVal) {
+			if (!chosen || qs('[data-mns-ncl-row="' + item.id + '"]', chosen)) return;
+			var li = document.createElement('li');
+			li.className = 'mns-ncl__row';
+			li.setAttribute('data-mns-ncl-row', item.id);
+			li.setAttribute('data-label', item.label);
+			li.innerHTML =
+				'<span class="mns-ncl__row-name"></span>' +
+				(locked
+					? '<b class="mns-ncl__row-qty"><output data-qty></output> عدد</b>'
+					: '<span class="mns-ncl__stepper"><button type="button" class="mns-ncl__stp" data-step="-1" aria-label="کم کردن">−</button><output data-qty></output><button type="button" class="mns-ncl__stp" data-step="1" aria-label="زیاد کردن">+</button></span>' +
+					  '<button type="button" class="mns-ncl__rm" data-rm aria-label="حذف">' + trashIcon + '</button>');
+			qs('.mns-ncl__row-name', li).textContent = item.label;
+			qs('[data-qty]', li).textContent = toFaDigits(qtyVal || 1);
+			qsa('[data-step]', li).forEach(function (b) {
+				b.addEventListener('click', function () {
+					var n = qtyOf(li) + parseInt(b.getAttribute('data-step'), 10);
+					qs('[data-qty]', li).textContent = toFaDigits(Math.max(1, Math.min(999, n)));
+					afterEdit(li);
+				});
+			});
+			var rm = qs('[data-rm]', li);
+			if (rm) {
+				rm.addEventListener('click', function () {
+					li.parentNode.removeChild(li);
+					renderCatalog();
+					refreshEmpty();
+					afterEdit(chosen);
+				});
+			}
+			chosen.appendChild(li);
+			refreshEmpty();
+		}
+		function renderCatalog() {
+			if (!catalogEl) return;
+			var q = latin((findEl && findEl.value) || '').trim().toLowerCase();
+			catalogEl.innerHTML = '';
+			catalog.forEach(function (item) {
+				if (qs('[data-mns-ncl-row="' + item.id + '"]', root)) return;
+				if (q && (item.label + ' ' + item.cat).toLowerCase().indexOf(q) === -1) return;
+				var li = document.createElement('li');
+				var b = document.createElement('button');
+				b.type = 'button';
+				b.className = 'mns-ncl__cat';
+				b.innerHTML = '<span></span><small></small>';
+				qs('span', b).textContent = item.label;
+				qs('small', b).textContent = item.cat;
+				b.addEventListener('click', function () {
+					addRow(item, 1);
+					renderCatalog();
+					afterEdit(chosen);
+				});
+				li.appendChild(b);
+				catalogEl.appendChild(li);
+			});
+			if (!catalogEl.children.length) {
+				var none = document.createElement('li');
+				none.className = 'mns-ncl__cat-none';
+				none.textContent = 'موردی پیدا نشد';
+				catalogEl.appendChild(none);
+			}
+		}
+		if (findEl) findEl.addEventListener('input', renderCatalog);
+
+		/* ---- notes ---- */
+		var notes = qs('[data-mns-ncl-notes]', root);
+		var counter = qs('[data-mns-ncl-counter]', root);
+		function noteCount() {
+			if (counter && notes) counter.textContent = toFaDigits(notes.value.length) + ' از ۱٬۰۰۰ نویسه';
+		}
+		if (notes) {
+			notes.addEventListener('input', function () {
+				noteCount();
+				scheduleSave();
+			});
+		}
+
+		/* ---- start state: the server's values ---- */
+		Object.keys(cfg.rows || {}).forEach(function (id) {
+			var item = itemById(id);
+			if (item) addRow(item, cfg.rows[id]);
+		});
+		allFields().forEach(function (el) {
+			if (el.getAttribute('data-type') === 'number') validateNumber(el);
+		});
+		renderCatalog();
+		refreshEmpty();
+		noteCount();
+		render();
+
+		/* ---- actions ---- */
+		function flash(el) {
+			el.classList.add('is-flash');
+			window.setTimeout(function () {
+				el.classList.remove('is-flash');
+			}, 1600);
+		}
+		function scrollToEl(el, block) {
+			window.setTimeout(function () {
+				if (el && el.scrollIntoView) el.scrollIntoView({ block: block || 'start', behavior: 'smooth' });
+			}, 460); /* after the collapse animation settled, so the target position is final */
+		}
+		/* ---- review + final submit ---- */
+		var formView = qs('[data-mns-ncl-formview]', root);
+		var reviewView = qs('[data-mns-ncl-reviewview]', root);
+		var reviewBtn = qs('[data-mns-ncl-review]', root);
+		var finalBtn = qs('[data-mns-ncl-final]', root);
+		var editBtn = qs('[data-mns-ncl-edit]', root);
+		var confirmEl = qs('#mns-ncl-confirm', root);
+
+		function valueText(el) {
+			var v = readValue(el);
+			if (v === '') return '';
+			var type = el.getAttribute('data-type');
+			if (type === 'check') return 'تأیید شد';
+			if (type === 'number') return toFaDigits(v) + (el.getAttribute('data-unit') ? ' ' + el.getAttribute('data-unit') : '');
+			return v;
+		}
+		function buildReview() {
+			var host = qs('[data-mns-ncl-summary]', root);
+			host.innerHTML = '';
+			stepEls.forEach(function (stepEl) {
+				var key = keyOf(stepEl);
+				var block = document.createElement('div');
+				block.className = 'mns-ncl__rv-block';
+				var h = document.createElement('p');
+				h.className = 'mns-ncl__rv-h';
+				h.textContent = qs('.mns-ncl__st-title', stepEl).textContent;
+				block.appendChild(h);
+				var ul = document.createElement('ul');
+				ul.className = 'mns-ncl__sum';
+				function line(a, b, cls) {
+					var li = document.createElement('li');
+					var x = document.createElement('span');
+					var y = document.createElement('span');
+					x.textContent = a;
+					y.textContent = b;
+					if (cls) li.className = cls;
+					li.appendChild(x);
+					li.appendChild(y);
+					ul.appendChild(li);
+				}
+				if (key === 'extras') {
+					rowsList().forEach(function (r) {
+						line(r.getAttribute('data-label'), toFaDigits(qtyOf(r)) + ' عدد');
+					});
+					if (!rowsList().length) line('موردی ثبت نشده', '—', 'is-empty');
+				} else {
+					fieldsOf(stepEl).forEach(function (el) {
+						var txt = valueText(el);
+						var miss = (el.hasAttribute('data-required') && !answered(el)) || txt === '';
+						var cls = '';
+						if (miss && el.hasAttribute('data-required')) cls = 'is-miss';
+						else if (txt === '') cls = 'is-empty';
+						else if (hasFlag(stepEl) && (el.classList.contains('is-acked') || (el.getAttribute('data-normal') && readValue(el) !== el.getAttribute('data-normal')))) cls = 'is-warn';
+						line(labelOf(el).replace(/\s*\(اختیاری\)$/, ''), miss && el.hasAttribute('data-required') ? 'ثبت نشده' : txt === '' ? '—' : txt, cls);
+					});
+				}
+				block.appendChild(ul);
+				host.appendChild(block);
+			});
+			var n = notes && notes.value.trim();
+			if (n) {
+				var nb = document.createElement('div');
+				nb.className = 'mns-ncl__rv-block';
+				nb.innerHTML = '<p class="mns-ncl__rv-h">یادداشت</p><p class="mns-ncl__rv-note"></p>';
+				qs('.mns-ncl__rv-note', nb).textContent = n;
+				host.appendChild(nb);
+			}
+		}
+		function showView(review) {
+			setCollapse(formView, !review);
+			setCollapse(reviewView, review);
+			if (review) buildReview();
+			if (confirmEl) setCollapse(confirmEl, false);
+			window.scrollTo({ top: 0, behavior: 'smooth' });
+		}
+		if (reviewBtn) {
+			reviewBtn.addEventListener('click', function () {
+				/* something still open: show exactly what */
+				var first = firstOpenRequired();
+				if (first) {
+					var miss = missingOf(first);
+					var reason = qs('[data-mns-step-reason]', first);
+					if (reason) {
+						reason.classList.remove('is-hint');
+						reason.textContent = 'هنوز مانده: ' + miss.map(labelOf).join('، ');
+					}
+					if (miss[0]) {
+						flash(miss[0]);
+						miss[0].scrollIntoView({ block: 'center', behavior: 'smooth' });
+					}
+					return;
+				}
+				showView(true);
+			});
+		}
+		if (editBtn) {
+			editBtn.addEventListener('click', function () {
+				showView(false);
+			});
+		}
+		if (finalBtn) {
+			finalBtn.addEventListener('click', function () {
+				setCollapse(confirmEl, true);
+				scrollToEl(confirmEl, 'center');
+			});
+		}
+		if (confirmEl) {
+			var ok = qs('[data-mns-confirm-ok]', confirmEl);
+			var cancel = qs('[data-mns-confirm-cancel]', confirmEl);
+			var err = qs('[data-mns-confirm-error]', confirmEl);
+			if (cancel) {
+				cancel.addEventListener('click', function () {
+					setCollapse(confirmEl, false);
+				});
+			}
+			if (ok) {
+				ok.addEventListener('click', function () {
+					if (ok.classList.contains('is-loading')) return;
+					if (err) err.textContent = '';
+					if (navigator.onLine === false) {
+						if (err) err.textContent = 'ثبت نشد، دوباره تلاش کنید.';
+						return;
+					}
+					ok.classList.add('is-loading');
+					ok.disabled = true;
+					/* TODO(backend): one-time key; the server validates required fields and ranges, then locks. */
+					window.setTimeout(function () {
+						try {
+							window.localStorage.removeItem(storeKey);
+						} catch (e) {
+							/* ignore */
+						}
+						dirty = false;
+						window.location.href = ok.getAttribute('data-mns-go') || window.location.href;
+					}, 900);
+				});
+			}
+		}
+	}
+
+	/* Nurse end-of-visit report (P-31): sections in any order that complete themselves, one tap for the usual visit,
+	   an always-reachable urgent notice, photos with consent, autosave, review and final submit. */
+	function initNurseReport() {
+		var root = qs('[data-mns-nrp]');
+		if (!root || !qs('[data-mns-rp-form]', root)) return;
+		var cfg = {};
+		try {
+			cfg = JSON.parse(root.getAttribute('data-config') || '{}') || {};
+		} catch (e) {
+			cfg = {};
+		}
+		var normalVals = cfg.normal || {};
+		var phase = root.getAttribute('data-phase') || 'open';
+		var locked = phase === 'submitted';
+		var storeKey = root.getAttribute('data-key') || 'mns-nrp';
+		var secs = qsa('[data-mns-sec]', root);
+		var fields = qsa('[data-mns-rp-field]', root);
+		var segs = qsa('[data-mns-seg]', root);
+		var progress = qs('[data-mns-rp-progress]', root);
+		var quickEl = qs('[data-mns-rp-quick]', root);
+		var normalRow = qs('[data-mns-rp-normalrow]', root);
+		var finish = qs('[data-mns-rp-finish]', root);
+		var urgentPanel = qs('[data-mns-rp-urgent]', root);
+		var urgentBtn = qs('[data-mns-rp-urgent-toggle]', root);
+		var urgentLabel = qs('[data-mns-rp-urgent-label]', root);
+		var urgentText = qs('[data-mns-rp-urgent-text]', root);
+		var urgentSet = qs('[data-mns-rp-urgent-set]', root);
+		var urgentReason = qs('[data-mns-rp-urgent-reason]', root);
+		var st = { open: {}, urgent: false, quickGone: false, normalGone: false };
+		var files = [];
+
+		function setCollapse(el, open) {
+			if (!el) return;
+			el.classList.toggle('is-open', open);
+			if ('inert' in el) el.inert = !open;
+		}
+		function latin(s) {
+			return String(s == null ? '' : s)
+				.replace(/[۰-۹]/g, function (d) {
+					return '۰۱۲۳۴۵۶۷۸۹'.indexOf(d);
+				})
+				.replace(/[٠-٩]/g, function (d) {
+					return '٠١٢٣٤٥٦٧٨٩'.indexOf(d);
+				});
+		}
+		function keyOf(el) {
+			return el.getAttribute('data-mns-rp-field');
+		}
+		function fieldByKey(k) {
+			return qs('[data-mns-rp-field="' + k + '"]', root);
+		}
+		function readRaw(el) {
+			var type = el.getAttribute('data-type');
+			if (type === 'text') return qs('textarea', el).value.trim();
+			if (type === 'number') return latin(qs('input', el).value).trim();
+			var on = qs('input:checked', el);
+			return on ? on.value : '';
+		}
+		/* a field that is hidden by its condition has no value */
+		function visible(el) {
+			var cond = el.getAttribute('data-showif');
+			if (!cond) return true;
+			var p = cond.split('=');
+			var dep = fieldByKey(p[0]);
+			if (!dep || !visible(dep)) return false;
+			return p[1].split('|').indexOf(readRaw(dep)) !== -1;
+		}
+		function val(k) {
+			var el = fieldByKey(k);
+			return el && visible(el) ? readRaw(el) : '';
+		}
+		function numberBad(el) {
+			var raw = readRaw(el);
+			if (el.getAttribute('data-type') !== 'number' || raw === '') return false;
+			var n = parseFloat(raw);
+			var inp = qs('input', el);
+			return isNaN(n) || n < parseFloat(inp.getAttribute('data-min')) || n > parseFloat(inp.getAttribute('data-maxv'));
+		}
+		function missingOf(secEl) {
+			return qsa('[data-mns-rp-field]', secEl).filter(function (el) {
+				if (!visible(el)) return false;
+				if (numberBad(el)) return true;
+				return el.hasAttribute('data-required') && readRaw(el) === '';
+			});
+		}
+		function hasAny(secEl) {
+			return qsa('[data-mns-rp-field]', secEl).some(function (el) {
+				return visible(el) && readRaw(el) !== '';
+			});
+		}
+		function secComplete(secEl) {
+			if (secEl.hasAttribute('data-required')) return missingOf(secEl).length === 0;
+			return hasAny(secEl) && missingOf(secEl).length === 0;
+		}
+		function isNormal() {
+			return Object.keys(normalVals).every(function (k) {
+				return val(k) === normalVals[k];
+			}) && val('problem_type') === '' && val('follow_type') === '';
+		}
+		function anyRequiredAnswered() {
+			return fields.some(function (el) {
+				return el.hasAttribute('data-required') && visible(el) && readRaw(el) !== '';
+			});
+		}
+
+		/* ---- conditional fields + the follow-up rule ---- */
+		function applyRules() {
+			fields.forEach(function (el) {
+				if (!el.hasAttribute('data-showif')) return;
+				var show = visible(el);
+				if (!show && !el.hidden) {
+					/* a field that disappears forgets its answer */
+					qsa('input[type=radio]', el).forEach(function (r) {
+						r.checked = false;
+					});
+					qsa('textarea', el).forEach(function (t) {
+						t.value = '';
+					});
+				}
+				el.hidden = !show;
+			});
+			/* "needs follow-up" forces "follow-up: yes" */
+			var needs = val('patient_status') === 'نیازمند پیگیری';
+			var follow = fieldByKey('follow');
+			if (follow) {
+				qsa('input', follow).forEach(function (r) {
+					if (r.value === 'نیازی نیست') {
+						r.disabled = locked || needs;
+						if (needs && r.checked) r.checked = false;
+					}
+					if (needs && r.value === 'بله') r.checked = true;
+				});
+			}
+		}
+
+		/* ---- summaries ---- */
+		function summaryOf(secEl) {
+			var key = secEl.getAttribute('data-mns-sec');
+			var hint = secEl.getAttribute('data-hint') || '';
+			if (key === 'result') {
+				if (!secComplete(secEl)) return hint;
+				return val('result') + (val('reason') ? ' · ' + val('reason') : '');
+			}
+			if (key === 'problem') {
+				if (!secComplete(secEl)) return hint;
+				return val('problem') === 'خیر' ? 'مشکلی نبود' : 'بله · ' + val('problem_type');
+			}
+			if (key === 'patient') {
+				if (!secComplete(secEl)) return hint;
+				return val('patient_status') + ' · ' + (val('follow') === 'بله' ? 'پیگیری: ' + val('follow_type') : 'بدون پیگیری');
+			}
+			if (key === 'svc') {
+				var num = qs('[data-type="number"]', secEl);
+				var v = num ? readRaw(num) : '';
+				return v ? toFaDigits(v) + ' ' + (num.getAttribute('data-unit') || '') : hint;
+			}
+			if (key === 'notes') {
+				var t = val('notes');
+				var parts = [];
+				if (t) parts.push(t.length > 36 ? t.slice(0, 36) + '…' : t);
+				if (files.length) parts.push(toFaDigits(files.length) + ' عکس');
+				return parts.length ? parts.join(' · ') : hint;
+			}
+			return hint;
+		}
+		function hasFlag(secEl) {
+			var key = secEl.getAttribute('data-mns-sec');
+			if (key === 'result') return !!val('result') && val('result') !== 'کامل انجام شد';
+			if (key === 'problem') return val('problem') === 'بله';
+			if (key === 'patient') return val('patient_status') === 'نیازمند پیگیری' || val('follow') === 'بله';
+			return false;
+		}
+
+		function render() {
+			applyRules();
+			var done = 0;
+			var total = 0;
+			var segIdx = 0;
+			secs.forEach(function (secEl) {
+				var key = secEl.getAttribute('data-mns-sec');
+				var req = secEl.hasAttribute('data-required');
+				var ok = secComplete(secEl);
+				var isOpen = !!st.open[key];
+				secEl.classList.toggle('is-done', ok);
+				secEl.classList.toggle('is-open', isOpen);
+				secEl.classList.toggle('has-flag', ok && hasFlag(secEl));
+				var head = qs('[data-mns-sec-toggle]', secEl);
+				head.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+				setCollapse(qs('.mns-collapse', secEl), isOpen);
+				var sum = qs('[data-mns-sec-sum]', secEl);
+				if (sum) sum.textContent = summaryOf(secEl);
+				if (req) {
+					total++;
+					if (ok) done++;
+					if (segs[segIdx]) segs[segIdx].classList.toggle('is-done', ok);
+					segIdx++;
+				}
+			});
+			var left = total - done;
+			if (progress) {
+				progress.classList.toggle('is-complete', left === 0);
+				progress.textContent = left === 0 ? 'همهٔ بخش‌های الزامی کامل است' : toFaDigits(left) + ' بخش الزامی مانده';
+			}
+			var normal = isNormal();
+			if (!normal) st.normalGone = false;
+			setCollapse(quickEl, !locked && !anyRequiredAnswered() && !st.quickGone);
+			setCollapse(normalRow, !locked && normal && !st.normalGone);
+			if (urgentLabel) urgentLabel.textContent = st.urgent ? 'پیام ثبت شد' : 'پیام به پشتیبانی';
+			if (urgentBtn) urgentBtn.classList.toggle('is-set', st.urgent);
+			if (urgentSet) urgentSet.textContent = st.urgent ? 'برداشتن پیام' : 'ثبت پیام';
+		}
+
+		/* no draft saving: the form is submitted once; leaving with changes asks first */
+		var dirty = false;
+		function scheduleSave() {
+			if (locked) return;
+			dirty = true;
+		}
+		window.addEventListener('beforeunload', function (e) {
+			if (dirty && !locked) {
+				e.preventDefault();
+				e.returnValue = '';
+			}
+		});
+		function changed() {
+			render();
+			scheduleSave();
+		}
+
+		/* ---- field events ---- */
+		function setValue(k, v) {
+			var el = fieldByKey(k);
+			if (!el) return;
+			var type = el.getAttribute('data-type');
+			if (type === 'chips') {
+				qsa('input', el).forEach(function (r) {
+					r.checked = r.value === v;
+				});
+			} else if (type === 'text') {
+				qs('textarea', el).value = v;
+			} else if (type === 'number') {
+				qs('input', el).value = v ? toFaDigits(v) : '';
+			}
+		}
+		fields.forEach(function (el) {
+			var type = el.getAttribute('data-type');
+			if (type === 'chips') {
+				qsa('input', el).forEach(function (r) {
+					r.addEventListener('change', changed);
+				});
+			} else if (type === 'text') {
+				qs('textarea', el).addEventListener('input', changed);
+			} else if (type === 'number') {
+				var input = qs('input', el);
+				input.addEventListener('input', function () {
+					var fa = toFaDigits(latin(input.value).replace(/[^0-9]/g, ''));
+					if (fa !== input.value) input.value = fa;
+					var msg = qs('[data-mns-rp-msg]', el);
+					el.classList.toggle('is-bad', numberBad(el));
+					if (msg) msg.textContent = numberBad(el) ? 'این عدد ممکن نیست؛ دوباره بررسی کنید.' : '';
+					changed();
+				});
+			}
+		});
+
+		/* ---- sections ---- */
+		function flash(el) {
+			el.classList.add('is-flash');
+			window.setTimeout(function () {
+				el.classList.remove('is-flash');
+			}, 1600);
+		}
+		function scrollToEl(el, block) {
+			window.setTimeout(function () {
+				if (el && el.scrollIntoView) el.scrollIntoView({ block: block || 'start', behavior: 'smooth' });
+			}, 460);
+		}
+		secs.forEach(function (secEl) {
+			qs('[data-mns-sec-toggle]', secEl).addEventListener('click', function () {
+				var key = secEl.getAttribute('data-mns-sec');
+				st.open[key] = !st.open[key];
+				render();
+				if (st.open[key]) scrollToEl(secEl, 'start');
+			});
+		});
+
+		/* ---- the usual visit in one tap ---- */
+		var normalBtn = qs('[data-mns-rp-normal]', root);
+		var problemBtn = qs('[data-mns-rp-problem]', root);
+		var changeBtn = qs('[data-mns-rp-change]', root);
+		if (normalBtn) {
+			normalBtn.addEventListener('click', function () {
+				Object.keys(normalVals).forEach(function (k) {
+					setValue(k, normalVals[k]);
+				});
+				st.normalGone = false;
+				changed();
+				if (finish) scrollToEl(finish, 'center');
+			});
+		}
+		if (problemBtn) {
+			problemBtn.addEventListener('click', function () {
+				st.quickGone = true;
+				st.open.result = true;
+				st.open.problem = true;
+				render();
+				scrollToEl(secs[0], 'start');
+			});
+		}
+		if (changeBtn) {
+			changeBtn.addEventListener('click', function () {
+				st.normalGone = true;
+				st.open.result = true;
+				render();
+				scrollToEl(secs[0], 'start');
+			});
+		}
+
+		/* ---- urgent notice ---- */
+		if (urgentBtn) {
+			urgentBtn.addEventListener('click', function () {
+				var open = !(urgentPanel && urgentPanel.classList.contains('is-open'));
+				setCollapse(urgentPanel, open);
+				urgentBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+				if (open) scrollToEl(urgentPanel, 'center');
+			});
+		}
+		if (urgentSet) {
+			urgentSet.addEventListener('click', function () {
+				if (st.urgent) {
+					st.urgent = false;
+					if (urgentText) urgentText.value = '';
+					changed();
+					return;
+				}
+				if (!urgentText || urgentText.value.trim() === '') {
+					if (urgentReason) urgentReason.textContent = 'لطفاً پیام را بنویسید.';
+					if (urgentText) {
+						flash(urgentText.parentNode);
+						urgentText.focus();
+					}
+					return;
+				}
+				if (urgentReason) urgentReason.textContent = '';
+				st.urgent = true;
+				setCollapse(urgentPanel, false);
+				if (urgentBtn) urgentBtn.setAttribute('aria-expanded', 'false');
+				changed();
+			});
+		}
+		if (urgentText) {
+			urgentText.addEventListener('input', function () {
+				if (urgentReason) urgentReason.textContent = '';
+				scheduleSave();
+			});
+		}
+
+		/* ---- photos (static preview: only names + thumbnails; the upload is backend work) ---- */
+		var consent = qs('[data-mns-rp-consent]', root);
+		var pick = qs('[data-mns-rp-pick]', root);
+		var fileInput = qs('[data-mns-rp-file]', root);
+		var thumbs = qs('[data-mns-rp-thumbs]', root);
+		function drawThumbs() {
+			if (!thumbs) return;
+			thumbs.innerHTML = '';
+			files.forEach(function (f, i) {
+				var li = document.createElement('li');
+				var img = document.createElement('img');
+				img.alt = '';
+				try {
+					img.src = URL.createObjectURL(f);
+				} catch (e) {
+					img.removeAttribute('src');
+				}
+				var rm = document.createElement('button');
+				rm.type = 'button';
+				rm.className = 'mns-nrp__thumb-rm';
+				rm.setAttribute('aria-label', 'حذف عکس');
+				rm.innerHTML = (qs('[data-mns-rp-trash]', root) || {}).innerHTML || '×';
+				rm.addEventListener('click', function () {
+					files.splice(i, 1);
+					drawThumbs();
+					render();
+				});
+				li.appendChild(img);
+				li.appendChild(rm);
+				thumbs.appendChild(li);
+			});
+			if (pick) pick.classList.toggle('is-full', files.length >= 10);
+		}
+		if (consent && fileInput) {
+			consent.addEventListener('change', function () {
+				fileInput.disabled = !consent.checked || files.length >= 10;
+				if (pick) pick.classList.toggle('is-off', !consent.checked);
+			});
+			fileInput.addEventListener('change', function () {
+				Array.prototype.slice.call(fileInput.files || []).forEach(function (f) {
+					if (files.length < 10) files.push(f);
+				});
+				fileInput.value = '';
+				drawThumbs();
+				render();
+			});
+		}
+
+		/* ---- review + final submit ---- */
+		var formView = qs('[data-mns-rp-formview]', root);
+		var reviewView = qs('[data-mns-rp-reviewview]', root);
+		var reviewBtn = qs('[data-mns-rp-review]', root);
+		var finalBtn = qs('[data-mns-rp-final]', root);
+		var editBtn = qs('[data-mns-rp-edit]', root);
+		var confirmEl = qs('#mns-rp-confirm', root);
+
+		function buildReview() {
+			var host = qs('[data-mns-rp-summary]', root);
+			host.innerHTML = '';
+			function block(title) {
+				var b = document.createElement('div');
+				b.className = 'mns-ncl__rv-block';
+				var h = document.createElement('p');
+				h.className = 'mns-ncl__rv-h';
+				h.textContent = title;
+				if (title) b.appendChild(h);
+				var ul = document.createElement('ul');
+				ul.className = 'mns-ncl__sum';
+				b.appendChild(ul);
+				host.appendChild(b);
+				return ul;
+			}
+			function line(ul, label, value, vis, cls) {
+				var li = document.createElement('li');
+				if (cls) li.className = cls;
+				var a = document.createElement('span');
+				a.appendChild(document.createTextNode(label));
+				if (vis) {
+					var tag = document.createElement('small');
+					tag.className = 'mns-nrp__vis ' + (vis === 'mgmt' ? 'is-mgmt' : 'is-pt');
+					tag.textContent = vis === 'mgmt' ? 'فقط مدیریت' : 'بیمار می‌بیند';
+					a.appendChild(tag);
+				}
+				var b = document.createElement('span');
+				b.textContent = value;
+				li.appendChild(a);
+				li.appendChild(b);
+				ul.appendChild(li);
+			}
+			secs.forEach(function (secEl) {
+				var title = qs('.mns-ncl__st-title', secEl).firstChild.textContent;
+				var items = qsa('[data-mns-rp-field]', secEl).filter(function (el) {
+					return visible(el) && readRaw(el) !== '';
+				});
+				if (!items.length) return;
+				/* a section with one answer named like the section needs no second heading */
+				var ul = block(items.length === 1 && items[0].getAttribute('data-label') === title ? '' : title);
+				items.forEach(function (el) {
+					var v = readRaw(el);
+					var shown = el.getAttribute('data-type') === 'number' ? toFaDigits(v) + ' ' + (el.getAttribute('data-unit') || '') : v;
+					line(ul, el.getAttribute('data-label').replace(/\s*\(اختیاری\)$/, ''), shown, el.getAttribute('data-vis'), '');
+				});
+			});
+			if (files.length) {
+				var pu = block('عکس‌ها');
+				line(pu, 'تعداد عکس', toFaDigits(files.length), 'mgmt', '');
+			}
+			if (st.urgent) {
+				var uu = block('پیام برای پشتیبانی');
+				line(uu, 'متن پیام', urgentText ? urgentText.value.trim() : '', 'mgmt', 'is-warn');
+			}
+			var partial = val('result') && val('result') !== 'کامل انجام شد';
+			var br = qs('[data-mns-rp-banner-review]', root);
+			var bu = qs('[data-mns-rp-banner-urgent]', root);
+			if (br) br.hidden = !partial;
+			if (bu) bu.hidden = !st.urgent;
+		}
+		function showView(review) {
+			setCollapse(formView, !review);
+			setCollapse(reviewView, review);
+			if (review) buildReview();
+			if (confirmEl) setCollapse(confirmEl, false);
+			window.scrollTo({ top: 0, behavior: 'smooth' });
+		}
+		if (reviewBtn) reviewBtn.addEventListener('click', function () {
+			/* a required section is still open: show exactly where */
+			var firstSec = secs.filter(function (s) {
+				return s.hasAttribute('data-required') && !secComplete(s);
+			})[0];
+			if (firstSec) {
+				var miss = missingOf(firstSec);
+				st.open[firstSec.getAttribute('data-mns-sec')] = true;
+				render();
+				if (miss[0]) {
+					flash(miss[0]);
+					scrollToEl(miss[0], 'center');
+				} else {
+					scrollToEl(firstSec, 'start');
+				}
+				return;
+			}
+			showView(true);
+		});
+		if (editBtn) editBtn.addEventListener('click', function () {
+			showView(false);
+		});
+		if (finalBtn) finalBtn.addEventListener('click', function () {
+			setCollapse(confirmEl, true);
+			scrollToEl(confirmEl, 'center');
+		});
+		if (confirmEl) {
+			var ok = qs('[data-mns-confirm-ok]', confirmEl);
+			var cancel = qs('[data-mns-confirm-cancel]', confirmEl);
+			var err = qs('[data-mns-confirm-error]', confirmEl);
+			if (cancel) {
+				cancel.addEventListener('click', function () {
+					setCollapse(confirmEl, false);
+				});
+			}
+			if (ok) {
+				ok.addEventListener('click', function () {
+					if (ok.classList.contains('is-loading')) return;
+					if (err) err.textContent = '';
+					if (navigator.onLine === false) {
+						if (err) err.textContent = 'ثبت نشد، دوباره تلاش کنید.';
+						return;
+					}
+					ok.classList.add('is-loading');
+					ok.disabled = true;
+					/* TODO(backend): one-time key; the server validates, locks, sends the urgent SMS, flags partial visits for review. */
+					window.setTimeout(function () {
+						try {
+							window.localStorage.removeItem(storeKey);
+						} catch (e) {
+							/* ignore */
+						}
+						dirty = false;
+						window.location.href = ok.getAttribute('data-mns-go') || window.location.href;
+					}, 900);
+				});
+			}
+		}
+
+		/* reached with answers: the first unfinished required section is open */
+		if (!locked && anyRequiredAnswered()) {
+			for (var i = 0; i < secs.length; i++) {
+				if (secs[i].hasAttribute('data-required') && !secComplete(secs[i])) {
+					st.open[secs[i].getAttribute('data-mns-sec')] = true;
+					break;
+				}
+			}
+		}
+		render();
+	}
+
+	/* Nurse medication step (P-33/34): one form. The path (prescription / consult), the consult result (recorded at once,
+	   then locked), drug cards with their own photo, review and final submit. Nothing is saved in between. */
+	/* Nurse medication step (P-33/34): one form. The path (prescription / consult), the consult result (recorded at once,
+	   then locked), drug cards with their own photo, review and final submit. Nothing is saved in between. */
+	function initNurseDrug() {
+		var root = qs('[data-mns-ndr]');
+		if (!root || !qs('[data-mns-nd-form]', root)) return;
+		var cfg = {};
+		try {
+			cfg = JSON.parse(root.getAttribute('data-config') || '{}') || {};
+		} catch (e) {
+			cfg = {};
+		}
+		var phase = root.getAttribute('data-phase') || 'draft';
+		var locked = phase === 'submitted';
+		var routes = cfg.routes || [];
+		var st = { path: cfg.path || '', consult: { result: '', time: '', note: '', attempts: [] }, busy: false };
+		var cs = cfg.consult || {};
+		st.consult.result = cs.result || '';
+		st.consult.time = cs.time || '';
+		st.consult.note = cs.note || '';
+		st.consult.attempts = (cs.attempts || []).slice();
+		var trashIcon = (qs('[data-mns-nd-trash]', root) || {}).innerHTML || '×';
+		var camIcon = (qs('[data-mns-nd-cam]', root) || {}).innerHTML || '';
+		var MAX_DRUGS = 20;
+
+		var pathField = qs('[data-mns-nd-field="path"]', root);
+		var rxBlock = qs('[data-mns-nd-rx]', root);
+		var consultBlock = qs('[data-mns-nd-consult]', root);
+		var consultForm = qs('[data-mns-nd-consult-form]', root);
+		var finalEl = qs('[data-mns-nd-final]', root);
+		var finalRows = qs('[data-mns-nd-final-rows]', root);
+		var denyEl = qs('[data-mns-nd-deny]', root);
+		var attemptsEl = qs('[data-mns-nd-attempts]', root);
+		var attemptsList = qs('[data-mns-nd-attempts-list]', root);
+		var registerBtn = qs('[data-mns-nd-register]', root);
+		var cnote = qs('[data-mns-nd-cnote]', root);
+		var doctor = qs('[data-mns-nd-doctor]', root);
+		var banner = qs('[data-mns-nd-banner]', root);
+		var gate = qs('[data-mns-nd-gate]', root);
+		var listWrap = qs('[data-mns-nd-listwrap]', root);
+		var listEl = qs('[data-mns-nd-list]', root);
+		var emptyEl = qs('[data-mns-nd-empty]', root);
+		var addBtn = qs('[data-mns-nd-add]', root);
+		var progress = qs('[data-mns-nd-progress]', root);
+		var secPath = qs('[data-mns-sec="path"]', root);
+		var secDrugs = qs('[data-mns-sec="drugs"]', root);
+
+		function setCollapse(el, open) {
+			if (!el) return;
+			el.classList.toggle('is-open', open);
+			if ('inert' in el) el.inert = !open;
+		}
+		function esc(s) {
+			var d = document.createElement('div');
+			d.textContent = String(s == null ? '' : s);
+			return d.innerHTML.replace(/"/g, '&quot;');
+		}
+		function nowFa() {
+			var d = new Date();
+			return toFaDigits((d.getHours() < 10 ? '0' : '') + d.getHours() + ':' + (d.getMinutes() < 10 ? '0' : '') + d.getMinutes());
+		}
+		function flash(el) {
+			if (!el) return;
+			el.classList.add('is-flash');
+			window.setTimeout(function () {
+				el.classList.remove('is-flash');
+			}, 1600);
+		}
+		function scrollToEl(el, block) {
+			window.setTimeout(function () {
+				if (el && el.scrollIntoView) el.scrollIntoView({ block: block || 'start', behavior: 'smooth' });
+			}, 120);
+		}
+
+		/* nothing is saved in between: leaving with changes asks first */
+		var dirty = false;
+		window.addEventListener('beforeunload', function (e) {
+			if (dirty && !locked) {
+				e.preventDefault();
+				e.returnValue = '';
+			}
+		});
+		function changed() {
+			if (locked) return;
+			dirty = true;
+			render();
+		}
+
+		/* ---- photos: a picker + tiles with a trash button (the real upload is backend work) ---- */
+		function makePhotos(wrap, max, initial, onChange) {
+			var items = (initial || []).map(function (n) {
+				return { name: n };
+			});
+			var thumbs = qs('[data-mns-nd-thumbs]', wrap);
+			var pick = qs('[data-mns-nd-pick]', wrap);
+			var input = qs('[data-mns-nd-file]', wrap);
+			function draw() {
+				thumbs.innerHTML = '';
+				items.forEach(function (it, i) {
+					var li = document.createElement('li');
+					if (it.file) {
+						var img = document.createElement('img');
+						img.alt = '';
+						try {
+							img.src = URL.createObjectURL(it.file);
+						} catch (e) {
+							img.removeAttribute('src');
+						}
+						li.appendChild(img);
+					} else {
+						var ph = document.createElement('span');
+						ph.className = 'mns-ndr__ph';
+						ph.innerHTML = camIcon;
+						var nm = document.createElement('small');
+						nm.textContent = it.name;
+						ph.appendChild(nm);
+						li.appendChild(ph);
+					}
+					if (!locked) {
+						var rm = document.createElement('button');
+						rm.type = 'button';
+						rm.className = 'mns-nrp__thumb-rm';
+						rm.setAttribute('aria-label', 'حذف عکس');
+						rm.innerHTML = trashIcon;
+						rm.addEventListener('click', function () {
+							items.splice(i, 1);
+							draw();
+							onChange();
+						});
+						li.appendChild(rm);
+					}
+					thumbs.appendChild(li);
+				});
+				if (pick) pick.classList.toggle('is-full', items.length >= max);
+				if (input) input.disabled = items.length >= max;
+			}
+			if (input) {
+				input.addEventListener('change', function () {
+					Array.prototype.slice.call(input.files || []).forEach(function (f) {
+						if (items.length < max) items.push({ file: f, name: f.name });
+					});
+					input.value = '';
+					draw();
+					onChange();
+				});
+			}
+			draw();
+			return {
+				count: function () {
+					return items.length;
+				}
+			};
+		}
+
+		/* ---- consult ---- */
+		function consultFinal() {
+			return st.consult.result === 'ok' || st.consult.result === 'denied';
+		}
+		function autoRow(a, b, cls) {
+			var p = document.createElement('p');
+			p.className = 'mns-nrp__auto-row' + (cls ? ' ' + cls : '');
+			var x = document.createElement('span');
+			var y = document.createElement('b');
+			x.textContent = a;
+			y.textContent = b;
+			p.appendChild(x);
+			p.appendChild(y);
+			return p;
+		}
+		if (registerBtn) {
+			registerBtn.addEventListener('click', function () {
+				if (st.busy) return;
+				var reason = qs('[data-mns-nd-consult-reason]', root);
+				var chosen = qs('input[name="consult_result"]:checked', consultForm);
+				reason.textContent = '';
+				if (!chosen) {
+					reason.textContent = 'نتیجهٔ مشاوره را انتخاب کنید.';
+					flash(qs('[data-mns-nd-field="consult_result"]', root));
+					return;
+				}
+				if (navigator.onLine === false) {
+					reason.textContent = 'ثبت نشد، اتصال برقرار نیست.';
+					return;
+				}
+				st.busy = true;
+				registerBtn.classList.add('is-loading');
+				registerBtn.disabled = true;
+				/* TODO(backend): a separate immediate, uneditable action; server time is stored; "not approved" flags the order and notifies admins in one transaction. */
+				window.setTimeout(function () {
+					st.busy = false;
+					registerBtn.classList.remove('is-loading');
+					registerBtn.disabled = false;
+					var t = nowFa();
+					if (chosen.value === 'none') {
+						st.consult.attempts.push(t);
+						chosen.checked = false;
+					} else {
+						st.consult.result = chosen.value;
+						st.consult.time = t;
+						st.consult.note = cnote ? cnote.value.trim() : '';
+					}
+					render();
+				}, 800);
+			});
+		}
+
+		/* ---- drug cards ---- */
+		var cards = [];
+		var seq = 0;
+		function chipsHtml(name, opts) {
+			return opts
+				.map(function (o) {
+					return '<label class="mns-ncl__chip"><input type="radio" name="' + name + '" value="' + esc(o) + '"' + (locked ? ' disabled' : '') + '><span>' + esc(o) + '</span></label>';
+				})
+				.join('');
+		}
+		function addCard(d) {
+			if (cards.length >= MAX_DRUGS) return null;
+			d = d || {};
+			seq++;
+			var n = seq;
+			var el = document.createElement('div');
+			el.className = 'mns-ndr__card';
+			el.innerHTML =
+				'<div class="mns-ndr__card-head"><b data-mns-nd-card-title></b>' +
+				(locked ? '' : '<button type="button" class="mns-ncl__rm" data-mns-nd-rm aria-label="حذف دارو">' + trashIcon + '</button>') +
+				'</div>' +
+				'<div class="mns-ndr__card-grid">' +
+				'<label class="mns-ndr__txt"><span>نام دارو</span><input type="text" autocomplete="off" data-f="name"' + (locked ? ' disabled' : '') + '></label>' +
+				'<label class="mns-ndr__txt"><span>دوز یا مقدار</span><input type="text" autocomplete="off" data-f="dose"' + (locked ? ' disabled' : '') + '></label>' +
+				'<fieldset class="mns-ncl__field mns-ndr__f-route"><legend class="mns-ncl__label">راه مصرف</legend><div class="mns-ncl__chips">' + chipsHtml('route-' + n, routes) + '</div></fieldset>' +
+				'<fieldset class="mns-ncl__field mns-ndr__f-needs"><legend class="mns-ncl__label">نسخه یا تأیید پزشک لازم است؟</legend><div class="mns-ncl__chips">' + chipsHtml('needs-' + n, ['خیر', 'بله']) + '</div>' +
+				'<p class="mns-ncl__lead" data-mns-nd-needs-hint hidden>تأیید پزشک را در بخش «تأیید پزشک» همین صفحه و پیش از دادن دارو ثبت کنید.</p></fieldset>' +
+				'<fieldset class="mns-ncl__field mns-ndr__f-status"><legend class="mns-ncl__label">وضعیت</legend><div class="mns-ncl__chips">' + chipsHtml('status-' + n, ['تجویز شد', 'تجویز نشد']) + '</div>' +
+				'<p class="mns-ndr__forced" data-mns-nd-forced hidden>چون مشاوره تأیید نشد، وضعیت خودکار «تجویز نشد» است.</p></fieldset>' +
+				'<div class="mns-ndr__f-photos"><p class="mns-ncl__label">عکس دارو <small class="mns-nrp__opt">الزامی؛ برچسب و نام دارو خوانا باشد</small></p>' +
+				'<div class="mns-ndr__photos" data-max="3">' +
+				(locked ? '' : '<label class="mns-nrp__pick" data-mns-nd-pick><input type="file" accept="image/*" multiple data-mns-nd-file><span><span aria-hidden="true">' + camIcon + '</span>عکس دارو را بگیرید یا انتخاب کنید</span></label>') +
+				'<ul class="mns-nrp__thumbs" data-mns-nd-thumbs></ul></div></div>' +
+				'<label class="mns-ndr__txt mns-ndr__f-note"><span>توضیح (اختیاری)</span><input type="text" autocomplete="off" data-f="note"' + (locked ? ' disabled' : '') + '></label>' +
+				'</div>' +
+				'<p class="mns-ncl__reason" data-mns-nd-card-reason role="alert"></p>';
+			qs('[data-f="name"]', el).value = d.name || '';
+			qs('[data-f="dose"]', el).value = d.dose || '';
+			qs('[data-f="note"]', el).value = d.note || '';
+			qsa('input[name="route-' + n + '"]', el).forEach(function (r) {
+				r.checked = r.value === d.route;
+			});
+			qsa('input[name="needs-' + n + '"]', el).forEach(function (r) {
+				r.checked = (d.needs === 'yes' && r.value === 'بله') || (d.needs === 'no' && r.value === 'خیر');
+			});
+			qsa('input[name="status-' + n + '"]', el).forEach(function (r) {
+				r.checked = r.value === d.status;
+			});
+			var card = { el: el, photos: null };
+			card.photos = makePhotos(qs('.mns-ndr__photos', el), 3, d.photos || [], changed);
+			var rm = qs('[data-mns-nd-rm]', el);
+			if (rm) {
+				rm.addEventListener('click', function () {
+					cards.splice(cards.indexOf(card), 1);
+					el.parentNode.removeChild(el);
+					changed();
+				});
+			}
+			el.addEventListener('input', changed);
+			el.addEventListener('change', changed);
+			cards.push(card);
+			listEl.appendChild(el);
+			return card;
+		}
+		function readCard(card) {
+			var el = card.el;
+			var route = qs('input[name^="route-"]:checked', el);
+			var status = qs('input[name^="status-"]:checked', el);
+			var needs = qs('input[name^="needs-"]:checked', el);
+			return {
+				needs: needs ? (needs.value === 'بله' ? 'yes' : 'no') : '',
+				name: qs('[data-f="name"]', el).value.trim(),
+				dose: qs('[data-f="dose"]', el).value.trim(),
+				note: qs('[data-f="note"]', el).value.trim(),
+				route: route ? route.value : '',
+				status: status ? status.value : '',
+				photos: card.photos.count()
+			};
+		}
+		function missingCard(card) {
+			var d = readCard(card);
+			var m = [];
+			if (!d.name) m.push('نام دارو');
+			if (!d.dose) m.push('دوز');
+			if (!d.route) m.push('راه مصرف');
+			if (!d.needs) m.push('نیاز به نسخه');
+			if (!d.status) m.push('وضعیت');
+			if (!d.photos) m.push('عکس دارو');
+			return m;
+		}
+		if (addBtn) {
+			addBtn.addEventListener('click', function () {
+				var c = addCard({});
+				changed();
+				if (c) scrollToEl(c.el, 'center');
+			});
+		}
+
+		/* ---- path ---- */
+		qsa('input', pathField).forEach(function (r) {
+			r.addEventListener('change', function () {
+				st.path = r.value;
+				changed();
+			});
+		});
+		if (doctor) {
+			doctor.value = cfg.rx_doctor || '';
+			doctor.addEventListener('input', changed);
+		}
+		var rxPhotos = makePhotos(qs('[data-mns-nd-rxphotos]', root), 5, cfg.rx_photos || [], changed);
+
+		/* ---- derived state ---- */
+		function needNames() {
+			return cards
+				.map(function (c, i) {
+					var r = readCard(c);
+					return r.needs === 'yes' ? r.name || 'دارو ' + toFaDigits(i + 1) : '';
+				})
+				.filter(Boolean);
+		}
+		function anyNeeds() {
+			return needNames().length > 0;
+		}
+		function pathComplete() {
+			if (!anyNeeds()) return true;
+			if (st.path === 'rx') return rxPhotos.count() > 0;
+			if (st.path === 'consult') return consultFinal();
+			return false;
+		}
+		function drugsComplete() {
+			return cards.length > 0 && cards.every(function (c) {
+				return missingCard(c).length === 0;
+			});
+		}
+		function render() {
+			var final = consultFinal();
+			var denied = st.consult.result === 'denied';
+			var needs = anyNeeds();
+			if (secPath) secPath.hidden = !needs;
+			var listText = qs('[data-mns-nd-needs-list]', root);
+			if (listText) listText.textContent = needs ? 'داروهای نیازمند نسخه یا تأیید: ' + needNames().join('، ') : '';
+			qsa('input', pathField).forEach(function (r) {
+				r.checked = r.value === st.path;
+				r.disabled = locked || final;
+			});
+			if (rxBlock) rxBlock.hidden = st.path !== 'rx';
+			if (consultBlock) consultBlock.hidden = st.path !== 'consult';
+			if (consultForm) consultForm.hidden = final || locked;
+			if (finalEl) finalEl.hidden = !final;
+			if (denyEl) denyEl.hidden = !denied;
+			var callBtn = qs('.mns-ndr__call', root);
+			if (callBtn) callBtn.hidden = final;
+			if (banner) banner.hidden = !(denied && needs);
+			if (attemptsEl) {
+				attemptsEl.hidden = !st.consult.attempts.length || final;
+				if (attemptsList) {
+					attemptsList.innerHTML = '';
+					st.consult.attempts.forEach(function (t, i) {
+						attemptsList.appendChild(autoRow('تلاش ' + toFaDigits(i + 1), 'بدون پاسخ · ' + t));
+					});
+				}
+			}
+			if (finalRows) {
+				finalRows.innerHTML = '';
+				if (final) {
+					finalRows.appendChild(autoRow('نتیجهٔ مشاوره', denied ? 'تأیید نشد' : 'تأیید شد', denied ? 'is-bad' : 'is-ok'));
+					finalRows.appendChild(autoRow('زمان ثبت', 'امروز ' + st.consult.time));
+					if (st.consult.note) finalRows.appendChild(autoRow('توضیح پزشک', st.consult.note));
+				}
+			}
+			cards.forEach(function (c, i) {
+				qs('[data-mns-nd-card-title]', c.el).textContent = 'دارو ' + toFaDigits(i + 1);
+				var statusRadios = qsa('input[name^="status-"]', c.el);
+				var forced = qs('[data-mns-nd-forced]', c.el);
+				var cardNeeds = readCard(c).needs === 'yes';
+				var hint = qs('[data-mns-nd-needs-hint]', c.el);
+				if (hint) hint.hidden = !(cardNeeds && !pathComplete());
+				if (denied && cardNeeds) {
+					statusRadios.forEach(function (r) {
+						r.checked = r.value === 'تجویز نشد';
+						r.disabled = true;
+					});
+				} else {
+					statusRadios.forEach(function (r) {
+						r.disabled = locked;
+					});
+				}
+				if (forced) forced.hidden = !(denied && cardNeeds);
+			});
+			if (emptyEl) emptyEl.hidden = cards.length > 0;
+			if (addBtn) addBtn.hidden = cards.length >= MAX_DRUGS;
+			var pOk = pathComplete();
+			var dOk = drugsComplete();
+			if (secPath) secPath.classList.toggle('is-done', pOk && needs);
+			if (secDrugs) secDrugs.classList.toggle('is-done', dOk);
+			var left = (pOk ? 0 : 1) + (dOk ? 0 : 1);
+			if (progress) {
+				progress.classList.toggle('is-complete', left === 0);
+				progress.textContent = left === 0 ? 'همهٔ بخش‌ها کامل است' : toFaDigits(left) + ' بخش مانده';
+			}
+		}
+
+		/* ---- start state ---- */
+		(cfg.drugs || []).forEach(function (d) {
+			addCard(d);
+		});
+		if (!cards.length && !locked) addCard({});
+		render();
+
+		/* ---- review + final submit ---- */
+		var formView = qs('[data-mns-nd-formview]', root);
+		var reviewView = qs('[data-mns-nd-reviewview]', root);
+		var reviewBtn = qs('[data-mns-nd-review]', root);
+		var finalBtn = qs('[data-mns-nd-final]', root);
+		var editBtn = qs('[data-mns-nd-edit]', root);
+		var confirmEl = qs('#mns-nd-confirm', root);
+
+		function buildReview() {
+			var host = qs('[data-mns-nd-summary]', root);
+			host.innerHTML = '';
+			function block(title) {
+				var b = document.createElement('div');
+				b.className = 'mns-ncl__rv-block';
+				var h = document.createElement('p');
+				h.className = 'mns-ncl__rv-h';
+				h.textContent = title;
+				var ul = document.createElement('ul');
+				ul.className = 'mns-ncl__sum';
+				b.appendChild(h);
+				b.appendChild(ul);
+				host.appendChild(b);
+				return ul;
+			}
+			function line(ul, a, b) {
+				var li = document.createElement('li');
+				var x = document.createElement('span');
+				var y = document.createElement('span');
+				x.textContent = a;
+				y.textContent = b;
+				li.appendChild(x);
+				li.appendChild(y);
+				ul.appendChild(li);
+			}
+			cards.forEach(function (c, i) {
+				var d = readCard(c);
+				var u = block('دارو ' + toFaDigits(i + 1));
+				line(u, 'نام و دوز', d.name + ' · ' + d.dose);
+				line(u, 'راه مصرف', d.route);
+				line(u, 'نسخه یا تأیید پزشک', d.needs === 'yes' ? 'لازم است' : 'لازم نیست');
+				line(u, 'وضعیت', d.status);
+				line(u, 'عکس دارو', toFaDigits(d.photos) + ' عکس');
+				if (d.note) line(u, 'توضیح', d.note);
+			});
+			if (anyNeeds()) {
+				var u1 = block('تأیید پزشک');
+				if (st.path === 'rx') {
+					line(u1, 'مسیر', 'نسخه دارد');
+					line(u1, 'عکس نسخه', toFaDigits(rxPhotos.count()) + ' عکس');
+					if (doctor && doctor.value.trim()) line(u1, 'نام پزشک', doctor.value.trim());
+				} else {
+					line(u1, 'مسیر', 'نسخه ندارد (مشاورهٔ پزشک)');
+					line(u1, 'نتیجهٔ مشاوره', st.consult.result === 'denied' ? 'تأیید نشد' : 'تأیید شد');
+					line(u1, 'زمان ثبت', 'امروز ' + st.consult.time);
+					if (st.consult.note) line(u1, 'توضیح پزشک', st.consult.note);
+				}
+			}
+			var br = qs('[data-mns-nd-banner-review]', root);
+			if (br) br.hidden = !(st.consult.result === 'denied' && anyNeeds());
+		}
+		function showView(review) {
+			setCollapse(formView, !review);
+			setCollapse(reviewView, review);
+			if (review) buildReview();
+			if (confirmEl) setCollapse(confirmEl, false);
+			window.scrollTo({ top: 0, behavior: 'smooth' });
+		}
+		if (reviewBtn) {
+			reviewBtn.addEventListener('click', function () {
+				/* something is still open: show exactly where */
+				var pr = qs('[data-mns-nd-reason="path"]', root);
+				var dr = qs('[data-mns-nd-reason="drugs"]', root);
+				pr.textContent = '';
+				dr.textContent = '';
+				qsa('[data-mns-nd-card-reason]', root).forEach(function (p) {
+					p.textContent = '';
+				});
+				if (!cards.length) {
+					dr.textContent = 'حداقل یک دارو اضافه کنید.';
+					scrollToEl(secDrugs, 'start');
+					return;
+				}
+				for (var i = 0; i < cards.length; i++) {
+					var m = missingCard(cards[i]);
+					if (m.length) {
+						qs('[data-mns-nd-card-reason]', cards[i].el).textContent = 'هنوز مانده: ' + m.join('، ');
+						flash(cards[i].el);
+						scrollToEl(cards[i].el, 'center');
+						return;
+					}
+				}
+				if (!pathComplete()) {
+					pr.textContent = !st.path
+						? 'مسیر تأیید را انتخاب کنید: نسخه یا مشاورهٔ پزشک.'
+						: st.path === 'rx'
+						? 'حداقل یک عکس نسخه لازم است.'
+						: 'نتیجهٔ مشاوره («تأیید شد» یا «تأیید نشد») هنوز ثبت نشده است. «پاسخ نداد» کافی نیست.';
+					flash(pathField);
+					scrollToEl(secPath, 'start');
+					return;
+				}
+				showView(true);
+			});
+		}
+		if (editBtn) editBtn.addEventListener('click', function () {
+			showView(false);
+		});
+		if (finalBtn) finalBtn.addEventListener('click', function () {
+			setCollapse(confirmEl, true);
+			scrollToEl(confirmEl, 'center');
+		});
+		if (confirmEl) {
+			var ok = qs('[data-mns-confirm-ok]', confirmEl);
+			var cancel = qs('[data-mns-confirm-cancel]', confirmEl);
+			var err = qs('[data-mns-confirm-error]', confirmEl);
+			if (cancel) {
+				cancel.addEventListener('click', function () {
+					setCollapse(confirmEl, false);
+				});
+			}
+			if (ok) {
+				ok.addEventListener('click', function () {
+					if (ok.classList.contains('is-loading')) return;
+					if (err) err.textContent = '';
+					if (navigator.onLine === false) {
+						if (err) err.textContent = 'ثبت نشد، دوباره تلاش کنید.';
+						return;
+					}
+					ok.classList.add('is-loading');
+					ok.disabled = true;
+					/* TODO(backend): one-time key; the server validates, uploads the files, locks. */
+					window.setTimeout(function () {
+						dirty = false;
+						window.location.href = ok.getAttribute('data-mns-go') || window.location.href;
+					}, 900);
+				});
+			}
+		}
+	}
+
+	/* Nurse "schedule and access" (P-06/07): status that follows the accept switch, the nurse's own monthly schedule (day by day, slot by slot)
+	   and the working regions across Iran (two searchable dropdowns). */
+	function initNurseSchedule() {
+		var root = qs('[data-mns-nvl]');
+		if (!root) return;
+		var cfg = {};
+		try {
+			cfg = JSON.parse(root.getAttribute('data-config') || '{}') || {};
+		} catch (e) {
+			cfg = {};
+		}
+		var xIcon = (qs('[data-mns-nvl-x]', root) || {}).innerHTML || '×';
+		var lockIcon = (qs('[data-mns-nvl-lock]', root) || {}).innerHTML || '';
+		var monthNames = cfg.monthNames || [];
+
+		function setCollapse(el, open) {
+			if (!el) return;
+			el.classList.toggle('is-open', open);
+			if ('inert' in el) el.inert = !open;
+		}
+		function mk(tag, cls, text) {
+			var e = document.createElement(tag);
+			if (cls) e.className = cls;
+			if (text != null) e.textContent = text;
+			return e;
+		}
+		function flash(el) {
+			if (!el) return;
+			el.classList.add('is-flash');
+			window.setTimeout(function () {
+				el.classList.remove('is-flash');
+			}, 1600);
+		}
+		function scrollToEl(el, block) {
+			window.setTimeout(function () {
+				if (el && el.scrollIntoView) el.scrollIntoView({ block: block || 'start', behavior: 'smooth' });
+			}, 120);
+		}
+
+		/* ---------------------------------------------------------------- status */
+		var accept = qs('[data-mns-accept]', root);
+		var statusEl = qs('[data-mns-nvl-status]', root);
+		var statusText = qs('[data-mns-nvl-status-text]', root);
+		var statusSub = qs('[data-mns-nvl-status-sub]', root);
+		function paintStatus() {
+			var on = !accept || accept.classList.contains('is-on');
+			var s = on ? (cfg.statuses || {})[cfg.case] : { tone: 'warn', text: cfg.pausedText, sub: cfg.pausedSub };
+			if (!s || !statusEl) return;
+			statusEl.className = 'mns-nvl__status is-' + s.tone;
+			statusText.textContent = s.text;
+			statusSub.textContent = s.sub;
+		}
+		if (accept && window.MutationObserver) {
+			new MutationObserver(paintStatus).observe(accept, { attributes: true, attributeFilter: ['class'] });
+		}
+		paintStatus();
+
+		/* nothing is saved while editing: leaving with changes asks first */
+		var scDirty = false;
+		var rgDirty = false;
+		window.addEventListener('beforeunload', function (e) {
+			if (scDirty || rgDirty) {
+				e.preventDefault();
+				e.returnValue = '';
+			}
+		});
+
+		/* ---------------------------------------------------------------- monthly schedule */
+		var slots = cfg.slots || [];
+		var days = cfg.days || [];
+		var byIso = {};
+		var idxOf = {};
+		var cur = {};
+		var saved = {};
+		days.forEach(function (d, i) {
+			byIso[d.iso] = d;
+			idxOf[d.iso] = i;
+			cur[d.iso] = d.on.slice();
+			saved[d.iso] = d.on.slice();
+		});
+		var months = [];
+		days.forEach(function (d) {
+			var k = d.y * 100 + d.m;
+			if (months.indexOf(k) === -1) months.push(k);
+		});
+		var mIdx = 0;
+		var selFrom = '';
+		var selTo = '';
+		var grid = qs('[data-mns-sc-grid]', root);
+		var title = qs('[data-mns-sc-title]', root);
+		var prevBtn = qs('[data-mns-sc-prev]', root);
+		var nextBtn = qs('[data-mns-sc-next]', root);
+		var panel = qs('[data-mns-sc-panel]', root);
+		var pTitle = qs('[data-mns-sc-ptitle]', root);
+		var slotsEl = qs('[data-mns-sc-slots]', root);
+		var lockNote = qs('[data-mns-sc-lock]', root);
+		var hint = qs('[data-mns-sc-hint]', root);
+		var bar = qs('[data-mns-sc-bar]', root);
+		var barText = qs('[data-mns-sc-bartext]', root);
+		var scError = qs('[data-mns-sc-error]', root);
+		var scDone = qs('[data-mns-sc-done]', root);
+		var scBusy = false;
+
+		function ordered(list) {
+			return slots
+				.filter(function (s) {
+					return list.indexOf(s.id) > -1;
+				})
+				.map(function (s) {
+					return s.id;
+				});
+		}
+		function same(a, b) {
+			return a.length === b.length && a.every(function (x) {
+				return b.indexOf(x) > -1;
+			});
+		}
+		function isOn(iso, id) {
+			return cur[iso].indexOf(id) > -1;
+		}
+		function dayLabel(iso) {
+			var d = byIso[iso];
+			return d ? toFaDigits(d.d) + ' ' + monthNames[d.m - 1] : iso;
+		}
+		function selDays() {
+			if (!selFrom) return [];
+			var i = idxOf[selFrom];
+			var j = idxOf[selTo || selFrom];
+			if (i > j) {
+				var t = i;
+				i = j;
+				j = t;
+			}
+			return days.slice(i, j + 1).filter(function (d) {
+				return !d.past;
+			});
+		}
+		function changedDays() {
+			return days.filter(function (d) {
+				return !d.past && !same(cur[d.iso], saved[d.iso]);
+			});
+		}
+		function renderCal() {
+			var k = months[mIdx];
+			var y = Math.floor(k / 100);
+			var m = k % 100;
+			title.textContent = monthNames[m - 1] + ' ' + toFaDigits(y);
+			prevBtn.disabled = mIdx === 0;
+			nextBtn.disabled = mIdx === months.length - 1;
+			grid.innerHTML = '';
+			var sel = {};
+			selDays().forEach(function (d) {
+				sel[d.iso] = true;
+			});
+			var monthDays = days.filter(function (d) {
+				return d.y === y && d.m === m;
+			});
+			for (var b = 0; b < monthDays[0].dow; b++) grid.appendChild(mk('span', 'mns-nvl__blank'));
+			monthDays.forEach(function (d) {
+				var btn = mk('button', 'mns-nvl__cd');
+				btn.type = 'button';
+				btn.disabled = d.past;
+				var on = cur[d.iso];
+				btn.classList.toggle('is-past', d.past);
+				btn.classList.toggle('is-today', d.today);
+				btn.classList.toggle('is-sel', !!sel[d.iso]);
+				btn.classList.toggle('is-off', !d.past && on.length === 0);
+				btn.classList.toggle('has-order', d.orders.length > 0);
+				btn.classList.toggle('is-changed', !d.past && !same(cur[d.iso], saved[d.iso]));
+				btn.appendChild(mk('span', 'mns-nvl__cdn', toFaDigits(d.d)));
+				var bars = mk('span', 'mns-nvl__bars');
+				slots.forEach(function (s) {
+					bars.appendChild(mk('i', on.indexOf(s.id) > -1 ? 'is-on' : ''));
+				});
+				btn.appendChild(bars);
+				btn.setAttribute('aria-pressed', sel[d.iso] ? 'true' : 'false');
+				btn.setAttribute('aria-label', toFaDigits(d.d) + ' ' + monthNames[d.m - 1] + ' · ' + (on.length ? toFaDigits(on.length) + ' بازه در دسترس' : 'نیستم') + (d.orders.length ? ' · سفارش دارد' : ''));
+				btn.addEventListener('click', function () {
+					scError.textContent = '';
+					scDone.hidden = true;
+					if (!selFrom || selTo) {
+						selFrom = d.iso;
+						selTo = '';
+					} else if (d.iso < selFrom) {
+						selTo = selFrom;
+						selFrom = d.iso;
+					} else {
+						selTo = d.iso;
+					}
+					renderAll();
+					if (!panel.classList.contains('is-open')) scrollToEl(panel, 'nearest');
+				});
+				grid.appendChild(btn);
+			});
+		}
+		/* slot icons: the sun's place on its path across the sky (sunrise -> noon -> sunset), the moon at night */
+		var svgOpen = '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false">';
+		var skyBase = '<path d="M3 19h18" /><path d="M4 19a8 8 0 0 1 16 0" stroke-dasharray="1.2 2.6" opacity=".55" />';
+		var sunAt = function (x, y) {
+			return '<circle cx="' + x + '" cy="' + y + '" r="2.6" fill="currentColor" />';
+		};
+		var slotIcons = {
+			'4-8': skyBase + sunAt(4.6, 15.6),
+			'8-12': skyBase + sunAt(8.1, 10.8),
+			'12-16': skyBase + sunAt(15.9, 10.8),
+			'16-20': skyBase + sunAt(19.4, 15.6),
+			'20-24': '<path d="M20 14.2A8 8 0 1 1 9.8 4a6.4 6.4 0 0 0 10.2 10.2z" fill="currentColor" /><path d="M18.5 4v3M17 5.5h3" />'
+		};
+		function slotIcon(id) {
+			return svgOpen + (slotIcons[id] || skyBase) + '</svg>';
+		}
+		var iconCheck = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>';
+		var iconZzz = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M4 3.5h6.5L4 11h6.5" /><path d="M13 11.5h5L13 17.5h5" /><path d="M18.5 18.5h3l-3 3.5h3" /></svg>';
+		var iconDash = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" focusable="false"><path d="M6 12h12" /></svg>';
+		function renderPanel() {
+			var sel = selDays();
+			setCollapse(panel, sel.length > 0);
+			hint.hidden = sel.length > 0;
+			if (!sel.length) return;
+			pTitle.textContent = sel.length === 1 ? dayLabel(sel[0].iso) : dayLabel(sel[0].iso) + ' تا ' + dayLabel(sel[sel.length - 1].iso) + ' (' + toFaDigits(sel.length) + ' روز)';
+			slotsEl.innerHTML = '';
+			var anyLocked = false;
+			slots.forEach(function (s) {
+				var onCount = sel.filter(function (d) {
+					return isOn(d.iso, s.id);
+				}).length;
+				var state = onCount === sel.length ? 'on' : onCount === 0 ? 'off' : 'mixed';
+				var locked = sel.some(function (d) {
+					return d.orders.indexOf(s.id) > -1;
+				});
+				if (locked) anyLocked = true;
+				var chip = mk('button', 'mns-nvl__sl is-' + state + (locked ? ' is-locked' : ''));
+				chip.type = 'button';
+				chip.setAttribute('aria-pressed', state === 'on' ? 'true' : 'false');
+				var stText = locked ? 'سفارش دارد' : state === 'on' ? 'در دسترس' : state === 'off' ? 'نیستم' : 'متفاوت';
+				chip.setAttribute('aria-label', s.name + '، ' + s.label + '، ' + stText);
+				chip.title = s.name;
+				var top = mk('span', 'mns-nvl__sltop');
+				var ic = mk('span', 'mns-nvl__slic');
+				ic.setAttribute('aria-hidden', 'true');
+				ic.innerHTML = slotIcon(s.id);
+				var hrs = mk('small', '', s.label);
+				hrs.setAttribute('dir', 'ltr');
+				top.appendChild(ic);
+				top.appendChild(hrs);
+				var st = mk('span', 'mns-nvl__slst');
+				var sti = mk('span', 'mns-nvl__slsti');
+				sti.setAttribute('aria-hidden', 'true');
+				sti.innerHTML = locked ? '' : state === 'on' ? iconCheck : state === 'off' ? iconZzz : iconDash;
+				st.appendChild(sti);
+				st.appendChild(document.createTextNode(stText));
+				if (locked) {
+					var li = mk('span', 'mns-nvl__sllock');
+					li.innerHTML = lockIcon;
+					chip.appendChild(li);
+				}
+				chip.appendChild(top);
+				chip.appendChild(st);
+				chip.addEventListener('click', function () {
+					var target = state === 'on' ? 'off' : 'on';
+					sel.forEach(function (d) {
+						var list = cur[d.iso].slice();
+						var p = list.indexOf(s.id);
+						if (target === 'on' && p === -1) list.push(s.id);
+						if (target === 'off' && p > -1 && d.orders.indexOf(s.id) === -1) list.splice(p, 1);
+						cur[d.iso] = ordered(list);
+					});
+					afterEdit();
+				});
+				slotsEl.appendChild(chip);
+			});
+			lockNote.hidden = !anyLocked;
+		}
+		function renderBar() {
+			var n = changedDays().length;
+			scDirty = n > 0;
+			bar.hidden = n === 0;
+			barText.textContent = toFaDigits(n) + ' روز تغییر کرده؛ هنوز ذخیره نشده است.';
+		}
+		function renderAll() {
+			renderCal();
+			renderPanel();
+			renderBar();
+		}
+		function afterEdit() {
+			scDone.hidden = true;
+			scError.textContent = '';
+			renderAll();
+		}
+		function applyToSel(fn) {
+			selDays().forEach(function (d) {
+				cur[d.iso] = ordered(fn(d));
+			});
+			afterEdit();
+		}
+		prevBtn.addEventListener('click', function () {
+			if (mIdx > 0) {
+				mIdx--;
+				renderCal();
+			}
+		});
+		nextBtn.addEventListener('click', function () {
+			if (mIdx < months.length - 1) {
+				mIdx++;
+				renderCal();
+			}
+		});
+		qs('[data-mns-sc-close]', root).addEventListener('click', function () {
+			selFrom = '';
+			selTo = '';
+			renderAll();
+		});
+		qs('[data-mns-sc-allon]', root).addEventListener('click', function () {
+			applyToSel(function () {
+				return slots.map(function (s) {
+					return s.id;
+				});
+			});
+		});
+		qs('[data-mns-sc-alloff]', root).addEventListener('click', function () {
+			applyToSel(function (d) {
+				return d.orders.slice();
+			});
+		});
+		qs('[data-mns-sc-reset]', root).addEventListener('click', function () {
+			applyToSel(function (d) {
+				return d.base.concat(d.orders);
+			});
+		});
+		qs('[data-mns-sc-undo]', root).addEventListener('click', function () {
+			days.forEach(function (d) {
+				cur[d.iso] = saved[d.iso].slice();
+			});
+			afterEdit();
+		});
+		qs('[data-mns-sc-save]', root).addEventListener('click', function () {
+			if (scBusy) return;
+			var btn = qs('[data-mns-sc-save]', root);
+			scError.textContent = '';
+			if (navigator.onLine === false) {
+				scError.textContent = 'ثبت نشد، اتصال برقرار نیست.';
+				return;
+			}
+			scBusy = true;
+			btn.classList.add('is-loading');
+			btn.disabled = true;
+			/* TODO(backend): store the day overrides; the server re-checks that a slot holding an order stays on (row lock on the nurse). */
+			window.setTimeout(function () {
+				scBusy = false;
+				btn.classList.remove('is-loading');
+				btn.disabled = false;
+				days.forEach(function (d) {
+					saved[d.iso] = cur[d.iso].slice();
+				});
+				renderAll();
+				scDone.hidden = false;
+			}, 800);
+		});
+		renderAll();
+
+		/* ---------------------------------------------------------------- regions: two searchable dropdowns */
+		var rg = qs('[data-mns-rg]', root);
+		if (!rg) return;
+		var provSel = qs('[data-mns-rg-prov]', rg);
+		var citySel = qs('[data-mns-rg-city]', rg);
+		var addBtn = qs('[data-mns-rg-add]', rg);
+		var addAllBtn = qs('[data-mns-rg-addall]', rg);
+		var addReason = qs('[data-mns-rg-addreason]', rg);
+		var selH = qs('[data-mns-rg-sel-h]', rg);
+		var groupsEl = qs('[data-mns-rg-groups]', rg);
+		var distEl = qs('[data-mns-rg-districts]', rg);
+		var noneEl = qs('[data-mns-rg-none]', rg);
+		var warnEl = qs('[data-mns-rg-warn]', rg);
+		var warnText = qs('[data-mns-rg-warn-text]', rg);
+		var reasonEl = qs('[data-mns-rg-reason]', rg);
+		var saveBtn = qs('[data-mns-rg-save]', rg);
+		var doneEl = qs('[data-mns-rg-done]', rg);
+		var distMap = cfg.districts || {};
+		var orderMap = cfg.regionOrders || {};
+		var data = null;
+		var provByCode = {};
+		var provNames = {};
+		qsa('option', provSel).forEach(function (o) {
+			if (o.value) provNames[o.value] = o.textContent;
+		});
+		var sel = (cfg.regions || []).map(function (r) {
+			return { prov: r.prov, city: r.city, d: (r.districts || []).slice() };
+		});
+
+		function canon(list) {
+			return list
+				.map(function (s) {
+					return { prov: s.prov, city: s.city, d: s.d.slice().sort(function (a, b) { return a - b; }) };
+				})
+				.sort(function (a, b) {
+					return a.prov + a.city < b.prov + b.city ? -1 : 1;
+				});
+		}
+		var baseline = JSON.stringify(canon(sel));
+		var baselineSel = JSON.parse(baseline);
+		function keyOf(prov, city) {
+			return prov + '|' + city;
+		}
+		function findSel(prov, city) {
+			for (var i = 0; i < sel.length; i++) if (sel[i].prov === prov && sel[i].city === city) return i;
+			return -1;
+		}
+		function provCityCount(code) {
+			return provByCode[code] ? provByCode[code].cities.length : 0;
+		}
+		function remove(prov, city) {
+			var i = findSel(prov, city);
+			if (i > -1) sel.splice(i, 1);
+			update();
+		}
+
+		function renderSelected() {
+			var provSet = {};
+			var cities = 0;
+			sel.forEach(function (s) {
+				provSet[s.prov] = true;
+				cities += s.city === '*' ? provCityCount(s.prov) || 1 : 1;
+			});
+			var np = Object.keys(provSet).length;
+			selH.textContent = sel.length ? 'مناطق فعالیت شما · ' + toFaDigits(np) + ' استان، ' + toFaDigits(cities) + ' شهر' : 'هنوز شهری اضافه نکرده‌اید.';
+			groupsEl.innerHTML = '';
+			Object.keys(provSet).forEach(function (code) {
+				var g = mk('div', 'mns-nvl__grp');
+				g.appendChild(mk('b', 'mns-nvl__grpname', provNames[code] || code));
+				var chips = mk('div', 'mns-nvl__chips');
+				sel.filter(function (s) {
+					return s.prov === code;
+				}).forEach(function (s) {
+					var chip = mk('span', 'mns-nvl__chip' + (s.city === '*' ? ' is-all' : ''));
+					var label = s.city === '*' ? 'همهٔ شهرها' + (provCityCount(code) ? ' (' + toFaDigits(provCityCount(code)) + ')' : '') : s.city + (distMap[keyOf(s.prov, s.city)] && s.d.length ? ' · ' + toFaDigits(s.d.length) + ' منطقه' : '');
+					chip.appendChild(mk('span', '', label));
+					var x = mk('button', 'mns-nvl__chip-x');
+					x.type = 'button';
+					x.setAttribute('aria-label', 'حذف ' + (s.city === '*' ? 'همهٔ شهرهای ' + (provNames[code] || '') : s.city));
+					x.innerHTML = xIcon;
+					x.addEventListener('click', function () {
+						remove(s.prov, s.city);
+					});
+					chip.appendChild(x);
+					chips.appendChild(chip);
+				});
+				g.appendChild(chips);
+				groupsEl.appendChild(g);
+			});
+		}
+		function renderDistricts() {
+			distEl.innerHTML = '';
+			sel.forEach(function (s) {
+				var names = distMap[keyOf(s.prov, s.city)];
+				if (!names) return;
+				var card = mk('div', 'mns-nvl__dcard');
+				card.setAttribute('data-mns-rg-dcard', keyOf(s.prov, s.city));
+				var head = mk('div', 'mns-nvl__dhead');
+				head.appendChild(mk('b', '', 'مناطق ' + s.city));
+				head.appendChild(mk('small', '', toFaDigits(s.d.length) + ' از ' + toFaDigits(names.length)));
+				card.appendChild(head);
+				var acts = mk('div', 'mns-nvl__dacts');
+				var all = mk('button', 'mns-nvl__link', 'انتخاب همه');
+				all.type = 'button';
+				all.addEventListener('click', function () {
+					s.d = names.map(function (n, i) {
+						return i + 1;
+					});
+					update();
+				});
+				var clr = mk('button', 'mns-nvl__link', 'پاک کردن');
+				clr.type = 'button';
+				clr.addEventListener('click', function () {
+					s.d = [];
+					update();
+				});
+				acts.appendChild(all);
+				acts.appendChild(clr);
+				card.appendChild(acts);
+				var chips = mk('div', 'mns-ncl__chips');
+				names.forEach(function (n, i) {
+					var num = i + 1;
+					var label = mk('label', 'mns-ncl__chip');
+					var inp = document.createElement('input');
+					inp.type = 'checkbox';
+					inp.checked = s.d.indexOf(num) > -1;
+					inp.addEventListener('change', function () {
+						var p = s.d.indexOf(num);
+						if (p > -1) s.d.splice(p, 1);
+						else s.d.push(num);
+						update();
+					});
+					label.appendChild(inp);
+					label.appendChild(mk('span', '', toFaDigits(num)));
+					label.title = n;
+					chips.appendChild(label);
+				});
+				card.appendChild(chips);
+				if (!s.d.length) {
+					card.classList.add('is-warn');
+					card.appendChild(mk('p', 'mns-nvl__dwarn', 'حداقل یک منطقه انتخاب کنید.'));
+				}
+				distEl.appendChild(card);
+			});
+		}
+		function removedOrders() {
+			var msgs = [];
+			var total = 0;
+			baselineSel.forEach(function (b) {
+				if (b.city === '*') return;
+				var i = findSel(b.prov, b.city);
+				var hasDistricts = !!distMap[keyOf(b.prov, b.city)];
+				if (i === -1 || hasDistricts) {
+					if (hasDistricts) {
+						b.d.forEach(function (num) {
+							if (i === -1 || sel[i].d.indexOf(num) === -1) {
+								var c = orderMap[keyOf(b.prov, b.city) + '|' + num] || 0;
+								if (c) {
+									total += c;
+									msgs.push('منطقه ' + toFaDigits(num) + ' ' + b.city);
+								}
+							}
+						});
+					} else {
+						var c2 = orderMap[keyOf(b.prov, b.city)] || 0;
+						if (c2) {
+							total += c2;
+							msgs.push(b.city);
+						}
+					}
+				}
+			});
+			return total ? toFaDigits(total) + ' سفارش تخصیص‌یافته در ' + msgs.join('، ') + ' دارید. حذف منطقه روی آن‌ها اثری ندارد.' : '';
+		}
+		function update() {
+			renderSelected();
+			renderDistricts();
+			noneEl.hidden = sel.length > 0;
+			rgDirty = JSON.stringify(canon(sel)) !== baseline;
+			saveBtn.hidden = !rgDirty;
+			doneEl.hidden = true;
+			reasonEl.textContent = '';
+			var w = rgDirty ? removedOrders() : '';
+			warnEl.hidden = !w;
+			warnText.textContent = w;
+		}
+
+		/* the two dropdowns */
+		function loadLocations(cb) {
+			if (data) {
+				cb();
+				return;
+			}
+			fetch(cfg.locationsUrl)
+				.then(function (r) {
+					if (!r.ok) throw new Error('http');
+					return r.json();
+				})
+				.then(function (d) {
+					data = d;
+					d.provinces.forEach(function (p) {
+						provByCode[p.code] = p;
+					});
+					cb();
+					renderSelected();
+				})
+				.catch(function () {
+					citySel.innerHTML = '<option value="">فهرست شهرها بارگذاری نشد؛ صفحه را دوباره باز کنید</option>';
+				});
+		}
+		provSel.addEventListener('change', function () {
+			addReason.textContent = '';
+			var code = provSel.value;
+			citySel.innerHTML = '<option value="">' + (code ? 'در حال بارگذاری…' : 'ابتدا استان را انتخاب کنید') + '</option>';
+			citySel.disabled = !code;
+			citySel.dispatchEvent(new Event('change'));
+			if (!code) return;
+			loadLocations(function () {
+				if (provSel.value !== code) return;
+				citySel.innerHTML = '<option value="">انتخاب کنید</option>';
+				provByCode[code].cities.forEach(function (name) {
+					var o = document.createElement('option');
+					o.value = name;
+					o.textContent = name;
+					citySel.appendChild(o);
+				});
+				citySel.disabled = false;
+				citySel.dispatchEvent(new Event('change'));
+			});
+		});
+		function resetCity() {
+			citySel.value = '';
+			citySel.dispatchEvent(new Event('change'));
+		}
+		addBtn.addEventListener('click', function () {
+			addReason.textContent = '';
+			var code = provSel.value;
+			var city = citySel.value;
+			if (!code) {
+				addReason.textContent = 'اول استان را انتخاب کنید.';
+				return;
+			}
+			if (!city) {
+				addReason.textContent = 'شهر را انتخاب کنید.';
+				return;
+			}
+			if (findSel(code, '*') > -1) {
+				addReason.textContent = 'همهٔ شهرهای این استان قبلاً اضافه شده است.';
+				return;
+			}
+			if (findSel(code, city) > -1) {
+				addReason.textContent = 'این شهر قبلاً اضافه شده است.';
+				return;
+			}
+			sel.push({ prov: code, city: city, d: [] });
+			resetCity();
+			update();
+		});
+		addAllBtn.addEventListener('click', function () {
+			addReason.textContent = '';
+			var code = provSel.value;
+			if (!code) {
+				addReason.textContent = 'اول استان را انتخاب کنید.';
+				return;
+			}
+			sel = sel.filter(function (s) {
+				return s.prov !== code;
+			});
+			sel.push({ prov: code, city: '*', d: [] });
+			resetCity();
+			update();
+		});
+		saveBtn.addEventListener('click', function () {
+			if (saveBtn.classList.contains('is-loading')) return;
+			reasonEl.textContent = '';
+			var missing = sel.filter(function (s) {
+				return distMap[keyOf(s.prov, s.city)] && !s.d.length;
+			})[0];
+			if (missing) {
+				reasonEl.textContent = 'برای ' + missing.city + ' حداقل یک منطقه انتخاب کنید.';
+				flash(qs('[data-mns-rg-dcard="' + keyOf(missing.prov, missing.city) + '"]', rg));
+				return;
+			}
+			if (navigator.onLine === false) {
+				reasonEl.textContent = 'ثبت نشد، اتصال برقرار نیست.';
+				return;
+			}
+			saveBtn.classList.add('is-loading');
+			saveBtn.disabled = true;
+			/* TODO(backend): replace the nurse's regions; assigned orders keep their nurse; reject cities/districts the admin switched off. */
+			window.setTimeout(function () {
+				saveBtn.classList.remove('is-loading');
+				saveBtn.disabled = false;
+				baseline = JSON.stringify(canon(sel));
+				baselineSel = JSON.parse(baseline);
+				rgDirty = false;
+				saveBtn.hidden = true;
+				warnEl.hidden = true;
+				doneEl.hidden = false;
+			}, 800);
+		});
+		update();
+		loadLocations(function () {});
 	}
 
 	function initLiveSearch() {

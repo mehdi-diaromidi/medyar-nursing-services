@@ -228,13 +228,10 @@ $chevron_svg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
 						</div>
 					<?php else : ?>
 						<div class="mns-olist__head" aria-hidden="true">
-							<span><?php echo esc_html__( 'شماره فاکتور', 'medyar-nursing-services' ); ?></span>
-							<span><?php echo esc_html__( 'خدمت', 'medyar-nursing-services' ); ?></span>
-							<span><?php echo esc_html__( 'بیمار', 'medyar-nursing-services' ); ?></span>
-							<?php echo $sort_link( 'date', __( 'تاریخ صدور', 'medyar-nursing-services' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+							<span><?php echo esc_html__( 'شماره و تاریخ', 'medyar-nursing-services' ); ?></span>
+							<span><?php echo esc_html__( 'خدمت و بیمار', 'medyar-nursing-services' ); ?></span>
 							<?php echo $sort_link( 'amount', __( 'مبلغ', 'medyar-nursing-services' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 							<span><?php echo esc_html__( 'وضعیت', 'medyar-nursing-services' ); ?></span>
-							<span><?php echo esc_html__( 'تاریخ و روش پرداخت', 'medyar-nursing-services' ); ?></span>
 							<span><?php echo esc_html__( 'اقدام', 'medyar-nursing-services' ); ?></span>
 						</div>
 						<section class="mns-ogroup mns-ogroup--action" aria-labelledby="mns-ig-unpaid">
@@ -272,13 +269,10 @@ $chevron_svg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
 							<table class="arp-table mns-otable">
 								<thead>
 									<tr>
-										<th><?php echo esc_html__( 'شماره فاکتور', 'medyar-nursing-services' ); ?></th>
-										<th><?php echo esc_html__( 'خدمت', 'medyar-nursing-services' ); ?></th>
-										<th><?php echo esc_html__( 'بیمار', 'medyar-nursing-services' ); ?></th>
-										<th><?php echo $sort_link( 'date', __( 'تاریخ صدور', 'medyar-nursing-services' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></th>
+										<th><span><?php echo esc_html__( 'شماره و تاریخ', 'medyar-nursing-services' ); ?></span></th>
+										<th><?php echo esc_html__( 'خدمت و بیمار', 'medyar-nursing-services' ); ?></th>
 										<th class="arp-table__amount"><?php echo $sort_link( 'amount', __( 'مبلغ', 'medyar-nursing-services' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></th>
 										<th><?php echo esc_html__( 'وضعیت', 'medyar-nursing-services' ); ?></th>
-										<th><?php echo esc_html__( 'تاریخ و روش پرداخت', 'medyar-nursing-services' ); ?></th>
 										<th><?php echo esc_html__( 'اقدام', 'medyar-nursing-services' ); ?></th>
 									</tr>
 								</thead>

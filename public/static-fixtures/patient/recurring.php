@@ -26,6 +26,8 @@ return array(
 			'preferred_nurse' => 'علی رضایی',
 			'status'          => 'active',
 			'status_label'    => 'فعال',
+			'done'            => 2,
+			'total'           => 6,
 			'slots'           => array(
 				array(
 					'label'  => 'نوبت ۳ از ۶',
@@ -46,6 +48,19 @@ return array(
 					'url'    => '',
 				),
 			),
+		),
+		array(
+			'id'              => 'r2',
+			'service'         => 'سرم‌تراپی',
+			'patient'         => 'خودم',
+			'pattern'         => 'یک‌روز در میان',
+			'pattern_detail'  => 'ساعت ۱۰:۰۰',
+			'preferred_nurse' => '',
+			'status'          => 'paused',
+			'status_label'    => 'متوقف',
+			'done'            => 4,
+			'total'           => 10,
+			'slots'           => array(),
 		),
 	),
 );

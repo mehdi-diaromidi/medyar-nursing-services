@@ -114,7 +114,7 @@ class MNS_UI {
 	 */
 	public static function nav_active( string $panel, string $page ): string {
 		if ( 'nurse' === $panel ) {
-			if ( 'order-view' === $page ) {
+			if ( in_array( $page, array( 'order-view', 'checklist', 'report', 'drug' ), true ) ) {
 				return 'orders';
 			}
 			if ( 'ratings' === $page ) {
@@ -147,7 +147,7 @@ class MNS_UI {
 			return true;
 		}
 		/* Parent highlight for detail pages on desktop sidebar. */
-		if ( 'order-view' === $page && 'orders' === $slug ) {
+		if ( in_array( $page, array( 'order-view', 'checklist', 'report', 'drug' ), true ) && 'orders' === $slug ) {
 			return true;
 		}
 		if ( 'invoice-view' === $page && 'invoices' === $slug ) {
@@ -305,6 +305,9 @@ class MNS_UI {
 				'dashboard'    => __( 'داشبورد', 'medyar-nursing-services' ),
 				'orders'       => __( 'سفارش‌های من', 'medyar-nursing-services' ),
 				'order-view'   => __( 'جزئیات سفارش', 'medyar-nursing-services' ),
+				'checklist'    => __( 'چک‌لیست', 'medyar-nursing-services' ),
+				'report'       => __( 'گزارش پایان مراجعه', 'medyar-nursing-services' ),
+				'drug'         => __( 'مرحلهٔ دارو', 'medyar-nursing-services' ),
 				'availability' => __( 'برنامه و دسترسی', 'medyar-nursing-services' ),
 				'ratings'      => __( 'امتیازهای من', 'medyar-nursing-services' ),
 				'profile'      => __( 'پروفایل', 'medyar-nursing-services' ),

@@ -100,7 +100,6 @@ $list_head = static function () use ( $sort_url, $state ) {
 		<span><?php echo esc_html__( 'کد پیگیری', 'medyar-nursing-services' ); ?></span>
 		<span><?php echo esc_html__( 'خدمت', 'medyar-nursing-services' ); ?></span>
 		<span><?php echo esc_html__( 'بیمار', 'medyar-nursing-services' ); ?></span>
-		<a class="mns-olist__sort<?php echo 'date' === $state['sort'] ? ' is-sorted is-' . esc_attr( $state['order'] ) : ''; ?>" href="<?php echo esc_url( $sort_url( 'date' ) ); ?>" tabindex="-1"><?php echo esc_html__( 'تاریخ', 'medyar-nursing-services' ); ?><?php echo mns_icon( 'chevron-down' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></a>
 		<span><?php echo esc_html__( 'پرستار', 'medyar-nursing-services' ); ?></span>
 		<span><?php echo esc_html__( 'وضعیت', 'medyar-nursing-services' ); ?></span>
 		<a class="mns-olist__sort<?php echo 'amount' === $state['sort'] ? ' is-sorted is-' . esc_attr( $state['order'] ) : ''; ?>" href="<?php echo esc_url( $sort_url( 'amount' ) ); ?>" tabindex="-1"><?php echo esc_html__( 'مبلغ', 'medyar-nursing-services' ); ?><?php echo mns_icon( 'chevron-down' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></a>
@@ -338,7 +337,6 @@ $paid_flash = isset( $_GET['mns_paid'] ) && '1' === sanitize_key( wp_unslash( $_
 										<th><?php echo esc_html__( 'کد پیگیری', 'medyar-nursing-services' ); ?></th>
 										<th><?php echo esc_html__( 'خدمت', 'medyar-nursing-services' ); ?></th>
 										<th><?php echo esc_html__( 'بیمار', 'medyar-nursing-services' ); ?></th>
-										<th><a class="mns-olist__sort<?php echo 'date' === $state['sort'] ? ' is-sorted is-' . esc_attr( $state['order'] ) : ''; ?>" href="<?php echo esc_url( $sort_url( 'date' ) ); ?>" data-mns-orders-nav><?php echo esc_html__( 'تاریخ', 'medyar-nursing-services' ); ?><?php echo mns_icon( 'chevron-down' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></a></th>
 										<th><?php echo esc_html__( 'پرستار', 'medyar-nursing-services' ); ?></th>
 										<th><?php echo esc_html__( 'وضعیت', 'medyar-nursing-services' ); ?></th>
 										<th class="arp-table__amount"><a class="mns-olist__sort<?php echo 'amount' === $state['sort'] ? ' is-sorted is-' . esc_attr( $state['order'] ) : ''; ?>" href="<?php echo esc_url( $sort_url( 'amount' ) ); ?>" data-mns-orders-nav><?php echo esc_html__( 'مبلغ', 'medyar-nursing-services' ); ?><?php echo mns_icon( 'chevron-down' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></a></th>

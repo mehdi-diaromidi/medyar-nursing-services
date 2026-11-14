@@ -21,7 +21,7 @@ $status    = (string) $row['status'];
 $types     = MNS_Patient_Invoices::types();
 ?>
 <li
-	class="mns-order mns-inv mns-order--<?php echo esc_attr( $group ); ?>"
+	class="mns-order mns-inv mns-order--<?php echo esc_attr( $group ); ?><?php echo in_array( $status, array( 'paid', 'dispute' ), true ) ? '' : ' mns-inv--solo'; ?>"
 	data-mns-order
 	data-mns-order-title="<?php echo esc_attr( (string) $row['service'] . ' · ' . $number ); ?>"
 >

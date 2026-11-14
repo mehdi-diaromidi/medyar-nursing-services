@@ -96,11 +96,7 @@ if ( 'orders' === $page ) {
 			</button>
 			<span class="mns-dash__role-badge"><?php echo esc_html__( 'پنل بیمار', 'medyar-nursing-services' ); ?></span>
 			<div class="mns-dash__user-avatar" data-mns-avatar="side">
-				<?php if ( $user_id > 0 ) : ?>
-					<?php echo get_avatar( $user_id, 64 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-				<?php else : ?>
-					<span class="mns-dash__user-avatar-fallback" aria-hidden="true"><?php echo mns_icon( 'user' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
-				<?php endif; ?>
+				<span class="mns-dash__user-avatar-fallback" aria-hidden="true"><?php echo mns_icon( 'user' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
 			</div>
 			<div class="mns-dash__user-name" data-mns-bind="display_name"><?php echo esc_html( $display ); ?></div>
 			<?php if ( '' !== $phone_ui ) : ?>

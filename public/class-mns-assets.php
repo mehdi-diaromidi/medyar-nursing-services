@@ -64,6 +64,10 @@ class MNS_Assets {
 		if ( 'patient' === MNS_Pages::current_panel() && in_array( MNS_Pages::current_page( 'patient' ), array( 'orders', 'invoices', 'invoice-view' ), true ) ) {
 			self::enqueue_arp_list_kit();
 		}
+
+		if ( 'nurse' === MNS_Pages::current_panel() && 'orders' === MNS_Pages::current_page( 'nurse' ) ) {
+			self::enqueue_arp_list_kit();
+		}
 	}
 
 	/**

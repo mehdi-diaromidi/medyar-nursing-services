@@ -28,9 +28,8 @@ $cells = MNS_Patient_Orders::cells( $row );
 			<?php echo mns_icon( 'copy' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 		</button>
 	</td>
-	<td class="arp-table__name"><a class="mns-order__title" href="<?php echo esc_url( $cells['view_url'] ); ?>" data-mns-order-link><?php echo esc_html( $cells['service'] ); ?></a></td>
+	<td class="arp-table__name"><a class="mns-order__title" href="<?php echo esc_url( $cells['view_url'] ); ?>" data-mns-order-link><?php echo esc_html( $cells['service'] ); ?></a><span class="mns-otable__when"><?php echo esc_html( $cells['when_short'] ); ?></span></td>
 	<td><?php echo esc_html( $cells['patient'] ); ?></td>
-	<td><?php echo esc_html( $cells['when_short'] ); ?></td>
 	<?php MNS_UI::partial( 'order-cells', array( 'cells' => $cells, 'tag' => 'td' ) ); ?>
 	<td class="mns-otable__actions">
 		<?php MNS_UI::partial( 'order-actions', array( 'row' => $row, 'menu_id' => 'mns-omt-' . sanitize_html_class( $code ) ) ); ?>

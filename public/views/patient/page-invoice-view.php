@@ -171,8 +171,8 @@ $revised = isset( $inv['revised'] ) && is_array( $inv['revised'] ) ? $inv['revis
 											<span class="mns-invd__sub"><?php echo esc_html( (string) $line['sub'] ); ?></span>
 										<?php endif; ?>
 									</td>
-									<td><?php echo $neg ? '—' : esc_html( MNS_Format::digits( (int) $line['qty'] ) ); ?></td>
-									<td><?php echo $neg ? '—' : esc_html( MNS_Format::number( (int) $line['unit'] ) ); ?></td>
+									<td data-label="<?php echo esc_attr__( 'تعداد', 'medyar-nursing-services' ); ?>"><?php echo $neg ? '—' : esc_html( MNS_Format::digits( (int) $line['qty'] ) ); ?></td>
+									<td data-label="<?php echo esc_attr__( 'قیمت واحد', 'medyar-nursing-services' ); ?>"><?php echo $neg ? '—' : esc_html( MNS_Format::number( (int) $line['unit'] ) ); ?></td>
 									<td class="mns-invd__sum" dir="ltr"><?php echo esc_html( MNS_Patient_Invoices::money( (int) $line['total'] ) ); ?></td>
 								</tr>
 							<?php endforeach; ?>

@@ -25,7 +25,7 @@ class MNS_Patient_Orders {
 		return array(
 			'all'       => __( 'همه', 'medyar-nursing-services' ),
 			'active'    => __( 'فعال', 'medyar-nursing-services' ),
-			'unpaid'    => __( 'منتظر پرداخت', 'medyar-nursing-services' ),
+			'unpaid'    => __( 'در انتظار پرداخت', 'medyar-nursing-services' ),
 			'done'      => __( 'تکمیل‌شده', 'medyar-nursing-services' ),
 			'cancelled' => __( 'لغوشده', 'medyar-nursing-services' ),
 		);
@@ -152,7 +152,7 @@ class MNS_Patient_Orders {
 		$when    = (string) ( $row['when'] ?? '' );
 		return array(
 			'status'       => $status,
-			'status_label' => MNS_Order_Status::INVOICED === $status ? __( 'منتظر پرداخت', 'medyar-nursing-services' ) : (string) $info['label'],
+			'status_label' => MNS_Order_Status::INVOICED === $status ? __( 'در انتظار پرداخت', 'medyar-nursing-services' ) : (string) $info['label'],
 			'service'      => $service,
 			'patient'      => (string) ( $row['patient_name'] ?? '' ),
 			'when_short'   => self::when_label( $when, 'short' ),
@@ -363,26 +363,10 @@ class MNS_Patient_Orders {
 	}
 
 	/**
-	 * «۱۰ صبح» / «۴ عصر» / «۷:۳۰ شب».
+	 * 24-hour clock everywhere: «۱۰:۰۰» / «۲۰:۰۰» (product decision; no «صبح/عصر/شب»).
 	 */
 	public static function clock( DateTimeImmutable $dt ): string {
-		$h = (int) $dt->format( 'G' );
-		$m = (int) $dt->format( 'i' );
-		if ( $h < 12 ) {
-			$period = __( 'صبح', 'medyar-nursing-services' );
-		} elseif ( $h < 14 ) {
-			$period = __( 'ظهر', 'medyar-nursing-services' );
-		} elseif ( $h < 19 ) {
-			$period = __( 'عصر', 'medyar-nursing-services' );
-		} else {
-			$period = __( 'شب', 'medyar-nursing-services' );
-		}
-		$h12 = $h % 12;
-		if ( 0 === $h12 ) {
-			$h12 = 12;
-		}
-		$num = $m > 0 ? sprintf( '%d:%02d', $h12, $m ) : (string) $h12;
-		return MNS_Format::digits( $num ) . ' ' . $period;
+		return MNS_Format::digits( $dt->format( 'H:i' ) );
 	}
 
 	/**

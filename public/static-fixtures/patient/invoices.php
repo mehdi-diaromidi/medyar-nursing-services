@@ -115,7 +115,7 @@ for ( $i = 0; $i < 7; $i++ ) {
 
 /* Line items: kind => chip label; amounts in toman; negative = discount. */
 $lines_2031 = array(
-	array( 'kind' => 'base', 'title' => 'سرم‌تراپی در منزل', 'sub' => 'مدت حضور: ۷۵ دقیقه', 'qty' => 1, 'unit' => 900000 ),
+	array( 'kind' => 'base', 'title' => 'سرم‌تراپی در منزل', 'qty' => 1, 'unit' => 900000 ),
 	array( 'kind' => 'extra', 'title' => 'تعویض کاتتر', 'qty' => 1, 'unit' => 120000 ),
 	array( 'kind' => 'supply', 'title' => 'ست سرم', 'qty' => 2, 'unit' => 90000 ),
 	array( 'kind' => 'drug', 'title' => 'مشاوره دارویی', 'qty' => 1, 'unit' => 150000 ),
@@ -123,7 +123,7 @@ $lines_2031 = array(
 	array( 'kind' => 'loyalty', 'title' => 'کد پاداش وفاداری', 'qty' => 0, 'unit' => 0, 'total' => -40000 ),
 );
 $lines_2018 = array(
-	array( 'kind' => 'base', 'title' => 'سرم‌تراپی در منزل', 'sub' => 'مدت حضور: ۷۵ دقیقه', 'qty' => 1, 'unit' => 840000 ),
+	array( 'kind' => 'base', 'title' => 'سرم‌تراپی در منزل', 'qty' => 1, 'unit' => 840000 ),
 	array( 'kind' => 'extra', 'title' => 'تعویض کاتتر', 'qty' => 1, 'unit' => 120000 ),
 	array( 'kind' => 'supply', 'title' => 'ست سرم', 'qty' => 2, 'unit' => 90000 ),
 	array( 'kind' => 'first_discount', 'title' => 'تخفیف سفارش اول', 'qty' => 0, 'unit' => 0, 'total' => -60000 ),

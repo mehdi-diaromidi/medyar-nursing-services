@@ -9,6 +9,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+$districts = array();
+for ( $i = 1; $i <= 22; $i++ ) {
+	$districts[ 'THR|تهران' ][] = sprintf( 'منطقه %s', MNS_Format::digits( (string) $i ) );
+}
+
 return array(
 	'default_phone' => '09123456789',
 	'service'       => array(
@@ -37,18 +42,8 @@ return array(
 			'gender'    => 'female',
 		),
 	),
-	'cities'        => array(
-		array(
-			'id'    => '1',
-			'name'  => 'تهران',
-			'areas' => array( 'ونک', 'جردن', 'سعادت‌آباد', 'نیاوران' ),
-		),
-		array(
-			'id'    => '2',
-			'name'  => 'کرج',
-			'areas' => array( 'گوهردشت', 'عظیمیه' ),
-		),
-	),
+	/* Province > city come from the shared library (assets/data/iran-locations.json); only cities divided into districts are listed here. */
+	'districts'     => $districts,
 	'time_slots'    => array(
 		/* Six 4-hour slots (client decision, 10 Nov 2026); hours are admin settings in the real backend. `disabled` = no nurse in that slot. */
 		array( 'id' => '0-4', 'label' => '۰ تا ۴', 'disabled' => true, 'name' => 'بامداد' ),
@@ -73,9 +68,9 @@ return array(
 		),
 	),
 	'availability'  => array(
-		'yellow_areas'    => array( 'گوهردشت' ),
+		'yellow_areas'    => array( 'منطقه ۱۸', 'کرج' ),
 		'red_area_gender' => array(
-			'نیاوران' => 'male',
+			'منطقه ۲۲' => 'male',
 		),
 		'alt_slots'       => array( '12-16', '16-20', '20-24' ),
 	),

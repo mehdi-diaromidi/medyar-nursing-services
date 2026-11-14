@@ -23,8 +23,8 @@ $status = (string) ( $cells['status'] ?? '' );
 		<span class="mns-order__avatar" aria-hidden="true"><?php echo mns_icon( 'user' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
 		<span class="mns-order__nurse-name"><?php echo esc_html( (string) ( $nurse['name'] ?? '' ) ); ?></span>
 	<?php else : ?>
-		<span class="mns-order__pending-short"><?php echo esc_html__( 'در انتظار تخصیص', 'medyar-nursing-services' ); ?></span>
-		<span class="mns-order__pending-long"><?php echo esc_html__( 'در انتظار تخصیص پرستار', 'medyar-nursing-services' ); ?></span>
+		<span class="mns-order__pending-short"><?php echo esc_html__( 'در حال تعیین پرستار', 'medyar-nursing-services' ); ?></span>
+		<span class="mns-order__pending-long"><?php echo esc_html__( 'در حال تعیین پرستار', 'medyar-nursing-services' ); ?></span>
 	<?php endif; ?>
 </<?php echo $tag; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
 
