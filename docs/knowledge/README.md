@@ -14,11 +14,16 @@
 
 **قاعدهٔ تعارض:** برای رفتار محصول، آخرین تصمیم کاربر در چت برنده است؛ برای واقعیت کد، خود کد. تفاوت‌های شناخته‌شده: [`07-open-items/inconsistencies.md`](07-open-items/inconsistencies.md).
 
+> **اول [`PROJECT-LOGIC.md`](PROJECT-LOGIC.md) را بخوان:** خلاصهٔ جامع منطق‌ها، قواعد، وضعیت کد و قانون‌های کار (به‌روزتر از بقیهٔ اسناد این پوشه؛ تاریخ ۱۶ نوامبر ۲۰۲۶).
+
+> **مسیر توسعهٔ بک‌اند و روش نظارت بر ایجنت سازنده:** [`09-development/README.md`](09-development/README.md).
+
 ## نقشهٔ پوشه
 
 ```
 knowledge/
 ├─ README.md
+├─ PROJECT-LOGIC.md    ← نقطهٔ شروع هر ایجنت (منطق جامع پروژه)
 ├─ 00-overview/        project-summary · roles-and-actors · glossary
 ├─ 01-infrastructure/  environments-and-server · deploy-and-verify · working-rules-and-preferences
 ├─ 02-dependencies/    mns-dependencies   (قالب، ARP، کیف پول، صف پیامک، زرین‌پال — فقط آنچه MNS لازم دارد)
@@ -33,7 +38,8 @@ knowledge/
 ├─ 05-implementation/  mns-plugin-technical · ui-design-system · current-status · backend-blueprint
 ├─ 06-lessons/         gotchas · security-and-server-health
 ├─ 07-open-items/      open-questions · todo · inconsistencies
-└─ 08-history/         changelog
+├─ 08-history/         changelog
+└─ 09-development/     مسیر ساخت بک‌اند: تصمیم‌ها، مدل داده، قواعد، API، نقشهٔ راه، کارت‌های وظیفه، راهنمای نظارت، سناریوهای پذیرش
 ```
 
 ## برچسب‌ها
@@ -46,7 +52,7 @@ knowledge/
 
 | می‌خواهم… | بخوان |
 |---|---|
-| جلسهٔ جدید با AI شروع کنم | `00-overview/project-summary` + `03-nursing-project/decisions-log` + `07-open-items/inconsistencies` |
+| جلسهٔ جدید با AI شروع کنم | **`PROJECT-LOGIC.md`** + `00-overview/project-summary` + `03-nursing-project/decisions-log` + `07-open-items/inconsistencies` |
 | صفحه‌ای را بسازم | فایل همان صفحه در `04-pages/` + `05-implementation/ui-design-system` + `01-infrastructure/working-rules-and-preferences` |
 | بک‌اند بنویسم | `05-implementation/backend-blueprint` + `03-nursing-project/order-lifecycle` + `rules-assignment-pricing-billing` + `02-dependencies/mns-dependencies` |
 | دیپلوی کنم | `01-infrastructure/deploy-and-verify` |
